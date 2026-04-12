@@ -1,0 +1,44 @@
+<div class="filter-bar">
+    <div class="filter-group">
+        <span class="filter-label">判图类型：</span>
+        <select class="form-control">
+            <option value="">全部</option>
+            <option value="normal">正常判图</option>
+            <option value="advanced">高级判图</option>
+        </select>
+    </div>
+    <div class="filter-group">
+        <span class="filter-label">状态：</span>
+        <select class="form-control">
+            <option value="">全部</option>
+            <option value="pending">待处理</option>
+            <option value="processing">处理中</option>
+            <option value="completed">已完成</option>
+        </select>
+    </div>
+    <div class="filter-group">
+        <button class="btn btn-primary">刷新</button>
+        <button class="btn btn-secondary">批量处理</button>
+    </div>
+</div>
+
+<div class="judge-interface">
+    <div class="image-panel">
+        <div class="chart-title">包裹图像</div>
+        <div class="image-container">
+            <span style="color: #909399;">点击左侧列表选择图像</span>
+        </div>
+        <div class="judge-controls">
+            <button class="btn btn-primary">正常</button>
+            <button class="btn btn-warning">可疑</button>
+            <button class="btn btn-danger">违禁品</button>
+            <button class="btn btn-secondary">下一图像</button>
+        </div>
+    </div>
+    <div class="judge-list">
+        <div class="chart-title">待处理列表</div>
+        <div id="judgeList">
+            <!-- 待处理列表将通过JavaScript动态生成 -->
+        </div>
+    </div>
+</div>

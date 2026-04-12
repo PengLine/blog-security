@@ -1,0 +1,89 @@
+<div class="filter-bar">
+    <div class="filter-group">
+        <span class="filter-label">设备类型：</span>
+        <select class="form-control">
+            <option value="">全部</option>
+            <option value="security">安检设备</option>
+            <option value="access">门禁设备</option>
+            <option value="detection">探测设备</option>
+        </select>
+    </div>
+    <div class="filter-group">
+        <span class="filter-label">设备状态：</span>
+        <select class="form-control">
+            <option value="">全部</option>
+            <option value="online">在线</option>
+            <option value="offline">离线</option>
+            <option value="warning">告警</option>
+        </select>
+    </div>
+    <div class="filter-group">
+        <span class="filter-label">关键词：</span>
+        <input type="text" class="form-control" placeholder="设备名称或ID">
+    </div>
+    <div class="filter-group">
+        <button class="btn btn-primary">搜索</button>
+        <button class="btn btn-secondary">重置</button>
+    </div>
+</div>
+
+<div class="device-detail">
+    <div class="detail-panel">
+        <div class="detail-title">设备概览</div>
+        <div class="detail-item">
+            <span class="detail-label">设备总数</span>
+            <span class="detail-value">42</span>
+        </div>
+        <div class="detail-item">
+            <span class="detail-label">在线设备</span>
+            <span class="detail-value">39</span>
+        </div>
+        <div class="detail-item">
+            <span class="detail-label">离线设备</span>
+            <span class="detail-value">3</span>
+        </div>
+        <div class="detail-item">
+            <span class="detail-label">告警设备</span>
+            <span class="detail-value">2</span>
+        </div>
+    </div>
+    <div class="detail-panel">
+        <div class="detail-title">设备类型分布</div>
+        <div class="detail-item">
+            <span class="detail-label">安检机</span>
+            <span class="detail-value">8</span>
+        </div>
+        <div class="detail-item">
+            <span class="detail-label">安检门</span>
+            <span class="detail-value">15</span>
+        </div>
+        <div class="detail-item">
+            <span class="detail-label">明眸设备</span>
+            <span class="detail-value">12</span>
+        </div>
+        <div class="detail-item">
+            <span class="detail-label">探测设备</span>
+            <span class="detail-value">7</span>
+        </div>
+    </div>
+</div>
+
+<div class="table-section">
+    <div class="table-title">设备列表</div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>设备ID</th>
+                <th>设备名称</th>
+                <th>设备类型</th>
+                <th>IP地址</th>
+                <th>状态</th>
+                <th>位置</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody id="deviceTableBody">
+            <!-- 设备列表将通过JavaScript动态生成 -->
+        </tbody>
+    </table>
+</div>

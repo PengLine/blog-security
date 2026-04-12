@@ -1,0 +1,52 @@
+<div class="filter-bar">
+    <div class="filter-group">
+        <span class="filter-label">事件类型：</span>
+        <select class="form-control">
+            <option value="">全部</option>
+            <option value="passenger">客流事件</option>
+            <option value="metal">金属事件</option>
+            <option value="contraband">违禁品事件</option>
+            <option value="face">人脸事件</option>
+        </select>
+    </div>
+    <div class="filter-group">
+        <span class="filter-label">事件状态：</span>
+        <select class="form-control">
+            <option value="">全部</option>
+            <option value="normal">正常</option>
+            <option value="warning">警告</option>
+            <option value="danger">危险</option>
+        </select>
+    </div>
+    <div class="filter-group">
+        <span class="filter-label">时间范围：</span>
+        <input type="datetime-local" class="form-control">
+        <span>至</span>
+        <input type="datetime-local" class="form-control">
+    </div>
+    <div class="filter-group">
+        <button class="btn btn-primary">查询</button>
+        <button class="btn btn-secondary">导出</button>
+    </div>
+</div>
+
+<div class="table-section">
+    <div class="table-title">事件列表</div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>事件ID</th>
+                <th>时间</th>
+                <th>设备</th>
+                <th>事件类型</th>
+                <th>状态</th>
+                <th>详情</th>
+                <th>处理状态</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody id="eventsTableBody">
+            <!-- 事件列表将通过JavaScript动态生成 -->
+        </tbody>
+    </table>
+</div>
