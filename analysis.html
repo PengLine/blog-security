@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>统计分析</title>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        .container {
+            font-family: 'Microsoft YaHei', sans-serif !important;
+            background-color: #0a1929 !important;
+            color: #ffffff !important;
+            overflow-x: hidden !important;
+            max-width: 1200px !important;
+            margin: 0 auto !important;
+            padding: 20px !important;
+        }
+
+        .page-header {
+            background-color: #10253b;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            margin-bottom: 20px;
+        }
+
+        .page-header h1 {
+            font-size: 24px;
+            color: #ffffff;
+            margin-bottom: 10px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: #909399;
+            padding: 8px 16px;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            background-color: #18304a;
+            color: #ffffff;
+        }
+
+        .nav-links a.active {
+            background-color: #18304a;
+            color: #409eff;
+        }
+
+        .filter-section {
+            background-color: #10253b;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            margin-bottom: 20px;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .filter-group label {
+            font-weight: 500;
+            color: #909399;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            padding: 8px 12px;
+            border: 1px solid #18304a;
+            border-radius: 4px;
+            font-size: 14px;
+            background-color: #0a1929;
+            color: #ffffff;
+        }
+
+        .filter-group button {
+            padding: 8px 16px;
+            background-color: #1890ff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .filter-group button:hover {
+            background-color: #40a9ff;
+        }
+
+        .charts-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .chart-card {
+            background-color: #10253b;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .chart-card h3 {
+            font-size: 18px;
+            color: #ffffff;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .chart-placeholder {
+            height: 300px;
+            background-color: #0a1929;
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 客流趋势图样式 */
+        .trend-chart {
+            height: 100%;
+            position: relative;
+        }
+
+        .trend-axis {
+            position: absolute;
+            background-color: #18304a;
+        }
+
+        .trend-axis.x-axis {
+            left: 50px;
+            bottom: 20px;
+            width: calc(100% - 70px);
+            height: 1px;
+        }
+
+        .trend-axis.y-axis {
+            left: 50px;
+            bottom: 20px;
+            width: 1px;
+            height: calc(100% - 40px);
+        }
+
+        .trend-line-container {
+            position: absolute;
+            left: 50px;
+            bottom: 20px;
+            width: calc(100% - 70px);
+            height: calc(100% - 40px);
+        }
+
+        .trend-line {
+            fill: none;
+            stroke: #1890ff;
+            stroke-width: 2;
+        }
+
+        .trend-area {
+            fill: rgba(24, 144, 255, 0.1);
+            stroke: none;
+        }
+
+        .trend-dot {
+            fill: #1890ff;
+            stroke: #0a1929;
+            stroke-width: 2;
+        }
+
+        /* 饼图样式 */
+        .pie-chart {
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .pie-svg {
+            width: 250px;
+            height: 250px;
+        }
+
+        .pie-legend {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: #909399;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+            margin-right: 8px;
+        }
+
+        /* 数据表格样式 */
+        .data-section {
+            background-color: #10253b;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            margin-bottom: 20px;
+        }
+
+        .data-section h3 {
+            font-size: 18px;
+            color: #ffffff;
+            margin-bottom: 20px;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #18304a;
+            color: #ffffff;
+        }
+
+        .data-table th {
+            background-color: #18304a;
+            font-weight: 500;
+            color: #909399;
+        }
+
+        .data-table tr:hover {
+            background-color: #18304a;
+        }
+
+        /* 统计卡片样式 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stat-box {
+            background-color: #10253b;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+
+        .stat-box .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #ffffff;
+        }
+
+        .stat-box .stat-label {
+            color: #909399;
+            font-size: 14px;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            .nav-links {
+                flex-direction: column;
+            }
+
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+
+            .filter-section {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .pie-legend {
+                position: static;
+                margin-top: 20px;
+                transform: none;
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 10px;
+            }
+
+            .legend-item {
+                margin-bottom: 0;
+            }
+
+            .data-table {
+                font-size: 12px;
+            }
+
+            .data-table th,
+            .data-table td {
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <h1>统计分析</h1>
+            <div class="nav-links">
+                <a href="index.html">首页</a>
+                <a href="dashboard.html">仪表盘</a>
+                <a href="device.html">设备管理</a>
+                <a href="events.html">事件中心</a>
+                <a href="judge.html">集中判图</a>
+                <a href="alarm.html">告警中心</a>
+                <a href="analysis.html" class="active">统计分析</a>
+                <a href="passage.html">通行管理</a>
+                <a href="face.html">人脸识别</a>
+                <a href="config.html">系统配置</a>
+            </div>
+        </div>
+
+        <div class="filter-section">
+            <div class="filter-group">
+                <label for="timeRange">时间范围：</label>
+                <select id="timeRange">
+                    <option value="7d">最近7天</option>
+                    <option value="30d" selected>最近30天</option>
+                    <option value="90d">最近90天</option>
+                    <option value="custom">自定义</option>
+                </select>
+            </div>
+            <div class="filter-group" id="customDateRange" style="display: none;">
+                <input type="date" id="startDate">
+                <input type="date" id="endDate">
+            </div>
+            <div class="filter-group">
+                <label for="dataType">数据类型：</label>
+                <select id="dataType">
+                    <option value="passenger">客流数据</option>
+                    <option value="alarm">告警数据</option>
+                    <option value="device">设备数据</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <button id="refreshBtn">刷新数据</button>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-box">
+                <div class="stat-value" id="totalPassenger">0</div>
+                <div class="stat-label">总客流量</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="avgDailyPassenger">0</div>
+                <div class="stat-label">日均客流量</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="totalAlarms">0</div>
+                <div class="stat-label">总告警数</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="deviceOnlineRate">0%</div>
+                <div class="stat-label">设备在线率</div>
+            </div>
+        </div>
+
+        <div class="charts-container">
+            <div class="chart-card">
+                <h3>客流趋势图</h3>
+                <div class="chart-placeholder">
+                    <div class="trend-chart">
+                        <div class="trend-axis x-axis"></div>
+                        <div class="trend-axis y-axis"></div>
+                        <div class="trend-line-container">
+                            <svg width="100%" height="100%" viewBox="0 0 400 250">
+                                <path id="passengerTrendLine" class="trend-line" d=""></path>
+                                <path id="passengerTrendArea" class="trend-area" d=""></path>
+                                <g id="passengerTrendDots"></g>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <h3>告警类型分布</h3>
+                <div class="chart-placeholder">
+                    <div class="pie-chart">
+                        <svg class="pie-svg" viewBox="0 0 200 200">
+                            <g id="alarmTypePie"></g>
+                            <text x="100" y="100" text-anchor="middle" dominant-baseline="middle" font-size="16" fill="#666">告警类型</text>
+                        </svg>
+                        <div class="pie-legend">
+                            <div class="legend-item">
+                                <div class="legend-color" style="background-color: #1890ff;"></div>
+                                <span>入侵告警</span>
+                                <span id="intrusionCount" style="margin-left: 5px; font-weight: bold;">0</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background-color: #f5222d;"></div>
+                                <span>火灾告警</span>
+                                <span id="fireCount" style="margin-left: 5px; font-weight: bold;">0</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background-color: #52c41a;"></div>
+                                <span>设备告警</span>
+                                <span id="deviceCount" style="margin-left: 5px; font-weight: bold;">0</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background-color: #faad14;"></div>
+                                <span>门禁告警</span>
+                                <span id="accessCount" style="margin-left: 5px; font-weight: bold;">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 新增违禁品统计图表 -->
+            <div class="chart-card">
+                <h3>违禁品级别分布</h3>
+                <div class="chart-placeholder">
+                    <div class="pie-chart">
+                        <svg class="pie-svg" viewBox="0 0 200 200">
+                            <g id="contrabandLevelPie"></g>
+                            <text x="100" y="100" text-anchor="middle" dominant-baseline="middle" font-size="16" fill="#666">违禁品级别</text>
+                        </svg>
+                        <div class="pie-legend">
+                            <div class="legend-item">
+                                <div class="legend-color" style="background-color: #f5222d;"></div>
+                                <span>高级违禁品</span>
+                                <span id="highContrabandCount" style="margin-left: 5px; font-weight: bold;">0</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background-color: #faad14;"></div>
+                                <span>中级违禁品</span>
+                                <span id="mediumContrabandCount" style="margin-left: 5px; font-weight: bold;">0</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background-color: #1890ff;"></div>
+                                <span>低级违禁品</span>
+                                <span id="lowContrabandCount" style="margin-left: 5px; font-weight: bold;">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="chart-card">
+                <h3>违禁品类型分布</h3>
+                <div class="chart-placeholder">
+                    <div class="bar-chart">
+                        <svg width="100%" height="100%" viewBox="0 0 400 250">
+                            <g id="contrabandTypeBars"></g>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="data-section">
+            <h3>详细数据表格</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>日期</th>
+                        <th>客流量</th>
+                        <th>告警总数</th>
+                        <th>入侵告警</th>
+                        <th>火灾告警</th>
+                        <th>设备告警</th>
+                        <th>门禁告警</th>
+                        <th>设备在线率</th>
+                    </tr>
+                </thead>
+                <tbody id="dataTableBody">
+                    <!-- 数据表格将通过JavaScript动态生成 -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // 模拟数据生成函数
+        function generateMockData(days = 30) {
+            const data = [];
+            const now = new Date();
+            
+            for (let i = days - 1; i >= 0; i--) {
+                const date = new Date(now);
+                date.setDate(date.getDate() - i);
+                
+                // 生成模拟客流量（100-500之间的随机数）
+                const passengerCount = Math.floor(Math.random() * 400) + 100;
+                
+                // 生成模拟告警数据
+                const alarmTypes = {
+                    intrusion: Math.floor(Math.random() * 10) + 1,
+                    fire: Math.floor(Math.random() * 5) + 1,
+                    device: Math.floor(Math.random() * 15) + 1,
+                    access: Math.floor(Math.random() * 8) + 1
+                };
+                
+                const totalAlarms = Object.values(alarmTypes).reduce((sum, count) => sum + count, 0);
+                
+                // 生成设备在线率（95%-100%之间的随机数）
+                const onlineRate = Math.round((Math.random() * 5 + 95) * 10) / 10;
+                
+                // 生成模拟违禁品数据
+                const contrabandLevels = {
+                    high: Math.floor(Math.random() * 3) + 1,   // 高级违禁品：1-3个
+                    medium: Math.floor(Math.random() * 5) + 2, // 中级违禁品：2-6个
+                    low: Math.floor(Math.random() * 10) + 5    // 低级违禁品：5-14个
+                };
+                
+                const contrabandTypes = {
+                    刀具: Math.floor(Math.random() * 5) + 1,
+                    液体: Math.floor(Math.random() * 8) + 2,
+                    电池: Math.floor(Math.random() * 6) + 3,
+                    其他: Math.floor(Math.random() * 7) + 2
+                };
+                
+                const totalContraband = Object.values(contrabandLevels).reduce((sum, count) => sum + count, 0);
+                
+                data.push({
+                    date: date.toISOString().split('T')[0],
+                    dateFormatted: date.toLocaleDateString('zh-CN'),
+                    passengerCount: passengerCount,
+                    alarms: alarmTypes,
+                    totalAlarms: totalAlarms,
+                    onlineRate: onlineRate,
+                    contrabandLevels: contrabandLevels,
+                    contrabandTypes: contrabandTypes,
+                    totalContraband: totalContraband
+                });
+            }
+            
+            return data;
+        }
+
+        // 页面数据
+        let allData = [];
+        let filteredData = [];
+
+        // 初始化页面
+        function initPage() {
+            // 生成模拟数据
+            allData = generateMockData(30);
+            filteredData = [...allData];
+
+            // 渲染统计数据
+            renderStats();
+
+            // 渲染图表
+            renderCharts();
+
+            // 渲染数据表格
+            renderDataTable();
+
+            // 绑定事件
+            bindEvents();
+        }
+
+        // 渲染统计数据
+        function renderStats() {
+            const totalPassenger = filteredData.reduce((sum, item) => sum + item.passengerCount, 0);
+            const avgDailyPassenger = Math.round(totalPassenger / filteredData.length);
+            const totalAlarms = filteredData.reduce((sum, item) => sum + item.totalAlarms, 0);
+            const avgOnlineRate = filteredData.reduce((sum, item) => sum + item.onlineRate, 0) / filteredData.length;
+
+            document.getElementById('totalPassenger').textContent = totalPassenger.toLocaleString();
+            document.getElementById('avgDailyPassenger').textContent = avgDailyPassenger.toLocaleString();
+            document.getElementById('totalAlarms').textContent = totalAlarms.toLocaleString();
+            document.getElementById('deviceOnlineRate').textContent = avgOnlineRate.toFixed(1) + '%';
+        }
+
+        // 渲染图表
+        function renderCharts() {
+            // 渲染客流趋势图
+            renderPassengerTrend();
+            
+            // 渲染告警类型分布饼图
+            renderAlarmTypePie();
+            
+            // 渲染违禁品相关图表
+            renderContrabandLevelPie();
+            renderContrabandTypeBarChart();
+        }
+
+        // 渲染客流趋势图
+        function renderPassengerTrend() {
+            const svgWidth = 400;
+            const svgHeight = 250;
+            const padding = 20;
+            const chartWidth = svgWidth - 2 * padding;
+            const chartHeight = svgHeight - 2 * padding;
+
+            const maxPassenger = Math.max(...filteredData.map(item => item.passengerCount));
+            const minPassenger = Math.min(...filteredData.map(item => item.passengerCount));
+            const yRange = maxPassenger - minPassenger;
+
+            // 生成折线和区域路径
+            let linePath = '';
+            let areaPath = '';
+
+            filteredData.forEach((item, index) => {
+                const x = padding + (index / (filteredData.length - 1)) * chartWidth;
+                const y = padding + chartHeight - ((item.passengerCount - minPassenger) / yRange) * chartHeight;
+
+                if (index === 0) {
+                    linePath = `M ${x} ${y}`;
+                    areaPath = `M ${x} ${padding + chartHeight} L ${x} ${y}`;
+                } else {
+                    linePath += ` L ${x} ${y}`;
+                    areaPath += ` L ${x} ${y}`;
+                }
+            });
+
+            areaPath += ` L ${padding + chartWidth} ${padding + chartHeight} Z`;
+
+            // 更新折线和区域
+            document.getElementById('passengerTrendLine').setAttribute('d', linePath);
+            document.getElementById('passengerTrendArea').setAttribute('d', areaPath);
+
+            // 更新数据点
+            const dotsGroup = document.getElementById('passengerTrendDots');
+            dotsGroup.innerHTML = '';
+
+            filteredData.forEach((item, index) => {
+                const x = padding + (index / (filteredData.length - 1)) * chartWidth;
+                const y = padding + chartHeight - ((item.passengerCount - minPassenger) / yRange) * chartHeight;
+
+                const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                dot.setAttribute('class', 'trend-dot');
+                dot.setAttribute('cx', x);
+                dot.setAttribute('cy', y);
+                dot.setAttribute('r', 4);
+                dot.setAttribute('title', `${item.dateFormatted}: ${item.passengerCount}人`);
+
+                dotsGroup.appendChild(dot);
+            });
+        }
+
+        // 渲染告警类型分布饼图
+        function renderAlarmTypePie() {
+            // 计算各类告警总数
+            const alarmTotals = {
+                intrusion: filteredData.reduce((sum, item) => sum + item.alarms.intrusion, 0),
+                fire: filteredData.reduce((sum, item) => sum + item.alarms.fire, 0),
+                device: filteredData.reduce((sum, item) => sum + item.alarms.device, 0),
+                access: filteredData.reduce((sum, item) => sum + item.alarms.access, 0)
+            };
+
+            // 更新图例数量
+            document.getElementById('intrusionCount').textContent = alarmTotals.intrusion;
+            document.getElementById('fireCount').textContent = alarmTotals.fire;
+            document.getElementById('deviceCount').textContent = alarmTotals.device;
+            document.getElementById('accessCount').textContent = alarmTotals.access;
+
+            const totalAlarms = Object.values(alarmTotals).reduce((sum, count) => sum + count, 0);
+            if (totalAlarms === 0) return;
+
+            const centerX = 100;
+            const centerY = 100;
+            const radius = 80;
+            const colors = {
+                intrusion: '#1890ff',
+                fire: '#f5222d',
+                device: '#52c41a',
+                access: '#faad14'
+            };
+
+            const pieGroup = document.getElementById('alarmTypePie');
+            pieGroup.innerHTML = '';
+
+            let startAngle = 0;
+
+            Object.entries(alarmTotals).forEach(([type, count]) => {
+                const sliceAngle = (count / totalAlarms) * 2 * Math.PI;
+                const endAngle = startAngle + sliceAngle;
+
+                // 计算饼图扇区的路径
+                const x1 = centerX + radius * Math.cos(startAngle);
+                const y1 = centerY + radius * Math.sin(startAngle);
+                const x2 = centerX + radius * Math.cos(endAngle);
+                const y2 = centerY + radius * Math.sin(endAngle);
+
+                const largeArcFlag = sliceAngle > Math.PI ? 1 : 0;
+
+                const path = `M ${centerX} ${centerY} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2} Z`;
+
+                // 创建饼图扇区
+                const slice = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                slice.setAttribute('d', path);
+                slice.setAttribute('fill', colors[type]);
+                slice.setAttribute('stroke', '#fff');
+                slice.setAttribute('stroke-width', '2');
+                slice.setAttribute('title', `${type}: ${count}次`);
+
+                pieGroup.appendChild(slice);
+
+                startAngle = endAngle;
+            });
+        }
+
+        // 渲染违禁品级别分布饼图
+        function renderContrabandLevelPie() {
+            // 计算各级别违禁品总数
+            const contrabandLevelTotals = {
+                high: filteredData.reduce((sum, item) => sum + item.contrabandLevels.high, 0),
+                medium: filteredData.reduce((sum, item) => sum + item.contrabandLevels.medium, 0),
+                low: filteredData.reduce((sum, item) => sum + item.contrabandLevels.low, 0)
+            };
+
+            // 更新图例数量
+            document.getElementById('highContrabandCount').textContent = contrabandLevelTotals.high;
+            document.getElementById('mediumContrabandCount').textContent = contrabandLevelTotals.medium;
+            document.getElementById('lowContrabandCount').textContent = contrabandLevelTotals.low;
+
+            const totalContraband = Object.values(contrabandLevelTotals).reduce((sum, count) => sum + count, 0);
+            if (totalContraband === 0) return;
+
+            const centerX = 100;
+            const centerY = 100;
+            const radius = 80;
+            const colors = {
+                high: '#f5222d',   // 红色表示高级违禁品
+                medium: '#faad14', // 黄色表示中级违禁品
+                low: '#1890ff'     // 蓝色表示低级违禁品
+            };
+
+            const pieGroup = document.getElementById('contrabandLevelPie');
+            pieGroup.innerHTML = '';
+
+            let startAngle = 0;
+
+            Object.entries(contrabandLevelTotals).forEach(([level, count]) => {
+                const sliceAngle = (count / totalContraband) * 2 * Math.PI;
+                const endAngle = startAngle + sliceAngle;
+
+                // 计算饼图扇区的路径
+                const x1 = centerX + radius * Math.cos(startAngle);
+                const y1 = centerY + radius * Math.sin(startAngle);
+                const x2 = centerX + radius * Math.cos(endAngle);
+                const y2 = centerY + radius * Math.sin(endAngle);
+
+                const largeArcFlag = sliceAngle > Math.PI ? 1 : 0;
+
+                const path = `M ${centerX} ${centerY} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2} Z`;
+
+                // 创建饼图扇区
+                const slice = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                slice.setAttribute('d', path);
+                slice.setAttribute('fill', colors[level]);
+                slice.setAttribute('stroke', '#fff');
+                slice.setAttribute('stroke-width', '2');
+                slice.setAttribute('title', `${level === 'high' ? '高级' : level === 'medium' ? '中级' : '低级'}违禁品: ${count}个`);
+
+                pieGroup.appendChild(slice);
+
+                startAngle = endAngle;
+            });
+        }
+
+        // 渲染违禁品类型分布柱状图
+        function renderContrabandTypeBarChart() {
+            // 计算各类型违禁品总数
+            const contrabandTypeTotals = {
+                刀具: filteredData.reduce((sum, item) => sum + item.contrabandTypes.刀具, 0),
+                液体: filteredData.reduce((sum, item) => sum + item.contrabandTypes.液体, 0),
+                电池: filteredData.reduce((sum, item) => sum + item.contrabandTypes.电池, 0),
+                其他: filteredData.reduce((sum, item) => sum + item.contrabandTypes.其他, 0)
+            };
+
+            const svgWidth = 400;
+            const svgHeight = 250;
+            const padding = 50;
+            const chartWidth = svgWidth - 2 * padding;
+            const chartHeight = svgHeight - 2 * padding;
+
+            const barGroup = document.getElementById('contrabandTypeBars');
+            barGroup.innerHTML = '';
+
+            // 设置柱状图的最大高度
+            const maxCount = Math.max(...Object.values(contrabandTypeTotals));
+            const barWidth = chartWidth / Object.keys(contrabandTypeTotals).length - 10;
+            const barSpacing = 10;
+
+            let currentX = padding;
+
+            Object.entries(contrabandTypeTotals).forEach(([type, count]) => {
+                // 计算柱状图的高度
+                const barHeight = (count / maxCount) * chartHeight;
+                const barX = currentX;
+                const barY = padding + chartHeight - barHeight;
+
+                // 创建柱状图
+                const bar = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                bar.setAttribute('x', barX);
+                bar.setAttribute('y', barY);
+                bar.setAttribute('width', barWidth);
+                bar.setAttribute('height', barHeight);
+                bar.setAttribute('fill', '#1890ff');
+                bar.setAttribute('stroke', '#000');
+                bar.setAttribute('stroke-width', '1');
+                bar.setAttribute('title', `${type}: ${count}个`);
+
+                barGroup.appendChild(bar);
+
+                // 添加类型标签
+                const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                label.setAttribute('x', barX + barWidth / 2);
+                label.setAttribute('y', padding + chartHeight + 20);
+                label.setAttribute('text-anchor', 'middle');
+                label.setAttribute('font-size', '12');
+                label.setAttribute('fill', '#ffffff');
+                label.textContent = type;
+
+                barGroup.appendChild(label);
+
+                // 添加数量标签
+                const countLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                countLabel.setAttribute('x', barX + barWidth / 2);
+                countLabel.setAttribute('y', barY - 5);
+                countLabel.setAttribute('text-anchor', 'middle');
+                countLabel.setAttribute('font-size', '12');
+                countLabel.setAttribute('fill', '#ffffff');
+                countLabel.textContent = count;
+
+                barGroup.appendChild(countLabel);
+
+                currentX += barWidth + barSpacing;
+            });
+        }
+
+        // 渲染数据表格
+        function renderDataTable() {
+            const tbody = document.getElementById('dataTableBody');
+            tbody.innerHTML = '';
+
+            filteredData.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.dateFormatted}</td>
+                    <td>${item.passengerCount.toLocaleString()}</td>
+                    <td>${item.totalAlarms}</td>
+                    <td>${item.alarms.intrusion}</td>
+                    <td>${item.alarms.fire}</td>
+                    <td>${item.alarms.device}</td>
+                    <td>${item.alarms.access}</td>
+                    <td>${item.onlineRate.toFixed(1)}%</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // 绑定事件
+        function bindEvents() {
+            // 时间范围选择事件
+            document.getElementById('timeRange').addEventListener('change', (e) => {
+                const customDateRange = document.getElementById('customDateRange');
+                if (e.target.value === 'custom') {
+                    customDateRange.style.display = 'flex';
+                } else {
+                    customDateRange.style.display = 'none';
+                    filterData();
+                }
+            });
+
+            // 数据类型选择事件
+            document.getElementById('dataType').addEventListener('change', filterData);
+
+            // 刷新按钮点击事件
+            document.getElementById('refreshBtn').addEventListener('click', refreshData);
+
+            // 自定义日期范围事件
+            document.getElementById('startDate').addEventListener('change', filterData);
+            document.getElementById('endDate').addEventListener('change', filterData);
+        }
+
+        // 筛选数据
+        function filterData() {
+            const timeRange = document.getElementById('timeRange').value;
+            const dataType = document.getElementById('dataType').value;
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+
+            let tempData = [...allData];
+
+            // 时间范围筛选
+            if (timeRange === '7d') {
+                const sevenDaysAgo = new Date();
+                sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+                tempData = tempData.filter(item => new Date(item.date) >= sevenDaysAgo);
+            } else if (timeRange === '30d') {
+                const thirtyDaysAgo = new Date();
+                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                tempData = tempData.filter(item => new Date(item.date) >= thirtyDaysAgo);
+            } else if (timeRange === '90d') {
+                const ninetyDaysAgo = new Date();
+                ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+                tempData = tempData.filter(item => new Date(item.date) >= ninetyDaysAgo);
+            } else if (timeRange === 'custom') {
+                if (startDate && endDate) {
+                    tempData = tempData.filter(item => 
+                        new Date(item.date) >= new Date(startDate) && 
+                        new Date(item.date) <= new Date(endDate)
+                    );
+                }
+            }
+
+            filteredData = tempData;
+
+            // 重新渲染页面
+            renderStats();
+            renderCharts();
+            renderDataTable();
+        }
+
+        // 刷新数据
+        function refreshData() {
+            // 重新生成模拟数据
+            allData = generateMockData(30);
+            filterData();
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', initPage);
+    </script>
+</body>
+</html>

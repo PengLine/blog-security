@@ -1,0 +1,1436 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>人脸识别管理</title>
+    
+    <style>
+        /* 全局样式重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* 主容器样式 */
+        .container {
+            font-family: 'Microsoft YaHei', Arial, sans-serif !important;
+            background-color: #0a1929 !important;
+            color: #ffffff !important;
+            overflow-x: hidden !important;
+            max-width: 1200px !important;
+            margin: 0 auto !important;
+            padding: 20px !important;
+        }
+
+        .page-header {
+            background-color: #10253b;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            margin-bottom: 20px;
+        }
+
+        .page-header h1 {
+            font-size: 24px;
+            color: #ffffff;
+            margin-bottom: 10px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: #909399;
+            padding: 8px 16px;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            background-color: #18304a;
+            color: #ffffff;
+        }
+
+        .nav-links a.active {
+            background-color: #18304a;
+            color: #409eff;
+        }
+
+        /* 模块容器 */
+        .module {
+            padding: 20px;
+        }
+
+        /* 标签页导航 */
+        .tab-nav {
+            display: flex;
+            background-color: #10253b;
+            border-radius: 8px 8px 0 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .tab-nav-item {
+            padding: 15px 20px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #909399;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .tab-nav-item:hover {
+            color: #409eff;
+            background-color: #18304a;
+        }
+
+        .tab-nav-item.active {
+            color: #409eff;
+            border-bottom-color: #409eff;
+            background-color: #18304a;
+        }
+
+        /* 标签页内容 */
+        .tab-content {
+            background-color: #10253b;
+            padding: 20px;
+            border-radius: 0 0 8px 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            margin-bottom: 20px;
+        }
+
+        .tab-content:not(.active) {
+            display: none;
+        }
+
+        /* 人员管理 */
+        .personnel-section {
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #ffffff;
+            border-bottom: 1px solid #1e3a5f;
+            padding-bottom: 10px;
+        }
+
+        /* 表单样式 */
+        .form-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .form-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-label {
+            font-size: 12px;
+            color: #909399;
+            margin-bottom: 5px;
+        }
+
+        .form-control {
+            padding: 8px 12px;
+            background-color: #18304a;
+            border: 1px solid #1e3a5f;
+            color: #ffffff;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #409eff;
+        }
+
+        /* 按钮样式 */
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s ease;
+            margin-right: 5px;
+        }
+
+        .btn-primary {
+            background-color: #409eff;
+            color: #ffffff;
+        }
+
+        .btn-primary:hover {
+            background-color: #66b1ff;
+        }
+
+        .btn-danger {
+            background-color: #f56c6c;
+            color: #ffffff;
+        }
+
+        .btn-danger:hover {
+            background-color: #f78989;
+        }
+
+        .btn-success {
+            background-color: #67c23a;
+            color: #ffffff;
+        }
+
+        .btn-success:hover {
+            background-color: #85ce61;
+        }
+
+        .btn-secondary {
+            background-color: #606266;
+            color: #ffffff;
+        }
+
+        .btn-secondary:hover {
+            background-color: #737579;
+        }
+
+        /* 表格样式 */
+        .table-container {
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #1e3a5f;
+            font-size: 13px;
+        }
+
+        .data-table th {
+            background-color: #18304a;
+            color: #909399;
+            font-weight: normal;
+        }
+
+        .data-table td {
+            color: #ffffff;
+        }
+
+        /* 人脸录入区域 */
+        .face-enroll-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .face-preview {
+            background-color: #0a1929;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px dashed #1e3a5f;
+        }
+
+        #faceCanvas {
+            width: 100%;
+            max-width: 400px;
+            max-height: 400px;
+            border-radius: 8px;
+            object-fit: contain;
+            background-color: #000;
+        }
+
+        .enroll-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        /* 统计卡片 */
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background-color: #18304a;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .stat-card-title {
+            font-size: 12px;
+            color: #909399;
+            margin-bottom: 8px;
+        }
+
+        .stat-card-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffffff;
+        }
+
+        /* 黑名单区域 */
+        .blacklist-section {
+            margin-bottom: 20px;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .face-enroll-section {
+                grid-template-columns: 1fr;
+            }
+
+            .form-group {
+                grid-template-columns: 1fr;
+            }
+
+            .tab-nav {
+                flex-wrap: wrap;
+            }
+
+            .tab-nav-item {
+                padding: 12px 15px;
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <h1>人脸识别管理</h1>
+            <div class="nav-links">
+                <a href="index.html">首页</a>
+                <a href="dashboard.html">仪表盘</a>
+                <a href="device.html">设备管理</a>
+                <a href="events.html">事件中心</a>
+                <a href="judge.html">集中判图</a>
+                <a href="alarm.html">告警中心</a>
+                <a href="analysis.html">统计分析</a>
+                <a href="passage.html">通行管理</a>
+                <a href="face.html" class="active">人脸识别</a>
+                <a href="config.html">系统配置</a>
+            </div>
+        </div>
+        
+        <!-- 标签页导航 -->
+        <div class="tab-nav">
+            <div class="tab-nav-item active" data-tab="personnel">人员管理</div>
+            <div class="tab-nav-item" data-tab="enroll">人脸录入</div>
+            <div class="tab-nav-item" data-tab="records">识别记录</div>
+            <div class="tab-nav-item" data-tab="blacklist">黑名单管理</div>
+        </div>
+        
+        <!-- 人员管理标签页 -->
+        <div class="tab-content active" id="personnel">
+            <div class="personnel-section">
+                <div class="section-title">人员信息管理</div>
+                <div class="form-group">
+                    <div class="form-item">
+                        <label class="form-label">人员ID</label>
+                        <input type="text" class="form-control" id="personId" placeholder="系统自动生成">
+                    </div>
+                    <div class="form-item">
+                        <label class="form-label">姓名</label>
+                        <input type="text" class="form-control" id="personName" placeholder="请输入姓名">
+                    </div>
+                    <div class="form-item">
+                        <label class="form-label">性别</label>
+                        <select class="form-control" id="personGender">
+                            <option value="男">男</option>
+                            <option value="女">女</option>
+                            <option value="未知">未知</option>
+                        </select>
+                    </div>
+                    <div class="form-item">
+                        <label class="form-label">年龄</label>
+                        <input type="number" class="form-control" id="personAge" placeholder="请输入年龄">
+                    </div>
+                    <div class="form-item">
+                        <label class="form-label">身份证号</label>
+                        <input type="text" class="form-control" id="personIdCard" placeholder="请输入身份证号">
+                    </div>
+                    <div class="form-item">
+                        <label class="form-label">联系方式</label>
+                        <input type="text" class="form-control" id="personPhone" placeholder="请输入联系方式">
+                    </div>
+                    <div class="form-item">
+                        <label class="form-label">所属部门</label>
+                        <select class="form-control" id="personDepartment">
+                            <option value="普通乘客">普通乘客</option>
+                            <option value="工作人员">工作人员</option>
+                            <option value="VIP">VIP</option>
+                        </select>
+                    </div>
+                    <div class="form-item">
+                        <label class="form-label">操作</label>
+                        <div style="display: flex; gap: 5px; margin-top: 5px;">
+                            <button class="btn btn-primary" onclick="addPersonnel()">添加</button>
+                            <button class="btn btn-success" onclick="updatePersonnel()">更新</button>
+                            <button class="btn btn-danger" onclick="deletePersonnel()">删除</button>
+                            <button class="btn btn-secondary" onclick="clearPersonnelForm()">清空</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="data-table" id="personnelTable">
+                        <thead>
+                            <tr>
+                                <th>人员ID</th>
+                                <th>姓名</th>
+                                <th>性别</th>
+                                <th>年龄</th>
+                                <th>身份证号</th>
+                                <th>联系方式</th>
+                                <th>所属部门</th>
+                                <th>人脸状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="personnelTableBody"></tbody>
+                    </table>
+                </div>
+                
+                <!-- 人员列表分页控制 -->
+                <div class="pagination-controls" style="margin-top: 15px; padding: 15px 0; border-top: 1px solid #1e3a5f; display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
+                    <div style="display: flex; align-items: center;">
+                        <label for="personnelPageSizeSelect" style="color: #909399; margin-right: 8px;">每页显示:</label>
+                        <select id="personnelPageSizeSelect" onchange="changePageSize('personnel')" style="padding: 4px 8px; background-color: #18304a; border: 1px solid #1e3a5f; color: #ffffff; border-radius: 4px; font-size: 12px;">
+                            <option value="10">10条</option>
+                            <option value="20" selected>20条</option>
+                            <option value="30">30条</option>
+                            <option value="50">50条</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <button class="btn btn-secondary" onclick="goToPage('personnel', 1)" id="personnelFirstPageBtn" style="font-size: 12px; padding: 4px 8px;">首页</button>
+                        <button class="btn btn-secondary" onclick="goToPage('personnel', window.pagination.personnel.currentPage - 1)" id="personnelPrevPageBtn" style="font-size: 12px; padding: 4px 8px;">上一页</button>
+                        <span style="color: #ffffff;">第 <span id="personnelCurrentPageSpan">1</span>/<span id="personnelTotalPagesSpan">1</span> 页</span>
+                        <button class="btn btn-secondary" onclick="goToPage('personnel', window.pagination.personnel.currentPage + 1)" id="personnelNextPageBtn" style="font-size: 12px; padding: 4px 8px;">下一页</button>
+                        <button class="btn btn-secondary" onclick="goToPage('personnel', window.pagination.personnel.totalPages)" id="personnelLastPageBtn" style="font-size: 12px; padding: 4px 8px;">末页</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 人脸录入标签页 -->
+        <div class="tab-content" id="enroll">
+            <div class="section-title">人脸录入</div>
+            <div class="face-enroll-section">
+                <div class="face-preview">
+                    <canvas id="faceCanvas" width="400" height="400"></canvas>
+                </div>
+                <div class="enroll-actions">
+                    <div class="form-item">
+                        <label class="form-label">选择人员</label>
+                        <select class="form-control" id="enrollPersonSelect">
+                            <!-- 人员列表将通过JavaScript动态生成 -->
+                        </select>
+                    </div>
+                    <div class="form-item">
+                        <label class="form-label">录入方式</label>
+                        <select class="form-control" id="enrollMethodSelect">
+                            <option value="camera">摄像头录入</option>
+                            <option value="upload">上传图片</option>
+                        </select>
+                    </div>
+                    <div class="form-item" style="margin-top: 10px;">
+                        <button class="btn btn-primary" onclick="startEnroll()" style="width: 100%; padding: 10px 0;">开始录入</button>
+                    </div>
+                    <div class="form-item">
+                        <button class="btn btn-success" onclick="saveEnroll()" style="width: 100%; padding: 10px 0;">保存人脸</button>
+                    </div>
+                    <div class="form-item">
+                        <button class="btn btn-danger" onclick="cancelEnroll()" style="width: 100%; padding: 10px 0;">取消</button>
+                    </div>
+                    <div class="form-item">
+                        <input type="file" id="faceImageUpload" accept="image/*" style="display: none;" onchange="handleFaceImageUpload()">
+                        <button class="btn btn-secondary" onclick="document.getElementById('faceImageUpload').click()" style="width: 100%; padding: 10px 0;">上传图片</button>
+                    </div>
+                </div>
+            </div>
+            <div class="table-container">
+                    <table class="data-table" id="enrollHistoryTable">
+                        <thead>
+                            <tr>
+                                <th>时间</th>
+                                <th>人员ID</th>
+                                <th>姓名</th>
+                                <th>录入方式</th>
+                                <th>状态</th>
+                                <th>相似度</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="enrollHistoryTableBody"></tbody>
+                    </table>
+                </div>
+                
+                <!-- 录入历史分页控制 -->
+                <div class="pagination-controls" style="margin-top: 15px; padding: 15px 0; border-top: 1px solid #1e3a5f; display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
+                    <div style="display: flex; align-items: center;">
+                        <label for="enrollHistoryPageSizeSelect" style="color: #909399; margin-right: 8px;">每页显示:</label>
+                        <select id="enrollHistoryPageSizeSelect" onchange="changePageSize('enrollHistory')" style="padding: 4px 8px; background-color: #18304a; border: 1px solid #1e3a5f; color: #ffffff; border-radius: 4px; font-size: 12px;">
+                            <option value="10">10条</option>
+                            <option value="20" selected>20条</option>
+                            <option value="30">30条</option>
+                            <option value="50">50条</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <button class="btn btn-secondary" onclick="goToPage('enrollHistory', 1)" id="enrollHistoryFirstPageBtn" style="font-size: 12px; padding: 4px 8px;">首页</button>
+                        <button class="btn btn-secondary" onclick="goToPage('enrollHistory', window.pagination.enrollHistory.currentPage - 1)" id="enrollHistoryPrevPageBtn" style="font-size: 12px; padding: 4px 8px;">上一页</button>
+                        <span style="color: #ffffff;">第 <span id="enrollHistoryCurrentPageSpan">1</span>/<span id="enrollHistoryTotalPagesSpan">1</span> 页</span>
+                        <button class="btn btn-secondary" onclick="goToPage('enrollHistory', window.pagination.enrollHistory.currentPage + 1)" id="enrollHistoryNextPageBtn" style="font-size: 12px; padding: 4px 8px;">下一页</button>
+                        <button class="btn btn-secondary" onclick="goToPage('enrollHistory', window.pagination.enrollHistory.totalPages)" id="enrollHistoryLastPageBtn" style="font-size: 12px; padding: 4px 8px;">末页</button>
+                    </div>
+                </div>
+        </div>
+        
+        <!-- 识别记录标签页 -->
+        <div class="tab-content" id="records">
+            <div class="stats-cards">
+                <div class="stat-card">
+                    <div class="stat-card-title">今日识别次数</div>
+                    <div class="stat-card-value" id="todayRecognitionCount">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-title">识别成功率</div>
+                    <div class="stat-card-value" id="recognitionSuccessRate">0%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-title">平均相似度</div>
+                    <div class="stat-card-value" id="averageSimilarity">0%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-title">未识别次数</div>
+                    <div class="stat-card-value" id="unrecognizedCount">0</div>
+                </div>
+            </div>
+            <div class="table-container">
+                    <table class="data-table" id="recognitionRecordsTable">
+                        <thead>
+                            <tr>
+                                <th>时间</th>
+                                <th>人员ID</th>
+                                <th>姓名</th>
+                                <th>通道</th>
+                                <th>相似度</th>
+                                <th>状态</th>
+                                <th>体温</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recognitionRecordsTableBody"></tbody>
+                    </table>
+                </div>
+                
+                <!-- 识别记录分页控制 -->
+                <div class="pagination-controls" style="margin-top: 15px; padding: 15px 0; border-top: 1px solid #1e3a5f; display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
+                    <div style="display: flex; align-items: center;">
+                        <label for="recognitionRecordsPageSizeSelect" style="color: #909399; margin-right: 8px;">每页显示:</label>
+                        <select id="recognitionRecordsPageSizeSelect" onchange="changePageSize('recognitionRecords')" style="padding: 4px 8px; background-color: #18304a; border: 1px solid #1e3a5f; color: #ffffff; border-radius: 4px; font-size: 12px;">
+                            <option value="10">10条</option>
+                            <option value="20" selected>20条</option>
+                            <option value="30">30条</option>
+                            <option value="50">50条</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <button class="btn btn-secondary" onclick="goToPage('recognitionRecords', 1)" id="recognitionRecordsFirstPageBtn" style="font-size: 12px; padding: 4px 8px;">首页</button>
+                        <button class="btn btn-secondary" onclick="goToPage('recognitionRecords', window.pagination.recognitionRecords.currentPage - 1)" id="recognitionRecordsPrevPageBtn" style="font-size: 12px; padding: 4px 8px;">上一页</button>
+                        <span style="color: #ffffff;">第 <span id="recognitionRecordsCurrentPageSpan">1</span>/<span id="recognitionRecordsTotalPagesSpan">1</span> 页</span>
+                        <button class="btn btn-secondary" onclick="goToPage('recognitionRecords', window.pagination.recognitionRecords.currentPage + 1)" id="recognitionRecordsNextPageBtn" style="font-size: 12px; padding: 4px 8px;">下一页</button>
+                        <button class="btn btn-secondary" onclick="goToPage('recognitionRecords', window.pagination.recognitionRecords.totalPages)" id="recognitionRecordsLastPageBtn" style="font-size: 12px; padding: 4px 8px;">末页</button>
+                    </div>
+                </div>
+        </div>
+        
+        <!-- 黑名单管理标签页 -->
+        <div class="tab-content" id="blacklist">
+            <div class="blacklist-section">
+                <div class="section-title">黑名单管理</div>
+                <div class="form-group">
+                    <div class="form-item">
+                        <label class="form-label">人员ID</label>
+                        <input type="text" class="form-control" id="blacklistPersonId" placeholder="请输入人员ID">
+                    </div>
+                    <div class="form-item">
+                        <label class="form-label">姓名</label>
+                        <input type="text" class="form-control" id="blacklistPersonName" placeholder="请输入姓名">
+                    </div>
+                    <div class="form-item">
+                        <label class="form-label">黑名单原因</label>
+                        <textarea class="form-control" id="blacklistReason" rows="3" placeholder="请输入加入黑名单的原因"></textarea>
+                    </div>
+                    <div class="form-item">
+                        <label class="form-label">操作</label>
+                        <div style="display: flex; gap: 5px; margin-top: 5px;">
+                            <button class="btn btn-primary" onclick="addBlacklist()">添加到黑名单</button>
+                            <button class="btn btn-danger" onclick="removeBlacklist()">从黑名单移除</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="data-table" id="blacklistTable">
+                        <thead>
+                            <tr>
+                                <th>人员ID</th>
+                                <th>姓名</th>
+                                <th>加入时间</th>
+                                <th>原因</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="blacklistTableBody"></tbody>
+                    </table>
+                </div>
+                
+                <!-- 黑名单分页控制 -->
+                <div class="pagination-controls" style="margin-top: 15px; padding: 15px 0; border-top: 1px solid #1e3a5f; display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
+                    <div style="display: flex; align-items: center;">
+                        <label for="blacklistPageSizeSelect" style="color: #909399; margin-right: 8px;">每页显示:</label>
+                        <select id="blacklistPageSizeSelect" onchange="changePageSize('blacklist')" style="padding: 4px 8px; background-color: #18304a; border: 1px solid #1e3a5f; color: #ffffff; border-radius: 4px; font-size: 12px;">
+                            <option value="10">10条</option>
+                            <option value="20" selected>20条</option>
+                            <option value="30">30条</option>
+                            <option value="50">50条</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <button class="btn btn-secondary" onclick="goToPage('blacklist', 1)" id="blacklistFirstPageBtn" style="font-size: 12px; padding: 4px 8px;">首页</button>
+                        <button class="btn btn-secondary" onclick="goToPage('blacklist', window.pagination.blacklist.currentPage - 1)" id="blacklistPrevPageBtn" style="font-size: 12px; padding: 4px 8px;">上一页</button>
+                        <span style="color: #ffffff;">第 <span id="blacklistCurrentPageSpan">1</span>/<span id="blacklistTotalPagesSpan">1</span> 页</span>
+                        <button class="btn btn-secondary" onclick="goToPage('blacklist', window.pagination.blacklist.currentPage + 1)" id="blacklistNextPageBtn" style="font-size: 12px; padding: 4px 8px;">下一页</button>
+                        <button class="btn btn-secondary" onclick="goToPage('blacklist', window.pagination.blacklist.totalPages)" id="blacklistLastPageBtn" style="font-size: 12px; padding: 4px 8px;">末页</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 模拟数据生成函数
+        function generateMockData() {
+            // 人员数据
+            const personnel = [];
+            for (let i = 0; i < 20; i++) {
+                const gender = Math.random() > 0.5 ? '男' : '女';
+                const department = ['普通乘客', '工作人员', 'VIP'][Math.floor(Math.random() * 3)];
+                const faceStatus = Math.random() > 0.3 ? '已录入' : '未录入';
+                personnel.push({
+                    id: `PERS-${Date.now()}-${i}`,
+                    name: `人员${i + 1}`,
+                    gender: gender,
+                    age: Math.floor(Math.random() * 50) + 18,
+                    idCard: `110101${1970 + Math.floor(Math.random() * 50)}${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`,
+                    phone: `138${String(Math.floor(Math.random() * 100000000)).padStart(8, '0')}`,
+                    department: department,
+                    faceStatus: faceStatus,
+                    createTime: new Date(Date.now() - Math.random() * 31536000000).toLocaleString()
+                });
+            }
+
+            // 人脸录入历史
+            const enrollHistory = [];
+            for (let i = 0; i < 15; i++) {
+                const person = personnel[Math.floor(Math.random() * personnel.length)];
+                enrollHistory.push({
+                    id: `ENROLL-${Date.now()}-${i}`,
+                    time: new Date(Date.now() - Math.random() * 86400000).toLocaleString(),
+                    personId: person.id,
+                    personName: person.name,
+                    method: Math.random() > 0.5 ? '摄像头' : '上传图片',
+                    status: Math.random() > 0.8 ? '失败' : '成功',
+                    similarity: Math.random() > 0.8 ? (Math.random() * 10 + 85).toFixed(1) : (Math.random() * 10 + 90).toFixed(1)
+                });
+            }
+
+            // 识别记录
+            const recognitionRecords = [];
+            for (let i = 0; i < 30; i++) {
+                const person = personnel[Math.floor(Math.random() * personnel.length)];
+                const status = Math.random() > 0.8 ? '未识别' : '识别成功';
+                recognitionRecords.push({
+                    id: `REC-${Date.now()}-${i}`,
+                    time: new Date(Date.now() - Math.random() * 86400000).toLocaleString(),
+                    personId: status === '识别成功' ? person.id : '未知',
+                    personName: status === '识别成功' ? person.name : '未知',
+                    channel: `channel${Math.floor(Math.random() * 5) + 1}`,
+                    similarity: status === '识别成功' ? (Math.random() * 10 + 85).toFixed(1) : '0.0',
+                    status: status,
+                    temperature: (Math.random() * 2 + 36).toFixed(1)
+                });
+            }
+
+            // 黑名单
+            const blacklist = [];
+            for (let i = 0; i < 5; i++) {
+                const person = personnel[Math.floor(Math.random() * personnel.length)];
+                blacklist.push({
+                    id: `BLACK-${Date.now()}-${i}`,
+                    personId: person.id,
+                    personName: person.name,
+                    joinTime: new Date(Date.now() - Math.random() * 31536000000).toLocaleString(),
+                    reason: ['携带违禁品', '体温异常', '闹事行为', '其他原因'][Math.floor(Math.random() * 4)]
+                });
+            }
+
+            // 统计数据
+            const stats = {
+                todayRecognitionCount: Math.floor(Math.random() * 1000) + 200,
+                recognitionSuccessRate: (Math.random() * 5 + 95).toFixed(1),
+                averageSimilarity: (Math.random() * 5 + 90).toFixed(1),
+                unrecognizedCount: Math.floor(Math.random() * 50) + 10
+            };
+
+            return { personnel, enrollHistory, recognitionRecords, blacklist, stats };
+        }
+
+        // 全局数据变量
+        let mockData = {};
+        let currentPersonnel = null;
+        
+        // 分页配置
+        window.pagination = {
+            personnel: { currentPage: 1, pageSize: 20, totalPages: 1 },
+            enrollHistory: { currentPage: 1, pageSize: 20, totalPages: 1 },
+            recognitionRecords: { currentPage: 1, pageSize: 20, totalPages: 1 },
+            blacklist: { currentPage: 1, pageSize: 20, totalPages: 1 }
+        };
+
+        // 初始化页面
+        function initPage() {
+            // 生成模拟数据
+            mockData = generateMockData();
+
+            // 初始化标签页
+            initTabs();
+
+            // 初始化分页
+            calculateTotalPages('personnel');
+            calculateTotalPages('enrollHistory');
+            calculateTotalPages('recognitionRecords');
+            calculateTotalPages('blacklist');
+
+            // 渲染各标签页内容
+            renderPagedPersonnelList();
+            renderPagedEnrollHistory();
+            renderPagedRecognitionRecords();
+            renderPagedBlacklist();
+            renderStats();
+            updatePersonnelSelect();
+            initFaceCanvas();
+        }
+
+        // 初始化标签页
+        function initTabs() {
+            const tabNavItems = document.querySelectorAll('.tab-nav-item');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            tabNavItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    const tabId = item.getAttribute('data-tab');
+                    
+                    // 移除所有活动状态
+                    tabNavItems.forEach(nav => nav.classList.remove('active'));
+                    tabContents.forEach(content => content.classList.remove('active'));
+                    
+                    // 添加当前活动状态
+                    item.classList.add('active');
+                    document.getElementById(tabId).classList.add('active');
+                });
+            });
+        }
+
+        // 渲染人员列表
+        function renderPersonnelList() {
+            const tbody = document.getElementById('personnelTableBody');
+            tbody.innerHTML = '';
+
+            mockData.personnel.forEach(person => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${person.id}</td>
+                    <td>${person.name}</td>
+                    <td>${person.gender}</td>
+                    <td>${person.age}</td>
+                    <td>${person.idCard}</td>
+                    <td>${person.phone}</td>
+                    <td>${person.department}</td>
+                    <td>${person.faceStatus}</td>
+                    <td>
+                        <button class="btn btn-primary" onclick="editPersonnel('${person.id}')">编辑</button>
+                        <button class="btn btn-danger" onclick="deletePersonnel('${person.id}')">删除</button>
+                        ${person.faceStatus === '未录入' ? `<button class="btn btn-success" onclick="enrollPersonFace('${person.id}')">录入人脸</button>` : ''}
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // 渲染录入历史
+        function renderEnrollHistory() {
+            const tbody = document.getElementById('enrollHistoryTableBody');
+            tbody.innerHTML = '';
+
+            mockData.enrollHistory.forEach(record => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${record.time}</td>
+                    <td>${record.personId}</td>
+                    <td>${record.personName}</td>
+                    <td>${record.method}</td>
+                    <td>${record.status}</td>
+                    <td>${record.similarity}%</td>
+                    <td><button class="btn btn-primary" onclick="viewEnrollDetail('${record.id}')">查看</button></td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // 渲染识别记录
+        function renderRecognitionRecords() {
+            const tbody = document.getElementById('recognitionRecordsTableBody');
+            tbody.innerHTML = '';
+
+            mockData.recognitionRecords.forEach(record => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${record.time}</td>
+                    <td>${record.personId}</td>
+                    <td>${record.personName}</td>
+                    <td>${record.channel}</td>
+                    <td>${record.similarity}%</td>
+                    <td>${record.status}</td>
+                    <td>${record.temperature}°C</td>
+                    <td><button class="btn btn-primary" onclick="viewRecognitionDetail('${record.id}')">查看</button></td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // 渲染黑名单
+        function renderBlacklist() {
+            const tbody = document.getElementById('blacklistTableBody');
+            tbody.innerHTML = '';
+
+            mockData.blacklist.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.personId}</td>
+                    <td>${item.personName}</td>
+                    <td>${item.joinTime}</td>
+                    <td>${item.reason}</td>
+                    <td><button class="btn btn-danger" onclick="removeBlacklist('${item.id}')">移除</button></td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // 渲染统计数据
+        function renderStats() {
+            document.getElementById('todayRecognitionCount').textContent = mockData.stats.todayRecognitionCount;
+            document.getElementById('recognitionSuccessRate').textContent = `${mockData.stats.recognitionSuccessRate}%`;
+            document.getElementById('averageSimilarity').textContent = `${mockData.stats.averageSimilarity}%`;
+            document.getElementById('unrecognizedCount').textContent = mockData.stats.unrecognizedCount;
+        }
+
+        // 更新人员选择下拉框
+        function updatePersonnelSelect() {
+            const select = document.getElementById('enrollPersonSelect');
+            select.innerHTML = '';
+
+            mockData.personnel.forEach(person => {
+                const option = document.createElement('option');
+                option.value = person.id;
+                option.textContent = `${person.name} (${person.id})`;
+                select.appendChild(option);
+            });
+        }
+
+        // 初始化人脸画布
+        function initFaceCanvas() {
+            const canvas = document.getElementById('faceCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            // 绘制默认图像
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = '#909399';
+            ctx.font = '16px Microsoft YaHei';
+            ctx.textAlign = 'center';
+            ctx.fillText('请点击开始录入或上传图片', canvas.width / 2, canvas.height / 2);
+        }
+
+        // 添加人员
+        function addPersonnel() {
+            const name = document.getElementById('personName').value;
+            const gender = document.getElementById('personGender').value;
+            const age = document.getElementById('personAge').value;
+            const idCard = document.getElementById('personIdCard').value;
+            const phone = document.getElementById('personPhone').value;
+            const department = document.getElementById('personDepartment').value;
+
+            if (!name || !age || !idCard) {
+                alert('请填写必填字段');
+                return;
+            }
+
+            const newPersonnel = {
+                id: `PERS-${Date.now()}`,
+                name: name,
+                gender: gender,
+                age: parseInt(age),
+                idCard: idCard,
+                phone: phone,
+                department: department,
+                faceStatus: '未录入',
+                createTime: new Date().toLocaleString()
+            };
+
+            mockData.personnel.push(newPersonnel);
+            renderPersonnelList();
+            updatePersonnelSelect();
+            clearPersonnelForm();
+        }
+
+        // 更新人员
+        function updatePersonnel() {
+            if (!currentPersonnel) {
+                alert('请先选择要更新的人员');
+                return;
+            }
+
+            const name = document.getElementById('personName').value;
+            const gender = document.getElementById('personGender').value;
+            const age = document.getElementById('personAge').value;
+            const idCard = document.getElementById('personIdCard').value;
+            const phone = document.getElementById('personPhone').value;
+            const department = document.getElementById('personDepartment').value;
+
+            if (!name || !age || !idCard) {
+                alert('请填写必填字段');
+                return;
+            }
+
+            const index = mockData.personnel.findIndex(p => p.id === currentPersonnel.id);
+            if (index !== -1) {
+                mockData.personnel[index] = {
+                    ...currentPersonnel,
+                    name: name,
+                    gender: gender,
+                    age: parseInt(age),
+                    idCard: idCard,
+                    phone: phone,
+                    department: department
+                };
+                renderPersonnelList();
+                clearPersonnelForm();
+            }
+        }
+
+        // 删除人员
+        function deletePersonnel(personId) {
+            if (personId) {
+                mockData.personnel = mockData.personnel.filter(p => p.id !== personId);
+            } else {
+                const personIdInput = document.getElementById('personId').value;
+                if (!personIdInput) {
+                    alert('请先选择要删除的人员');
+                    return;
+                }
+                mockData.personnel = mockData.personnel.filter(p => p.id !== personIdInput);
+            }
+            renderPersonnelList();
+            updatePersonnelSelect();
+            clearPersonnelForm();
+        }
+
+        // 编辑人员
+        function editPersonnel(personId) {
+            currentPersonnel = mockData.personnel.find(p => p.id === personId);
+            if (currentPersonnel) {
+                document.getElementById('personId').value = currentPersonnel.id;
+                document.getElementById('personName').value = currentPersonnel.name;
+                document.getElementById('personGender').value = currentPersonnel.gender;
+                document.getElementById('personAge').value = currentPersonnel.age;
+                document.getElementById('personIdCard').value = currentPersonnel.idCard;
+                document.getElementById('personPhone').value = currentPersonnel.phone;
+                document.getElementById('personDepartment').value = currentPersonnel.department;
+            }
+        }
+
+        // 清空人员表单
+        function clearPersonnelForm() {
+            document.getElementById('personId').value = '';
+            document.getElementById('personName').value = '';
+            document.getElementById('personGender').value = '男';
+            document.getElementById('personAge').value = '';
+            document.getElementById('personIdCard').value = '';
+            document.getElementById('personPhone').value = '';
+            document.getElementById('personDepartment').value = '普通乘客';
+            currentPersonnel = null;
+        }
+
+        // 人脸录入
+        function startEnroll() {
+            const personId = document.getElementById('enrollPersonSelect').value;
+            const method = document.getElementById('enrollMethodSelect').value;
+            
+            // 模拟人脸录入过程
+            const canvas = document.getElementById('faceCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            // 绘制模拟人脸图像
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 绘制简单的人脸轮廓
+            ctx.fillStyle = '#ffdbac';
+            ctx.beginPath();
+            ctx.arc(canvas.width / 2, canvas.height / 2, 80, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 绘制眼睛
+            ctx.fillStyle = '#000';
+            ctx.beginPath();
+            ctx.arc(canvas.width / 2 - 30, canvas.height / 2 - 20, 10, 0, Math.PI * 2);
+            ctx.arc(canvas.width / 2 + 30, canvas.height / 2 - 20, 10, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 绘制嘴巴
+            ctx.beginPath();
+            ctx.arc(canvas.width / 2, canvas.height / 2 + 30, 20, 0, Math.PI);
+            ctx.stroke();
+            
+            // 绘制文字
+            ctx.fillStyle = '#409eff';
+            ctx.font = '14px Microsoft YaHei';
+            ctx.textAlign = 'center';
+            ctx.fillText('正在录入人脸...', canvas.width / 2, canvas.height - 50);
+        }
+
+        // 保存人脸
+        function saveEnroll() {
+            const personId = document.getElementById('enrollPersonSelect').value;
+            const method = document.getElementById('enrollMethodSelect').value;
+            
+            const person = mockData.personnel.find(p => p.id === personId);
+            if (person) {
+                person.faceStatus = '已录入';
+                
+                // 添加录入历史
+                const newEnrollRecord = {
+                    id: `ENROLL-${Date.now()}`,
+                    time: new Date().toLocaleString(),
+                    personId: person.id,
+                    personName: person.name,
+                    method: method === 'camera' ? '摄像头' : '上传图片',
+                    status: '成功',
+                    similarity: (Math.random() * 10 + 90).toFixed(1)
+                };
+                mockData.enrollHistory.unshift(newEnrollRecord);
+                
+                // 更新界面
+                renderPersonnelList();
+                renderEnrollHistory();
+                updatePersonnelSelect();
+                
+                alert('人脸录入成功');
+            }
+        }
+
+        // 取消录入
+        function cancelEnroll() {
+            initFaceCanvas();
+        }
+
+        // 处理图片上传
+        function handleFaceImageUpload() {
+            const fileInput = document.getElementById('faceImageUpload');
+            const file = fileInput.files[0];
+            
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const canvas = document.getElementById('faceCanvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    // 创建图像对象
+                    const img = new Image();
+                    img.onload = function() {
+                        // 计算缩放比例
+                        const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
+                        const width = img.width * scale;
+                        const height = img.height * scale;
+                        
+                        // 清空画布并绘制图像
+                        ctx.fillStyle = '#000';
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(img, (canvas.width - width) / 2, (canvas.height - height) / 2, width, height);
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // 查看录入历史详情
+        function viewEnrollDetail(recordId) {
+            const record = mockData.enrollHistory.find(r => r.id === recordId);
+            if (record) {
+                alert(`录入详情：\nID: ${record.id}\n时间: ${record.time}\n人员: ${record.personName} (${record.personId})\n方式: ${record.method}\n状态: ${record.status}\n相似度: ${record.similarity}%`);
+            }
+        }
+
+        // 查看识别记录详情
+        function viewRecognitionDetail(recordId) {
+            const record = mockData.recognitionRecords.find(r => r.id === recordId);
+            if (record) {
+                alert(`识别详情：\nID: ${record.id}\n时间: ${record.time}\n人员: ${record.personName} (${record.personId})\n通道: ${record.channel}\n状态: ${record.status}\n相似度: ${record.similarity}%\n体温: ${record.temperature}°C`);
+            }
+        }
+
+        // 录入人脸
+        function enrollPersonFace(personId) {
+            const tabNav = document.querySelector('.tab-nav-item[data-tab="enroll"]');
+            tabNav.click();
+            
+            // 设置人员选择
+            document.getElementById('enrollPersonSelect').value = personId;
+        }
+
+        // 添加到黑名单
+        function addBlacklist() {
+            const personId = document.getElementById('blacklistPersonId').value;
+            const personName = document.getElementById('blacklistPersonName').value;
+            const reason = document.getElementById('blacklistReason').value;
+
+            if (!personId || !personName || !reason) {
+                alert('请填写完整信息');
+                return;
+            }
+
+            const newBlacklistItem = {
+                id: `BLACK-${Date.now()}`,
+                personId: personId,
+                personName: personName,
+                joinTime: new Date().toLocaleString(),
+                reason: reason
+            };
+
+            mockData.blacklist.push(newBlacklistItem);
+            renderBlacklist();
+            
+            // 清空表单
+            document.getElementById('blacklistPersonId').value = '';
+            document.getElementById('blacklistPersonName').value = '';
+            document.getElementById('blacklistReason').value = '';
+        }
+
+        // 从黑名单移除
+        function removeBlacklist(blacklistId) {
+            if (blacklistId) {
+                mockData.blacklist = mockData.blacklist.filter(item => item.id !== blacklistId);
+            } else {
+                const personId = document.getElementById('blacklistPersonId').value;
+                if (personId) {
+                    mockData.blacklist = mockData.blacklist.filter(item => item.personId !== personId);
+                }
+            }
+            // 重新计算总页数
+            calculateTotalPages('blacklist');
+            // 更新分页UI
+            updatePaginationUI('blacklist');
+            // 渲染分页数据
+            renderPagedBlacklist();
+        }
+
+        // 计算总页数
+        function calculateTotalPages(type) {
+            const data = mockData[type];
+            if (!data) return;
+            
+            const pagination = window.pagination[type];
+            pagination.totalPages = Math.ceil(data.length / pagination.pageSize);
+            if (pagination.totalPages < 1) {
+                pagination.totalPages = 1;
+            }
+        }
+        
+        // 更新分页UI
+        function updatePaginationUI(type) {
+            const pagination = window.pagination[type];
+            const currentPageSpan = document.getElementById(`${type}CurrentPageSpan`);
+            const totalPagesSpan = document.getElementById(`${type}TotalPagesSpan`);
+            
+            if (currentPageSpan && totalPagesSpan) {
+                currentPageSpan.textContent = pagination.currentPage;
+                totalPagesSpan.textContent = pagination.totalPages;
+            }
+            
+            // 启用/禁用按钮
+            const firstPageBtn = document.getElementById(`${type}FirstPageBtn`);
+            const prevPageBtn = document.getElementById(`${type}PrevPageBtn`);
+            const nextPageBtn = document.getElementById(`${type}NextPageBtn`);
+            const lastPageBtn = document.getElementById(`${type}LastPageBtn`);
+            
+            if (firstPageBtn && prevPageBtn) {
+                firstPageBtn.disabled = pagination.currentPage === 1;
+                prevPageBtn.disabled = pagination.currentPage === 1;
+            }
+            
+            if (nextPageBtn && lastPageBtn) {
+                nextPageBtn.disabled = pagination.currentPage === pagination.totalPages;
+                lastPageBtn.disabled = pagination.currentPage === pagination.totalPages;
+            }
+        }
+        
+        // 改变每页显示数量
+        function changePageSize(type) {
+            const selectElement = document.getElementById(`${type}PageSizeSelect`);
+            if (selectElement) {
+                window.pagination[type].pageSize = parseInt(selectElement.value);
+                window.pagination[type].currentPage = 1;
+                
+                // 重新计算总页数
+                calculateTotalPages(type);
+                
+                // 更新分页UI
+                updatePaginationUI(type);
+                
+                // 渲染分页数据
+                if (type === 'personnel') {
+                    renderPagedPersonnelList();
+                } else if (type === 'enrollHistory') {
+                    renderPagedEnrollHistory();
+                } else if (type === 'recognitionRecords') {
+                    renderPagedRecognitionRecords();
+                } else if (type === 'blacklist') {
+                    renderPagedBlacklist();
+                }
+            }
+        }
+        
+        // 跳转到指定页面
+        function goToPage(type, pageNum) {
+            const pagination = window.pagination[type];
+            
+            if (pageNum < 1 || pageNum > pagination.totalPages) {
+                return;
+            }
+            
+            pagination.currentPage = pageNum;
+            
+            // 更新分页UI
+            updatePaginationUI(type);
+            
+            // 渲染分页数据
+            if (type === 'personnel') {
+                renderPagedPersonnelList();
+            } else if (type === 'enrollHistory') {
+                renderPagedEnrollHistory();
+            } else if (type === 'recognitionRecords') {
+                renderPagedRecognitionRecords();
+            } else if (type === 'blacklist') {
+                renderPagedBlacklist();
+            }
+        }
+        
+        // 渲染分页人员列表
+        function renderPagedPersonnelList() {
+            const pagination = window.pagination.personnel;
+            const startIndex = (pagination.currentPage - 1) * pagination.pageSize;
+            const endIndex = startIndex + pagination.pageSize;
+            const pagedData = mockData.personnel.slice(startIndex, endIndex);
+            
+            const tbody = document.getElementById('personnelTableBody');
+            tbody.innerHTML = '';
+
+            pagedData.forEach(person => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${person.id}</td>
+                    <td>${person.name}</td>
+                    <td>${person.gender}</td>
+                    <td>${person.age}</td>
+                    <td>${person.idCard}</td>
+                    <td>${person.phone}</td>
+                    <td>${person.department}</td>
+                    <td>${person.faceStatus}</td>
+                    <td>
+                        <button class="btn btn-primary" onclick="editPersonnel('${person.id}')">编辑</button>
+                        <button class="btn btn-danger" onclick="deletePersonnel('${person.id}')">删除</button>
+                        ${person.faceStatus === '未录入' ? `<button class="btn btn-success" onclick="enrollPersonFace('${person.id}')">录入人脸</button>` : ''}
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            // 更新分页UI
+            updatePaginationUI('personnel');
+        }
+        
+        // 渲染分页录入历史
+        function renderPagedEnrollHistory() {
+            const pagination = window.pagination.enrollHistory;
+            const startIndex = (pagination.currentPage - 1) * pagination.pageSize;
+            const endIndex = startIndex + pagination.pageSize;
+            const pagedData = mockData.enrollHistory.slice(startIndex, endIndex);
+            
+            const tbody = document.getElementById('enrollHistoryTableBody');
+            tbody.innerHTML = '';
+
+            pagedData.forEach(record => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${record.time}</td>
+                    <td>${record.personId}</td>
+                    <td>${record.personName}</td>
+                    <td>${record.method}</td>
+                    <td>${record.status}</td>
+                    <td>${record.similarity}%</td>
+                    <td><button class="btn btn-primary" onclick="viewEnrollDetail('${record.id}')">查看</button></td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            // 更新分页UI
+            updatePaginationUI('enrollHistory');
+        }
+        
+        // 渲染分页识别记录
+        function renderPagedRecognitionRecords() {
+            const pagination = window.pagination.recognitionRecords;
+            const startIndex = (pagination.currentPage - 1) * pagination.pageSize;
+            const endIndex = startIndex + pagination.pageSize;
+            const pagedData = mockData.recognitionRecords.slice(startIndex, endIndex);
+            
+            const tbody = document.getElementById('recognitionRecordsTableBody');
+            tbody.innerHTML = '';
+
+            pagedData.forEach(record => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${record.time}</td>
+                    <td>${record.personId}</td>
+                    <td>${record.personName}</td>
+                    <td>${record.channel}</td>
+                    <td>${record.similarity}%</td>
+                    <td>${record.status}</td>
+                    <td>${record.temperature}°C</td>
+                    <td><button class="btn btn-primary" onclick="viewRecognitionDetail('${record.id}')">查看</button></td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            // 更新分页UI
+            updatePaginationUI('recognitionRecords');
+        }
+        
+        // 渲染分页黑名单
+        function renderPagedBlacklist() {
+            const pagination = window.pagination.blacklist;
+            const startIndex = (pagination.currentPage - 1) * pagination.pageSize;
+            const endIndex = startIndex + pagination.pageSize;
+            const pagedData = mockData.blacklist.slice(startIndex, endIndex);
+            
+            const tbody = document.getElementById('blacklistTableBody');
+            tbody.innerHTML = '';
+
+            pagedData.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.personId}</td>
+                    <td>${item.personName}</td>
+                    <td>${item.joinTime}</td>
+                    <td>${item.reason}</td>
+                    <td><button class="btn btn-danger" onclick="removeBlacklist('${item.id}')">移除</button></td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            // 更新分页UI
+            updatePaginationUI('blacklist');
+        }
+        
+        // 更新addPersonnel函数以支持分页
+        const originalAddPersonnel = addPersonnel;
+        addPersonnel = function() {
+            originalAddPersonnel.call(this);
+            // 重新计算总页数
+            calculateTotalPages('personnel');
+            // 更新分页UI
+            updatePaginationUI('personnel');
+            // 渲染分页数据
+            renderPagedPersonnelList();
+        };
+        
+        // 更新deletePersonnel函数以支持分页
+        const originalDeletePersonnel = deletePersonnel;
+        deletePersonnel = function(personId) {
+            originalDeletePersonnel.call(this, personId);
+            // 重新计算总页数
+            calculateTotalPages('personnel');
+            // 更新分页UI
+            updatePaginationUI('personnel');
+            // 渲染分页数据
+            renderPagedPersonnelList();
+        };
+        
+        // 更新addBlacklist函数以支持分页
+        const originalAddBlacklist = addBlacklist;
+        addBlacklist = function() {
+            originalAddBlacklist.call(this);
+            // 重新计算总页数
+            calculateTotalPages('blacklist');
+            // 更新分页UI
+            updatePaginationUI('blacklist');
+            // 渲染分页数据
+            renderPagedBlacklist();
+        };
+        
+        // 更新saveEnroll函数以支持分页
+        const originalSaveEnroll = saveEnroll;
+        saveEnroll = function() {
+            originalSaveEnroll.call(this);
+            // 重新计算总页数
+            calculateTotalPages('enrollHistory');
+            calculateTotalPages('personnel');
+            // 更新分页UI
+            updatePaginationUI('enrollHistory');
+            updatePaginationUI('personnel');
+            // 渲染分页数据
+            renderPagedEnrollHistory();
+            renderPagedPersonnelList();
+        };
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', initPage);
+    </script>
+</body>
+</html>

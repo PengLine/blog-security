@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>仪表盘</title>
+    
+    <style>
+        /* 全局样式重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* 主容器样式 */
+        .container {
+            font-family: 'Microsoft YaHei', Arial, sans-serif !important;
+            background-color: #0a1929 !important;
+            color: #ffffff !important;
+            overflow-x: hidden !important;
+            width: 100% !important;
+            max-width: 1200px !important;
+            margin: 0 auto !important;
+            padding: 20px !important;
+        }
+
+        .container .page-header {
+            background-color: #10253b;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            margin-bottom: 20px;
+        }
+
+        .page-header h1 {
+            font-size: 24px;
+            color: #ffffff;
+            margin-bottom: 10px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: #909399;
+            padding: 8px 16px;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            background-color: #18304a;
+            color: #ffffff;
+        }
+
+        .nav-links a.active {
+            background-color: #18304a;
+            color: #409eff;
+        }
+
+        /* 模块容器 */
+        .module {
+            padding: 20px;
+        }
+
+        /* 统计卡片区域 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background-color: #10253b;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .stat-title {
+            font-size: 12px;
+            color: #909399;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #ffffff;
+            margin-bottom: 5px;
+        }
+
+        .stat-trend {
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .trend-up {
+            color: #67c23a;
+        }
+
+        .trend-down {
+            color: #f56c6c;
+        }
+
+        /* 图表区域 */
+        .charts-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .chart-container {
+            background-color: #10253b;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .chart-title {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #ffffff;
+        }
+
+        /* 数据表格 */
+        .table-section {
+            background-color: #10253b;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            margin-bottom: 20px;
+        }
+
+        .table-title {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #ffffff;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #1e3a5f;
+            font-size: 13px;
+        }
+
+        .data-table th {
+            background-color: #18304a;
+            color: #909399;
+            font-weight: normal;
+        }
+
+        .data-table td {
+            color: #ffffff;
+        }
+
+        /* 状态标签 */
+        .status-tag {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            text-align: center;
+        }
+
+        .status-normal {
+            background-color: #67c23a;
+            color: #ffffff;
+        }
+
+        .status-warning {
+            background-color: #e6a23c;
+            color: #ffffff;
+        }
+
+        .status-danger {
+            background-color: #f56c6c;
+            color: #ffffff;
+        }
+
+        .status-processing {
+            background-color: #409eff;
+            color: #ffffff;
+        }
+
+        /* 操作按钮 */
+        .btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+            margin-right: 5px;
+        }
+
+        .btn-primary {
+            background-color: #409eff;
+            color: #ffffff;
+        }
+
+        .btn-primary:hover {
+            background-color: #66b1ff;
+        }
+
+        .btn-secondary {
+            background-color: #606266;
+            color: #ffffff;
+        }
+
+        .btn-secondary:hover {
+            background-color: #737579;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 1400px) {
+            .stats-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-nav {
+                display: none;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .charts-section {
+                grid-template-columns: 1fr;
+            }
+
+            /* 表格优化 */
+            .data-table {
+                font-size: 12px;
+            }
+
+            .data-table th,
+            .data-table td {
+                padding: 8px 5px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .logo {
+                font-size: 20px;
+            }
+
+            .system-info {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <h1>仪表盘</h1>
+            <div class="nav-links">
+                <a href="index.html">首页</a>
+                <a href="dashboard.html" class="active">仪表盘</a>
+                <a href="device.html">设备管理</a>
+                <a href="events.html">事件中心</a>
+                <a href="judge.html">集中判图</a>
+                <a href="alarm.html">告警中心</a>
+                <a href="analysis.html">统计分析</a>
+                <a href="passage.html">通行管理</a>
+                <a href="face.html">人脸识别</a>
+                <a href="config.html">系统配置</a>
+            </div>
+        </div>
+        <!-- 统计卡片区域 -->
+        <div class="stats-grid" id="statsGrid"></div>
+        
+        <!-- 图表区域 -->
+        <div class="charts-section">
+            <div class="chart-container">
+                <div class="chart-title">每小时客流统计</div>
+                <canvas id="passengerFlowChart" width="400" height="250"></canvas>
+            </div>
+            <div class="chart-container">
+                <div class="chart-title">违禁品检测趋势</div>
+                <canvas id="contrabandChart" width="400" height="250"></canvas>
+            </div>
+        </div>
+        
+        <!-- 最新事件列表 -->
+        <div class="table-section">
+            <div class="table-title">最新事件</div>
+            <table class="data-table" id="eventsTable">
+                <thead>
+                    <tr>
+                        <th>时间</th>
+                        <th>设备</th>
+                        <th>类型</th>
+                        <th>状态</th>
+                        <th>详情</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="eventsTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // 模拟数据生成函数
+        function generateMockData() {
+            // 设备列表数据
+            const deviceTypes = [
+                { name: "安检机", type: "security", ip: "192.168.1.101", status: "online", location: "1号通道" },
+                { name: "复检台", type: "security", ip: "192.168.1.102", status: "online", location: "2号通道" },
+                { name: "金属门", type: "access", ip: "192.168.1.103", status: "online", location: "3号通道" },
+                { name: "毫米波门", type: "access", ip: "192.168.1.104", status: "warning", location: "4号通道" },
+                { name: "防损门", type: "access", ip: "192.168.1.105", status: "online", location: "5号通道" },
+                { name: "分类门", type: "access", ip: "192.168.1.106", status: "offline", location: "6号通道" },
+                { name: "门禁设备", type: "access", ip: "192.168.1.107", status: "online", location: "7号通道" },
+                { name: "门禁视频一体机", type: "access", ip: "192.168.1.108", status: "online", location: "8号通道" },
+                { name: "人证对比", type: "access", ip: "192.168.1.109", status: "online", location: "9号通道" },
+                { name: "炸探", type: "detection", ip: "192.168.1.110", status: "online", location: "10号通道" },
+                { name: "液探", type: "detection", ip: "192.168.1.111", status: "online", location: "11号通道" }
+            ];
+
+            // 事件类型
+            const eventTypes = [
+                { name: "正常通过", type: "passenger", status: "normal", desc: "人员正常通过安检" },
+                { name: "金属检测", type: "metal", status: "warning", desc: "检测到金属物品" },
+                { name: "违禁品检测", type: "contraband", status: "danger", desc: "检测到违禁物品" },
+                { name: "温度异常", type: "face", status: "warning", desc: "体温检测异常" },
+                { name: "未刷脸", type: "face", status: "warning", desc: "未进行人脸识别" },
+                { name: "设备离线", type: "device", status: "danger", desc: "设备离线告警" },
+                { name: "设备在线", type: "device", status: "normal", desc: "设备恢复在线" }
+            ];
+
+            // 状态映射
+            const statusMap = {
+                normal: { name: "正常", class: "status-normal" },
+                warning: { name: "警告", class: "status-warning" },
+                danger: { name: "危险", class: "status-danger" },
+                processing: { name: "处理中", class: "status-processing" }
+            };
+
+            // 生成统计数据
+            const stats = [
+                { title: "今日客流", value: Math.floor(Math.random() * 5000) + 1000, trend: Math.random() > 0.5 ? "up" : "down", change: Math.floor(Math.random() * 20) + 1 },
+                { title: "违禁品检测", value: Math.floor(Math.random() * 100) + 10, trend: Math.random() > 0.5 ? "up" : "down", change: Math.floor(Math.random() * 10) + 1 },
+                { title: "温度异常", value: Math.floor(Math.random() * 50) + 5, trend: Math.random() > 0.5 ? "up" : "down", change: Math.floor(Math.random() * 5) + 1 },
+                { title: "设备在线率", value: (Math.random() * 10 + 90).toFixed(1), trend: "up", change: 0.5 },
+                { title: "包裹检测", value: Math.floor(Math.random() * 3000) + 500, trend: Math.random() > 0.5 ? "up" : "down", change: Math.floor(Math.random() * 15) + 1 },
+                { title: "人脸识别率", value: (Math.random() * 5 + 95).toFixed(1), trend: "up", change: 0.3 }
+            ];
+
+            // 生成事件数据
+            const events = [];
+            for (let i = 0; i < 10; i++) {
+                const time = new Date(Date.now() - Math.random() * 86400000);
+                const eventType = eventTypes[Math.floor(Math.random() * eventTypes.length)];
+                const device = deviceTypes[Math.floor(Math.random() * deviceTypes.length)];
+                const status = statusMap[eventType.status];
+                const processStatus = Math.random() > 0.7 ? "已处理" : (Math.random() > 0.5 ? "处理中" : "未处理");
+                const passengerId = Math.random() > 0.5 ? `PASS-${Math.floor(Math.random() * 10000)}` : "未知";
+                const contrabandType = eventType.type === "contraband" ? ["刀具", "液体", "电池", "其他"][Math.floor(Math.random() * 4)] : "无";
+                
+                events.push({
+                    id: `EVT-${Date.now()}-${i}`,
+                    time: time.toLocaleString(),
+                    device: device.name,
+                    type: eventType.name,
+                    typeCode: eventType.type,
+                    status: status,
+                    processStatus: processStatus,
+                    passengerId: passengerId,
+                    contrabandType: contrabandType,
+                    details: `${eventType.desc}${eventType.type === "contraband" ? `，违禁品类型：${contrabandType}` : ""}${passengerId !== "未知" ? `，人员ID：${passengerId}` : ""}`
+                });
+            }
+
+            // 按时间倒序排序
+            events.sort((a, b) => new Date(b.time) - new Date(a.time));
+
+            return { stats, events };
+        }
+
+        // 更新时间显示
+        function updateTime() {
+            const now = new Date();
+            const timeDisplay = document.getElementById('currentTime');
+            if (timeDisplay) {
+                timeDisplay.textContent = now.toLocaleString();
+            }
+        }
+
+        // 渲染统计卡片
+        function renderStats(stats) {
+            const statsGrid = document.getElementById('statsGrid');
+            if (!statsGrid) return;
+            
+            statsGrid.innerHTML = '';
+
+            stats.forEach(stat => {
+                const card = document.createElement('div');
+                card.className = 'stat-card';
+                
+                const trendIcon = stat.trend === 'up' ? '↑' : '↓';
+                const trendClass = stat.trend === 'up' ? 'trend-up' : 'trend-down';
+                
+                card.innerHTML = `
+                    <div class="stat-title">${stat.title}</div>
+                    <div class="stat-value">${stat.value}</div>
+                    <div class="stat-trend ${trendClass}">
+                        ${trendIcon} ${stat.change}%
+                    </div>
+                `;
+                
+                statsGrid.appendChild(card);
+            });
+        }
+
+        // 渲染事件列表
+        function renderEvents(events) {
+            const tbody = document.getElementById('eventsTableBody');
+            if (!tbody) return;
+            
+            tbody.innerHTML = '';
+
+            events.forEach(event => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${event.time}</td>
+                    <td>${event.device}</td>
+                    <td>${event.type}</td>
+                    <td><span class="status-tag ${event.status.class}">${event.status.name}</span></td>
+                    <td>${event.details}</td>
+                    <td>
+                        <button class="btn btn-primary">查看</button>
+                        <button class="btn btn-secondary">处理</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // 绘制简单图表
+        function drawChart(canvasId, title, data, labels, colors) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            
+            // 清除画布
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 绘制图表逻辑
+            const width = canvas.width;
+            const height = canvas.height;
+            const padding = 50;
+            
+            // 绘制标题
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '14px Microsoft YaHei';
+            ctx.textAlign = 'center';
+            ctx.fillText(title, width / 2, 20);
+            
+            if (data.length === 0) return;
+            
+            const maxValue = Math.max(...data);
+            const minValue = Math.min(...data);
+            const range = maxValue - minValue || 1;
+            
+            const barWidth = (width - 2 * padding) / data.length;
+            
+            // 绘制所有条形
+            data.forEach((value, index) => {
+                const barHeight = ((value - minValue) / range) * (height - 2 * padding);
+                const x = padding + index * barWidth;
+                const y = height - padding - barHeight;
+                
+                // 绘制条形
+                ctx.fillStyle = colors[index % colors.length];
+                ctx.fillRect(x + 5, y, barWidth - 10, barHeight);
+                
+                // 绘制数值
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '12px Microsoft YaHei';
+                ctx.textAlign = 'center';
+                ctx.fillText(value, x + barWidth / 2, y - 10);
+                
+                // 绘制标签
+                if (labels && labels[index]) {
+                    ctx.fillStyle = '#909399';
+                    ctx.font = '11px Microsoft YaHei';
+                    ctx.fillText(labels[index], x + barWidth / 2, height - padding + 20);
+                }
+            });
+        }
+
+        // 渲染首页图表
+        function renderCharts() {
+            // 生成图表数据
+            const hours = Array.from({ length: 12 }, (_, i) => i + 8);
+            const passengerFlowData = hours.map(() => Math.floor(Math.random() * 200) + 50);
+            const contrabandData = hours.map(() => Math.floor(Math.random() * 20) + 2);
+            
+            const colors = ['#409eff', '#67c23a', '#e6a23c', '#f56c6c', '#909399', '#722ed1'];
+            
+            drawChart('passengerFlowChart', '每小时客流', passengerFlowData, hours.map(h => `${h}时`), colors);
+            drawChart('contrabandChart', '每小时违禁品检测', contrabandData, hours.map(h => `${h}时`), colors);
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            // 生成并渲染数据
+            const data = generateMockData();
+            renderStats(data.stats);
+            renderEvents(data.events);
+            renderCharts();
+        });
+
+        // 响应式处理
+        window.addEventListener('resize', () => {
+            // 重新绘制图表
+            renderCharts();
+        });
+    </script>
+</body>
+</html>
