@@ -1,0 +1,222 @@
+<div class="module">
+    <div class="module-header">
+        <h2>人脸识别管理</h2>
+    </div>
+    
+    <!-- 标签页导航 -->
+    <div class="tab-nav">
+        <div class="tab-nav-item active" data-tab="personnel">人员管理</div>
+        <div class="tab-nav-item" data-tab="enroll">人脸录入</div>
+        <div class="tab-nav-item" data-tab="records">识别记录</div>
+        <div class="tab-nav-item" data-tab="blacklist">黑名单管理</div>
+    </div>
+    
+    <!-- 人员管理标签页 -->
+    <div class="tab-content active" id="personnel">
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label class="filter-label">人员ID：</label>
+                <input type="text" class="form-control" id="personId" placeholder="系统自动生成" readonly>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">姓名：</label>
+                <input type="text" class="form-control" id="personName" placeholder="请输入姓名">
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">性别：</label>
+                <select class="form-control" id="personGender">
+                    <option value="男">男</option>
+                    <option value="女">女</option>
+                    <option value="未知">未知</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">年龄：</label>
+                <input type="number" class="form-control" id="personAge" placeholder="请输入年龄">
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">身份证号：</label>
+                <input type="text" class="form-control" id="personIdCard" placeholder="请输入身份证号">
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">联系方式：</label>
+                <input type="text" class="form-control" id="personPhone" placeholder="请输入联系方式">
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">所属部门：</label>
+                <select class="form-control" id="personDepartment">
+                    <option value="普通乘客">普通乘客</option>
+                    <option value="工作人员">工作人员</option>
+                    <option value="VIP">VIP</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <button class="btn btn-primary" onclick="addPersonnel()">添加</button>
+                <button class="btn btn-success" onclick="updatePersonnel()">更新</button>
+                <button class="btn btn-danger" onclick="deletePersonnel()">删除</button>
+                <button class="btn btn-secondary" onclick="clearPersonnelForm()">清空</button>
+            </div>
+        </div>
+        
+        <div class="table-section">
+            <table class="data-table" id="personnelTable">
+                <thead>
+                    <tr>
+                        <th>人员ID</th>
+                        <th>姓名</th>
+                        <th>性别</th>
+                        <th>年龄</th>
+                        <th>身份证号</th>
+                        <th>联系方式</th>
+                        <th>所属部门</th>
+                        <th>人脸状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="personnelTableBody">
+                    <!-- 人员列表将通过JavaScript动态生成 -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- 人脸录入标签页 -->
+    <div class="tab-content" id="enroll">
+        <div class="judge-interface">
+            <div class="image-panel">
+                <div class="chart-title">人脸预览</div>
+                <div class="image-container" id="faceCanvasContainer">
+                    <span style="color: #909399;">请点击开始录入或上传图片</span>
+                </div>
+                <input type="file" id="faceImageUpload" accept="image/*" style="display: none;" onchange="handleFaceImageUpload()">
+                <div class="judge-controls">
+                    <button class="btn btn-primary" onclick="startEnroll()">开始录入</button>
+                    <button class="btn btn-success" onclick="saveEnroll()">保存人脸</button>
+                    <button class="btn btn-danger" onclick="cancelEnroll()">取消</button>
+                    <button class="btn btn-secondary" onclick="document.getElementById('faceImageUpload').click()">上传图片</button>
+                </div>
+            </div>
+            <div class="judge-list" style="max-height: 300px;">
+                <div class="chart-title">选择人员</div>
+                <select class="form-control" id="enrollPersonSelect" style="width: 100%; padding: 8px;">
+                    <!-- 人员列表将通过JavaScript动态生成 -->
+                </select>
+                <div style="margin-top: 15px;">
+                    <div class="chart-title">录入方式</div>
+                    <select class="form-control" id="enrollMethodSelect" style="width: 100%; padding: 8px;">
+                        <option value="camera">摄像头录入</option>
+                        <option value="upload">上传图片</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <div class="table-section" style="margin-top: 20px;">
+            <table class="data-table" id="enrollHistoryTable">
+                <thead>
+                    <tr>
+                        <th>时间</th>
+                        <th>人员ID</th>
+                        <th>姓名</th>
+                        <th>录入方式</th>
+                        <th>状态</th>
+                        <th>相似度</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="enrollHistoryTableBody">
+                    <!-- 录入历史将通过JavaScript动态生成 -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- 识别记录标签页 -->
+    <div class="tab-content" id="records">
+        <div class="stats-grid" style="margin-bottom: 20px;">
+            <div class="stat-card">
+                <div class="stat-content">
+                    <h3>今日识别次数</h3>
+                    <div class="stat-value" id="todayRecognitionCount">0</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-content">
+                    <h3>识别成功率</h3>
+                    <div class="stat-value" id="recognitionSuccessRate">0%</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-content">
+                    <h3>平均相似度</h3>
+                    <div class="stat-value" id="averageSimilarity">0%</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-content">
+                    <h3>未识别次数</h3>
+                    <div class="stat-value" id="unrecognizedCount">0</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="table-section">
+            <table class="data-table" id="recognitionRecordsTable">
+                <thead>
+                    <tr>
+                        <th>时间</th>
+                        <th>人员ID</th>
+                        <th>姓名</th>
+                        <th>通道</th>
+                        <th>相似度</th>
+                        <th>状态</th>
+                        <th>体温</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="recognitionRecordsTableBody">
+                    <!-- 识别记录将通过JavaScript动态生成 -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- 黑名单管理标签页 -->
+    <div class="tab-content" id="blacklist">
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label class="filter-label">人员ID：</label>
+                <input type="text" class="form-control" id="blacklistPersonId" placeholder="请输入人员ID">
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">姓名：</label>
+                <input type="text" class="form-control" id="blacklistPersonName" placeholder="请输入姓名">
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">黑名单原因：</label>
+                <textarea class="form-control" id="blacklistReason" rows="2" placeholder="请输入加入黑名单的原因"></textarea>
+            </div>
+            <div class="filter-group">
+                <button class="btn btn-primary" onclick="addBlacklist()">添加到黑名单</button>
+                <button class="btn btn-danger" onclick="removeBlacklist()">从黑名单移除</button>
+            </div>
+        </div>
+        
+        <div class="table-section">
+            <table class="data-table" id="blacklistTable">
+                <thead>
+                    <tr>
+                        <th>人员ID</th>
+                        <th>姓名</th>
+                        <th>加入时间</th>
+                        <th>原因</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="blacklistTableBody">
+                    <!-- 黑名单列表将通过JavaScript动态生成 -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

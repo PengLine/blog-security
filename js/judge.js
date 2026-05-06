@@ -357,16 +357,23 @@ function setupBatchProcess() {
     }
 }
 
-// 初始化批量处理功能
-function initJudgeModule() {
+// 设置判图模块功能
+function setupJudgeModule() {
     setupBatchProcess();
 }
+
+// 全局初始化函数
+window.initJudgeModule = function() {
+    const data = generateMockData();
+    renderJudgeItems(data.judgeItems);
+    setupJudgeModule();
+};
 
 // 加载判图模块数据
 function loadJudgeData() {
     const data = generateMockData();
     renderJudgeItems(data.judgeItems);
-    initJudgeModule();
+    setupJudgeModule();
 }
 
 // 当判图模块显示时加载数据

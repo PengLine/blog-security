@@ -27,6 +27,11 @@ function renderEvents(events, tableId = 'eventsTableBody') {
     });
 }
 
+// 全局初始化函数
+window.initEventsModule = function() {
+    loadEventsData();
+};
+
 // 加载事件中心数据
 function loadEventsData() {
     const data = generateMockData();

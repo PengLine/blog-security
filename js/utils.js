@@ -217,7 +217,7 @@ export function setupNavigation() {
             
             // 加载对应的HTML文件
             const xhr = new XMLHttpRequest();
-            xhr.open('GET', `/turnkey/smart-security/html/${navId}.html`, true);
+            xhr.open('GET', `html/${navId}.html`, true);
             xhr.onreadystatechange = function() {
                 if (xhr.readyState === 4) {
                     if (xhr.status === 200) {
@@ -246,6 +246,8 @@ function loadModuleScript(navId) {
         judge: 'js/judge.js',
         alarm: 'js/alarm.js',
         analysis: 'js/analysis.js',
+        passage: 'js/passage.js',
+        face: 'js/face.js',
         config: 'js/config.js'
     };
     
@@ -267,8 +269,14 @@ function loadModuleScript(navId) {
     
     script.onload = function() {
         console.log('脚本加载完成:', scriptSrc);
-        // 脚本加载完成后移除，避免重复加载
-        document.body.removeChild(script);
+        // 等待一小段时间确保DOM已更新
+        setTimeout(() => {
+            // 调用模块的初始化函数
+            const initFunc = window[`init${navId.charAt(0).toUpperCase() + navId.slice(1)}Module`];
+            if (typeof initFunc === 'function') {
+                initFunc();
+            }
+        }, 100);
     };
     
     script.onerror = function() {
@@ -290,6 +298,30 @@ export function setupDeviceSwitch() {
             loadDeviceDetail(deviceType);
         });
     });
+}
+
+// 分页工具函数
+export function createPagination(totalItems, itemsPerPage, currentPage, onPageChange) {
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    
+    if (totalPages <= 1) return '';
+    
+    let paginationHTML = `
+        <div class="pagination-page">
+            <button class="btn btn-secondary" ${currentPage <= 1 ? 'disabled' : ''} onclick="onPageChange(${currentPage - 1})">上一页</button>
+            <span class="page-info">第 ${currentPage} 页，共 ${totalPages} 页</span>
+            <button class="btn btn-secondary" ${currentPage >= totalPages ? 'disabled' : ''} onclick="onPageChange(${currentPage + 1})">下一页</button>
+        </div>
+    `;
+    
+    return paginationHTML;
+}
+
+// 分页数据处理
+export function paginateData(data, page, itemsPerPage = 20) {
+    const startIndex = (page - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return data.slice(startIndex, endIndex);
 }
 
 // 绘制简单图表（使用canvas）
@@ -596,9 +628,12 @@ export function drawChart(canvasId, title, data, labels, colors) {
 
 // 响应式处理
 window.addEventListener('resize', () => {
-    // 重新绘制所有图表
-    const data = generateMockData();
-    renderCharts(data);
+    // 重新绘制所有图表（只有在dashboard页面时）
+    const dashboardModule = document.getElementById('dashboard');
+    if (dashboardModule && window.renderCharts) {
+        const data = generateMockData();
+        window.renderCharts(data);
+    }
 });
 
 // 移动端导航功能

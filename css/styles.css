@@ -209,6 +209,31 @@ body .container{
     display: block;
 }
 
+/* 模块头部 */
+.module-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #1e3a5f;
+}
+
+.module-header h2 {
+    font-size: 18px;
+    color: #ffffff;
+    font-weight: 500;
+    margin: 0;
+}
+
+/* 模块操作区域 */
+.module-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
 /* 统计卡片区域 */
 .stats-grid {
     display: grid;
@@ -240,6 +265,13 @@ body .container{
     font-weight: bold;
     color: #ffffff;
     margin-bottom: 5px;
+}
+
+.stat-content h3 {
+    font-size: 12px;
+    color: #909399;
+    margin-bottom: 8px;
+    font-weight: normal;
 }
 
 .stat-trend {
@@ -380,6 +412,15 @@ body .container{
 
 .btn-danger:hover {
     background-color: #f78989;
+}
+
+.btn-success {
+    background-color: #67c23a;
+    color: #ffffff;
+}
+
+.btn-success:hover {
+    background-color: #85ce61;
 }
 
 /* 表单控件 */
@@ -608,6 +649,55 @@ body .container{
 
 .alarm-item.alarm-info {
     border-left-color: #409eff;
+}
+
+/* 标签页导航样式 */
+.tab-nav {
+    display: flex;
+    background-color: #10253b;
+    border-radius: 8px 8px 0 0;
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+.tab-nav-item {
+    padding: 15px 20px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #909399;
+    border-bottom: 2px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.tab-nav-item:hover {
+    color: #409eff;
+    background-color: #18304a;
+}
+
+.tab-nav-item.active {
+    color: #409eff;
+    border-bottom-color: #409eff;
+    background-color: #18304a;
+}
+
+/* 标签页内容样式 */
+.tab-content {
+    background-color: #10253b;
+    padding: 20px;
+    border-radius: 0 0 8px 8px;
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* 通道控制样式 */
+.channel-controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
 }
 
 .alarm-meta {

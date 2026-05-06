@@ -1,5 +1,10 @@
 import { generateMockData, drawChart } from './utils.js';
 
+// 全局初始化函数
+window.initAnalysisModule = function() {
+    loadAnalysisData();
+};
+
 // 加载统计数据
 function loadAnalysisData() {
     const data = generateMockData();
@@ -48,33 +53,35 @@ export function updateStats(data) {
 
 // 渲染分析图表
 export function renderAnalysisCharts(data) {
+    const colors = ['#409eff', '#67c23a', '#e6a23c', '#f56c6c', '#909399', '#722ed1'];
+    
     // 客流趋势图
-    const passengerCtx = document.getElementById('passengerChart');
-    if (passengerCtx) {
-        const passengerData = generatePassengerChartData();
-        drawChart(passengerCtx, passengerData, { type: 'line', title: '客流趋势' });
-    }
+    const hours = Array.from({ length: 12 }, (_, i) => i + 8);
+    const passengerFlowData = hours.map(() => Math.floor(Math.random() * 200) + 50);
+    drawChart('passengerChart', '客流趋势', passengerFlowData, hours.map(h => `${h}时`), colors);
     
     // 违禁品分类图
-    const contrabandCtx = document.getElementById('contrabandChart');
-    if (contrabandCtx) {
-        const contrabandData = generateContrabandChartData();
-        drawChart(contrabandCtx, contrabandData, { type: 'pie', title: '违禁品分类' });
-    }
+    const contrabandData = [35, 25, 15, 25];
+    drawChart('contrabandChart', '违禁品分类', contrabandData, ['刀具', '液体', '电池', '其他'], colors);
     
     // 设备状态分布图
-    const deviceStatusCtx = document.getElementById('deviceStatusChart');
-    if (deviceStatusCtx) {
-        const deviceStatusData = generateDeviceStatusChartData(data);
-        drawChart(deviceStatusCtx, deviceStatusData, { type: 'doughnut', title: '设备状态分布' });
-    }
+    const onlineCount = data.devices.filter(device => device.status.name === '在线').length;
+    const warningCount = data.devices.filter(device => device.status.name === '告警').length;
+    const offlineCount = data.devices.filter(device => device.status.name === '离线').length;
+    drawChart('deviceStatusChart', '设备状态分布', [onlineCount, warningCount, offlineCount], ['在线', '告警', '离线'], ['#2ecc71', '#f39c12', '#e74c3c']);
     
     // 事件类型统计图
-    const eventTypeCtx = document.getElementById('eventTypeChart');
-    if (eventTypeCtx) {
-        const eventTypeData = generateEventTypeChartData(data);
-        drawChart(eventTypeCtx, eventTypeData, { type: 'bar', title: '事件类型统计' });
-    }
+    const eventTypeStats = {};
+    data.events.forEach(event => {
+        if (!eventTypeStats[event.typeCode]) {
+            eventTypeStats[event.typeCode] = 0;
+        }
+        eventTypeStats[event.typeCode]++;
+    });
+    const typeMap = { passenger: '乘客', metal: '金属', contraband: '违禁品', face: '人脸' };
+    const eventTypeLabels = Object.keys(eventTypeStats).map(type => typeMap[type] || type);
+    const eventTypeValues = Object.values(eventTypeStats);
+    drawChart('eventTypeChart', '事件类型统计', eventTypeValues, eventTypeLabels, colors);
 }
 
 // 生成客流趋势图数据

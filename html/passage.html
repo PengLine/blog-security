@@ -1,0 +1,132 @@
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-content">
+            <h3>今日总通行</h3>
+            <div class="stat-value" id="totalPassage">0</div>
+            <div class="stat-trend">
+                <span class="trend-up">+12.5%</span>
+                <span>较昨日</span>
+            </div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-content">
+            <h3>体温异常</h3>
+            <div class="stat-value" id="tempAbnormal">0</div>
+            <div class="stat-trend">
+                <span class="trend-down">-3.2%</span>
+                <span>较昨日</span>
+            </div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-content">
+            <h3>违禁品检测</h3>
+            <div class="stat-value" id="contrabandFound">0</div>
+            <div class="stat-trend">
+                <span class="trend-up">+5.1%</span>
+                <span>较昨日</span>
+            </div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-content">
+            <h3>人脸未识别</h3>
+            <div class="stat-value" id="faceUnidentified">0</div>
+            <div class="stat-trend">
+                <span class="trend-down">-8.3%</span>
+                <span>较昨日</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="module">
+    <div class="module-header">
+        <h2>通道状态与控制</h2>
+    </div>
+    <div class="channel-controls" id="channelControls">
+        <!-- 通道控制将通过JavaScript动态生成 -->
+    </div>
+</div>
+
+<div class="module">
+    <div class="module-header">
+        <h2>人员与包裹绑定</h2>
+        <div class="module-actions">
+            <button class="btn btn-success" onclick="addNewBinding()">新增绑定</button>
+        </div>
+    </div>
+    
+    <div class="filter-bar">
+        <div class="filter-group">
+            <label class="filter-label">人员ID：</label>
+            <input type="text" class="form-control" id="passengerId" placeholder="请输入人员ID">
+        </div>
+        <div class="filter-group">
+            <label class="filter-label">包裹ID：</label>
+            <input type="text" class="form-control" id="packageId" placeholder="请输入包裹ID">
+        </div>
+        <div class="filter-group">
+            <label class="filter-label">通道：</label>
+            <select class="form-control" id="channelSelect">
+                <option value="channel1">1号通道</option>
+                <option value="channel2">2号通道</option>
+                <option value="channel3">3号通道</option>
+                <option value="channel4">4号通道</option>
+                <option value="channel5">5号通道</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <button class="btn btn-primary" onclick="bindPassengerPackage()">绑定</button>
+            <button class="btn btn-secondary" onclick="unbindPassengerPackage()">解除绑定</button>
+        </div>
+    </div>
+    
+    <div class="table-section">
+        <table class="data-table" id="bindingTable">
+            <thead>
+                <tr>
+                    <th>人员ID</th>
+                    <th>包裹ID</th>
+                    <th>通道</th>
+                    <th>绑定时间</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="bindingTableBody">
+                <!-- 绑定记录将通过JavaScript动态生成 -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="module">
+    <div class="module-header">
+        <h2>最新通行记录</h2>
+        <div class="module-actions">
+            <button class="btn btn-success" onclick="addNewPassageRecord()">新增通行记录</button>
+        </div>
+    </div>
+    
+    <div class="table-section">
+        <table class="data-table" id="passageRecordsTable">
+            <thead>
+                <tr>
+                    <th>时间</th>
+                    <th>人员ID</th>
+                    <th>包裹ID</th>
+                    <th>体温</th>
+                    <th>违禁品</th>
+                    <th>通道</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="passageRecordsTableBody">
+                <!-- 通行记录将通过JavaScript动态生成 -->
+            </tbody>
+        </table>
+    </div>
+</div>

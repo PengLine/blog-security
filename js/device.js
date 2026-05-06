@@ -33,7 +33,7 @@ function performDeviceOperation(operation, deviceId) {
 }
 
 // 加载设备详情
-function loadDeviceDetail(deviceType) {
+window.loadDeviceDetail = function(deviceType) {
     // 模拟不同类型设备的详情数据
     const deviceDetails = {
         securityCheckMachine: {
@@ -454,6 +454,11 @@ function loadDeviceDetail(deviceType) {
         </div>
     `;
 }
+
+// 全局初始化函数
+window.initDeviceModule = function() {
+    loadDeviceData();
+};
 
 // 加载设备管理数据
 function loadDeviceData() {

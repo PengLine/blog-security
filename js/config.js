@@ -7,6 +7,11 @@ const configTypeMap = {
     system: '系统配置'
 };
 
+// 全局初始化函数
+window.initConfigModule = function() {
+    loadConfigs();
+};
+
 // 加载配置数据
 function loadConfigs() {
     const data = generateMockData();

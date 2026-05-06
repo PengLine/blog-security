@@ -7,6 +7,14 @@ const alarmLevelMap = {
     info: { name: '信息', class: 'alarm-info' }
 };
 
+// 全局初始化函数
+window.initAlarmModule = function() {
+    loadAlarms();
+    setupFilters();
+    setupSelectAll();
+    setupBatchHandle();
+};
+
 // 加载告警数据
 function loadAlarms() {
     const data = generateMockData();
@@ -28,13 +36,6 @@ if (alarmModule) {
     
     // 设置批量处理功能
     setupBatchHandle();
-}
-
-// 加载告警数据
-function loadAlarms() {
-    const data = generateMockData();
-    renderAlarms(data.alarms);
-    updateAlarmStats(data.alarms);
 }
 
 // 渲染告警列表

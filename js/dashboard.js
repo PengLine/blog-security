@@ -52,7 +52,7 @@ function renderEvents(events, tableId = 'eventsTable') {
 }
 
 // 渲染首页图表
-function renderCharts(data) {
+window.renderCharts = function(data) {
     // 生成图表数据
     const hours = Array.from({ length: 12 }, (_, i) => i + 8);
     const passengerFlowData = hours.map(() => Math.floor(Math.random() * 200) + 50);
@@ -71,6 +71,11 @@ function loadDashboardData() {
     renderEvents(data.events.slice(0, 10));
     renderCharts(data);
 }
+
+// 全局初始化函数
+window.initDashboardModule = function() {
+    loadDashboardData();
+};
 
 // 当首页模块显示时加载数据
 const dashboardModule = document.getElementById('dashboard');
