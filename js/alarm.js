@@ -1,4 +1,4 @@
-import { generateMockData } from './utils.js';
+import { generateMockData, paginateData } from './utils.js';
 
 // 告警级别映射
 const alarmLevelMap = {
@@ -6,6 +6,11 @@ const alarmLevelMap = {
     warning: { name: '警告', class: 'alarm-warning' },
     info: { name: '信息', class: 'alarm-info' }
 };
+
+// 分页变量
+let currentAlarmPage = 1;
+const alarmsPerPage = 20;
+let allAlarms = [];
 
 // 全局初始化函数
 window.initAlarmModule = function() {
@@ -18,8 +23,10 @@ window.initAlarmModule = function() {
 // 加载告警数据
 function loadAlarms() {
     const data = generateMockData();
-    renderAlarms(data.alarms);
-    updateAlarmStats(data.alarms);
+    allAlarms = data.alarms;
+    renderAlarms(paginateData(allAlarms, currentAlarmPage, alarmsPerPage));
+    updateAlarmStats(allAlarms);
+    renderAlarmPagination();
 }
 
 // 当告警中心模块显示时加载数据
@@ -67,6 +74,47 @@ export function renderAlarms(alarms) {
         tbody.appendChild(row);
     });
 }
+
+// 渲染告警分页
+function renderAlarmPagination() {
+    const moduleDiv = document.getElementById('alarm');
+    if (!moduleDiv) {
+        console.error('告警中心模块未找到');
+        return;
+    }
+    
+    const tableSection = moduleDiv.querySelector('.table-section');
+    if (!tableSection) {
+        console.error('告警中心表格区域未找到');
+        return;
+    }
+    
+    let paginationDiv = tableSection.querySelector('.pagination-page');
+    if (!paginationDiv) {
+        paginationDiv = document.createElement('div');
+        paginationDiv.className = 'pagination-page';
+        tableSection.appendChild(paginationDiv);
+    }
+    
+    const totalPages = Math.ceil(allAlarms.length / alarmsPerPage);
+    if (totalPages <= 1) {
+        paginationDiv.innerHTML = '';
+        return;
+    }
+    
+    paginationDiv.innerHTML = `
+        <button class="btn btn-secondary" ${currentAlarmPage <= 1 ? 'disabled' : ''} onclick="window.changeAlarmPage(${currentAlarmPage - 1})">上一页</button>
+        <span class="page-info">第 ${currentAlarmPage} 页，共 ${totalPages} 页</span>
+        <button class="btn btn-secondary" ${currentAlarmPage >= totalPages ? 'disabled' : ''} onclick="window.changeAlarmPage(${currentAlarmPage + 1})">下一页</button>
+    `;
+}
+
+// 切换告警页码
+window.changeAlarmPage = function(page) {
+    currentAlarmPage = page;
+    renderAlarms(paginateData(allAlarms, currentAlarmPage, alarmsPerPage));
+    renderAlarmPagination();
+};
 
 // 更新告警统计信息
 function updateAlarmStats(alarms) {

@@ -1,4 +1,9 @@
-import { generateMockData } from './utils.js';
+import { generateMockData, paginateData } from './utils.js';
+
+// 分页变量
+let currentEventPage = 1;
+const eventsPerPage = 20;
+let allEvents = [];
 
 // 渲染事件列表
 function renderEvents(events, tableId = 'eventsTableBody') {
@@ -27,6 +32,47 @@ function renderEvents(events, tableId = 'eventsTableBody') {
     });
 }
 
+// 渲染事件分页
+function renderEventPagination() {
+    const moduleDiv = document.getElementById('events');
+    if (!moduleDiv) {
+        console.error('事件中心模块未找到');
+        return;
+    }
+    
+    const tableSection = moduleDiv.querySelector('.table-section');
+    if (!tableSection) {
+        console.error('事件中心表格区域未找到');
+        return;
+    }
+    
+    let paginationDiv = tableSection.querySelector('.pagination-page');
+    if (!paginationDiv) {
+        paginationDiv = document.createElement('div');
+        paginationDiv.className = 'pagination-page';
+        tableSection.appendChild(paginationDiv);
+    }
+    
+    const totalPages = Math.ceil(allEvents.length / eventsPerPage);
+    if (totalPages <= 1) {
+        paginationDiv.innerHTML = '';
+        return;
+    }
+    
+    paginationDiv.innerHTML = `
+        <button class="btn btn-secondary" ${currentEventPage <= 1 ? 'disabled' : ''} onclick="window.changeEventPage(${currentEventPage - 1})">上一页</button>
+        <span class="page-info">第 ${currentEventPage} 页，共 ${totalPages} 页</span>
+        <button class="btn btn-secondary" ${currentEventPage >= totalPages ? 'disabled' : ''} onclick="window.changeEventPage(${currentEventPage + 1})">下一页</button>
+    `;
+}
+
+// 切换事件页码
+window.changeEventPage = function(page) {
+    currentEventPage = page;
+    renderEvents(paginateData(allEvents, currentEventPage, eventsPerPage));
+    renderEventPagination();
+};
+
 // 全局初始化函数
 window.initEventsModule = function() {
     loadEventsData();
@@ -35,7 +81,9 @@ window.initEventsModule = function() {
 // 加载事件中心数据
 function loadEventsData() {
     const data = generateMockData();
-    renderEvents(data.events);
+    allEvents = data.events;
+    renderEvents(paginateData(allEvents, currentEventPage, eventsPerPage));
+    renderEventPagination();
 }
 
 // 当事件中心模块显示时加载数据

@@ -1,4 +1,9 @@
-import { generateMockData } from './utils.js';
+import { generateMockData, paginateData } from './utils.js';
+
+// 分页变量
+let currentDevicePage = 1;
+const devicesPerPage = 20;
+let allDevices = [];
 
 // 渲染设备列表
 function renderDevices(devices) {
@@ -343,6 +348,10 @@ window.loadDeviceDetail = function(deviceType) {
         
         // 添加到设备管理模块中
         const deviceModule = document.getElementById('device');
+        if (!deviceModule) {
+            console.error('设备管理模块未找到');
+            return;
+        }
         const tableSection = deviceModule.querySelector('.table-section');
         if (tableSection) {
             deviceModule.insertBefore(deviceDetailPanel, tableSection);
@@ -455,6 +464,47 @@ window.loadDeviceDetail = function(deviceType) {
     `;
 }
 
+// 渲染设备分页
+function renderDevicePagination() {
+    const moduleDiv = document.getElementById('device');
+    if (!moduleDiv) {
+        console.error('设备管理模块未找到');
+        return;
+    }
+    
+    const tableSection = moduleDiv.querySelector('.table-section');
+    if (!tableSection) {
+        console.error('设备管理表格区域未找到');
+        return;
+    }
+    
+    let paginationDiv = tableSection.querySelector('.pagination-page');
+    if (!paginationDiv) {
+        paginationDiv = document.createElement('div');
+        paginationDiv.className = 'pagination-page';
+        tableSection.appendChild(paginationDiv);
+    }
+    
+    const totalPages = Math.ceil(allDevices.length / devicesPerPage);
+    if (totalPages <= 1) {
+        paginationDiv.innerHTML = '';
+        return;
+    }
+    
+    paginationDiv.innerHTML = `
+        <button class="btn btn-secondary" ${currentDevicePage <= 1 ? 'disabled' : ''} onclick="window.changeDevicePage(${currentDevicePage - 1})">上一页</button>
+        <span class="page-info">第 ${currentDevicePage} 页，共 ${totalPages} 页</span>
+        <button class="btn btn-secondary" ${currentDevicePage >= totalPages ? 'disabled' : ''} onclick="window.changeDevicePage(${currentDevicePage + 1})">下一页</button>
+    `;
+}
+
+// 切换设备页码
+window.changeDevicePage = function(page) {
+    currentDevicePage = page;
+    renderDevices(paginateData(allDevices, currentDevicePage, devicesPerPage));
+    renderDevicePagination();
+};
+
 // 全局初始化函数
 window.initDeviceModule = function() {
     loadDeviceData();
@@ -463,7 +513,9 @@ window.initDeviceModule = function() {
 // 加载设备管理数据
 function loadDeviceData() {
     const data = generateMockData();
-    renderDevices(data.devices);
+    allDevices = data.devices;
+    renderDevices(paginateData(allDevices, currentDevicePage, devicesPerPage));
+    renderDevicePagination();
 }
 
 // 当设备管理模块显示时加载数据

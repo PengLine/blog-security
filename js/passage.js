@@ -2,12 +2,33 @@ import { generateMockData } from './utils.js';
 
 let mockData = {};
 
+// 分页变量
+let currentBindingPage = 1;
+let currentPassagePage = 1;
+const recordsPerPage = 20;
+
 function initPage() {
     mockData = generatePassageMockData();
     renderStats();
     renderChannelControls();
-    renderBindingRecords(mockData.bindingRecords);
-    renderPassageRecords(mockData.passageRecords);
+    renderBindingRecords(getBindingPageData(1));
+    renderBindingPagination();
+    renderPassageRecords(getPassagePageData(1));
+    renderPassagePagination();
+}
+
+// 获取绑定记录分页数据
+function getBindingPageData(page) {
+    const start = (page - 1) * recordsPerPage;
+    const end = start + recordsPerPage;
+    return mockData.bindingRecords.slice(start, end);
+}
+
+// 获取通行记录分页数据
+function getPassagePageData(page) {
+    const start = (page - 1) * recordsPerPage;
+    const end = start + recordsPerPage;
+    return mockData.passageRecords.slice(start, end);
 }
 
 function generatePassageMockData() {
@@ -136,6 +157,70 @@ function renderPassageRecords(records) {
         tbody.appendChild(row);
     });
 }
+
+// 渲染绑定记录分页
+function renderBindingPagination() {
+    const tableSection = document.querySelector('.module:nth-child(2) .table-section');
+    if (!tableSection) return;
+    
+    let paginationDiv = tableSection.querySelector('.pagination-page');
+    if (!paginationDiv) {
+        paginationDiv = document.createElement('div');
+        paginationDiv.className = 'pagination-page';
+        tableSection.appendChild(paginationDiv);
+    }
+    
+    const totalPages = Math.ceil(mockData.bindingRecords.length / recordsPerPage);
+    if (totalPages <= 1) {
+        paginationDiv.innerHTML = '';
+        return;
+    }
+    
+    paginationDiv.innerHTML = `
+        <button class="btn btn-secondary" ${currentBindingPage <= 1 ? 'disabled' : ''} onclick="window.changeBindingPage(${currentBindingPage - 1})">上一页</button>
+        <span class="page-info">第 ${currentBindingPage} 页，共 ${totalPages} 页</span>
+        <button class="btn btn-secondary" ${currentBindingPage >= totalPages ? 'disabled' : ''} onclick="window.changeBindingPage(${currentBindingPage + 1})">下一页</button>
+    `;
+}
+
+// 切换绑定记录页码
+window.changeBindingPage = function(page) {
+    currentBindingPage = page;
+    renderBindingRecords(getBindingPageData(currentBindingPage));
+    renderBindingPagination();
+};
+
+// 渲染通行记录分页
+function renderPassagePagination() {
+    const tableSection = document.querySelector('.module:nth-child(3) .table-section');
+    if (!tableSection) return;
+    
+    let paginationDiv = tableSection.querySelector('.pagination-page');
+    if (!paginationDiv) {
+        paginationDiv = document.createElement('div');
+        paginationDiv.className = 'pagination-page';
+        tableSection.appendChild(paginationDiv);
+    }
+    
+    const totalPages = Math.ceil(mockData.passageRecords.length / recordsPerPage);
+    if (totalPages <= 1) {
+        paginationDiv.innerHTML = '';
+        return;
+    }
+    
+    paginationDiv.innerHTML = `
+        <button class="btn btn-secondary" ${currentPassagePage <= 1 ? 'disabled' : ''} onclick="window.changePassagePage(${currentPassagePage - 1})">上一页</button>
+        <span class="page-info">第 ${currentPassagePage} 页，共 ${totalPages} 页</span>
+        <button class="btn btn-secondary" ${currentPassagePage >= totalPages ? 'disabled' : ''} onclick="window.changePassagePage(${currentPassagePage + 1})">下一页</button>
+    `;
+}
+
+// 切换通行记录页码
+window.changePassagePage = function(page) {
+    currentPassagePage = page;
+    renderPassageRecords(getPassagePageData(currentPassagePage));
+    renderPassagePagination();
+};
 
 function toggleChannel(channelId) {
     const channel = mockData.channels.find(c => c.id === channelId);

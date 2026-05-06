@@ -1,4 +1,4 @@
-import { generateMockData } from './utils.js';
+import { generateMockData, paginateData } from './utils.js';
 
 // 配置类型映射
 const configTypeMap = {
@@ -6,6 +6,11 @@ const configTypeMap = {
     event: '事件配置',
     system: '系统配置'
 };
+
+// 分页变量
+let currentConfigPage = 1;
+const configsPerPage = 20;
+let allConfigs = [];
 
 // 全局初始化函数
 window.initConfigModule = function() {
@@ -15,7 +20,9 @@ window.initConfigModule = function() {
 // 加载配置数据
 function loadConfigs() {
     const data = generateMockData();
-    renderConfigs(data.configs);
+    allConfigs = data.configs;
+    renderConfigs(paginateData(allConfigs, currentConfigPage, configsPerPage));
+    renderConfigPagination();
 }
 
 // 当配置管理模块显示时加载数据
@@ -52,6 +59,38 @@ export function renderConfigs(configs) {
         tbody.appendChild(row);
     });
 }
+
+// 渲染配置分页
+function renderConfigPagination() {
+    const tableSection = document.querySelector('.table-section');
+    if (!tableSection) return;
+    
+    let paginationDiv = tableSection.querySelector('.pagination-page');
+    if (!paginationDiv) {
+        paginationDiv = document.createElement('div');
+        paginationDiv.className = 'pagination-page';
+        tableSection.appendChild(paginationDiv);
+    }
+    
+    const totalPages = Math.ceil(allConfigs.length / configsPerPage);
+    if (totalPages <= 1) {
+        paginationDiv.innerHTML = '';
+        return;
+    }
+    
+    paginationDiv.innerHTML = `
+        <button class="btn btn-secondary" ${currentConfigPage <= 1 ? 'disabled' : ''} onclick="window.changeConfigPage(${currentConfigPage - 1})">上一页</button>
+        <span class="page-info">第 ${currentConfigPage} 页，共 ${totalPages} 页</span>
+        <button class="btn btn-secondary" ${currentConfigPage >= totalPages ? 'disabled' : ''} onclick="window.changeConfigPage(${currentConfigPage + 1})">下一页</button>
+    `;
+}
+
+// 切换配置页码
+window.changeConfigPage = function(page) {
+    currentConfigPage = page;
+    renderConfigs(paginateData(allConfigs, currentConfigPage, configsPerPage));
+    renderConfigPagination();
+};
 
 // 设置筛选功能
 function setupFilters() {

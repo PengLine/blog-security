@@ -295,9 +295,61 @@ export function setupDeviceSwitch() {
             item.classList.add('active');
             // 加载设备详情数据
             const deviceType = item.dataset.device;
-            loadDeviceDetail(deviceType);
+            
+            // 检查设备管理模块是否存在
+            const deviceModuleExists = document.getElementById('device') !== null;
+            
+            if (typeof window.loadDeviceDetail === 'function' && deviceModuleExists) {
+                // 如果函数已定义且设备管理模块存在，直接调用
+                window.loadDeviceDetail(deviceType);
+            } else {
+                // 如果函数未定义或模块不存在，先加载设备管理模块
+                loadDeviceModuleThenDetail(deviceType);
+            }
         });
     });
+}
+
+// 先加载设备管理模块，然后调用设备详情
+function loadDeviceModuleThenDetail(deviceType) {
+    const contentDiv = document.querySelector('.content');
+    if (!contentDiv) return;
+    
+    // 显示加载状态
+    contentDiv.innerHTML = '<div class="loading">加载中...</div>';
+    
+    // 加载设备管理HTML
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', 'html/device.html', true);
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4 && xhr.status === 200) {
+            contentDiv.innerHTML = xhr.responseText;
+            
+            // 加载设备管理JavaScript
+            const script = document.createElement('script');
+            script.type = 'module';
+            script.src = 'js/device.js';
+            document.body.appendChild(script);
+            script.onload = () => {
+                setTimeout(() => {
+                    // 更新导航状态
+                    const navItems = document.querySelectorAll('.nav-item');
+                    navItems.forEach(nav => nav.classList.remove('active'));
+                    const deviceNav = document.querySelector('.nav-item[data-nav="device"]');
+                    if (deviceNav) deviceNav.classList.add('active');
+                    
+                    // 调用设备详情函数
+                    if (typeof window.loadDeviceDetail === 'function') {
+                        window.loadDeviceDetail(deviceType);
+                    }
+                }, 100);
+            };
+            script.onerror = function() {
+                console.error('加载设备管理脚本失败');
+            };
+        }
+    };
+    xhr.send();
 }
 
 // 分页工具函数
@@ -701,8 +753,15 @@ function loadInitialDashboard() {
                 script.src = 'js/dashboard.js';
                 document.body.appendChild(script);
                 script.onload = () => {
-                    // 脚本加载完成后移除，避免重复加载
-                    document.body.removeChild(script);
+                    console.log('Dashboard script loaded');
+                    // 调用首页初始化函数
+                    setTimeout(() => {
+                        if (typeof window.initDashboardModule === 'function') {
+                            window.initDashboardModule();
+                        } else {
+                            console.error('initDashboardModule函数未定义');
+                        }
+                    }, 100);
                 };
                 script.onerror = function() {
                     console.error('加载首页脚本失败');
