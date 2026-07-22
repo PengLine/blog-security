@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
+    <meta name="robots" content="noindex, nofollow">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>仪表盘</title>
-    
+
     <style>
         /* 全局样式重置 */
         * {
@@ -279,6 +281,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="page-header">
@@ -298,7 +301,7 @@
         </div>
         <!-- 统计卡片区域 -->
         <div class="stats-grid" id="statsGrid"></div>
-        
+
         <!-- 图表区域 -->
         <div class="charts-section">
             <div class="chart-container">
@@ -310,7 +313,7 @@
                 <canvas id="contrabandChart" width="400" height="250"></canvas>
             </div>
         </div>
-        
+
         <!-- 最新事件列表 -->
         <div class="table-section">
             <div class="table-title">最新事件</div>
@@ -387,7 +390,7 @@
                 const processStatus = Math.random() > 0.7 ? "已处理" : (Math.random() > 0.5 ? "处理中" : "未处理");
                 const passengerId = Math.random() > 0.5 ? `PASS-${Math.floor(Math.random() * 10000)}` : "未知";
                 const contrabandType = eventType.type === "contraband" ? ["刀具", "液体", "电池", "其他"][Math.floor(Math.random() * 4)] : "无";
-                
+
                 events.push({
                     id: `EVT-${Date.now()}-${i}`,
                     time: time.toLocaleString(),
@@ -421,16 +424,16 @@
         function renderStats(stats) {
             const statsGrid = document.getElementById('statsGrid');
             if (!statsGrid) return;
-            
+
             statsGrid.innerHTML = '';
 
             stats.forEach(stat => {
                 const card = document.createElement('div');
                 card.className = 'stat-card';
-                
+
                 const trendIcon = stat.trend === 'up' ? '↑' : '↓';
                 const trendClass = stat.trend === 'up' ? 'trend-up' : 'trend-down';
-                
+
                 card.innerHTML = `
                     <div class="stat-title">${stat.title}</div>
                     <div class="stat-value">${stat.value}</div>
@@ -438,7 +441,7 @@
                         ${trendIcon} ${stat.change}%
                     </div>
                 `;
-                
+
                 statsGrid.appendChild(card);
             });
         }
@@ -447,7 +450,7 @@
         function renderEvents(events) {
             const tbody = document.getElementById('eventsTableBody');
             if (!tbody) return;
-            
+
             tbody.innerHTML = '';
 
             events.forEach(event => {
@@ -471,47 +474,47 @@
         function drawChart(canvasId, title, data, labels, colors) {
             const canvas = document.getElementById(canvasId);
             if (!canvas) return;
-            
+
             const ctx = canvas.getContext('2d');
-            
+
             // 清除画布
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
+
             // 绘制图表逻辑
             const width = canvas.width;
             const height = canvas.height;
             const padding = 50;
-            
+
             // 绘制标题
             ctx.fillStyle = '#ffffff';
             ctx.font = '14px Microsoft YaHei';
             ctx.textAlign = 'center';
             ctx.fillText(title, width / 2, 20);
-            
+
             if (data.length === 0) return;
-            
+
             const maxValue = Math.max(...data);
             const minValue = Math.min(...data);
             const range = maxValue - minValue || 1;
-            
+
             const barWidth = (width - 2 * padding) / data.length;
-            
+
             // 绘制所有条形
             data.forEach((value, index) => {
                 const barHeight = ((value - minValue) / range) * (height - 2 * padding);
                 const x = padding + index * barWidth;
                 const y = height - padding - barHeight;
-                
+
                 // 绘制条形
                 ctx.fillStyle = colors[index % colors.length];
                 ctx.fillRect(x + 5, y, barWidth - 10, barHeight);
-                
+
                 // 绘制数值
                 ctx.fillStyle = '#ffffff';
                 ctx.font = '12px Microsoft YaHei';
                 ctx.textAlign = 'center';
                 ctx.fillText(value, x + barWidth / 2, y - 10);
-                
+
                 // 绘制标签
                 if (labels && labels[index]) {
                     ctx.fillStyle = '#909399';
@@ -527,9 +530,9 @@
             const hours = Array.from({ length: 12 }, (_, i) => i + 8);
             const passengerFlowData = hours.map(() => Math.floor(Math.random() * 200) + 50);
             const contrabandData = hours.map(() => Math.floor(Math.random() * 20) + 2);
-            
+
             const colors = ['#409eff', '#67c23a', '#e6a23c', '#f56c6c', '#909399', '#722ed1'];
-            
+
             drawChart('passengerFlowChart', '每小时客流', passengerFlowData, hours.map(h => `${h}时`), colors);
             drawChart('contrabandChart', '每小时违禁品检测', contrabandData, hours.map(h => `${h}时`), colors);
         }
@@ -550,4 +553,5 @@
         });
     </script>
 </body>
+
 </html>

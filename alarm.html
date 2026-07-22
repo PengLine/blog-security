@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
+    <meta name="robots" content="noindex, nofollow">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>告警中心</title>
-    
+
     <style>
         * {
             margin: 0;
@@ -428,19 +430,20 @@
                 padding: 12px;
             }
 
-            .alarm-item > div {
+            .alarm-item>div {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
             }
 
-            .alarm-item > div > span:first-child {
+            .alarm-item>div>span:first-child {
                 font-weight: 500;
                 color: #666;
             }
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="page-header">
@@ -543,10 +546,12 @@
                 <!-- 告警列表将通过JavaScript动态生成 -->
             </div>
             <!-- 分页控制 -->
-            <div class="pagination-controls" style="margin-top: 0; padding: 15px 20px; background-color: #18304a; border-radius: 0 0 8px 8px; display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
+            <div class="pagination-controls"
+                style="margin-top: 0; padding: 15px 20px; background-color: #18304a; border-radius: 0 0 8px 8px; display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
                 <div style="display: flex; align-items: center;">
                     <label for="alarmPageSizeSelect" style="color: #909399; margin-right: 8px;">每页显示:</label>
-                    <select id="alarmPageSizeSelect" onchange="changeAlarmPageSize()" style="padding: 4px 8px; background-color: #0a1929; border: 1px solid #1e3a5f; color: #ffffff; border-radius: 4px; font-size: 12px;">
+                    <select id="alarmPageSizeSelect" onchange="changeAlarmPageSize()"
+                        style="padding: 4px 8px; background-color: #0a1929; border: 1px solid #1e3a5f; color: #ffffff; border-radius: 4px; font-size: 12px;">
                         <option value="10">10条</option>
                         <option value="20" selected>20条</option>
                         <option value="30">30条</option>
@@ -554,11 +559,16 @@
                     </select>
                 </div>
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <button class="action-btn btn-secondary" onclick="goToAlarmPage(1)" id="alarmFirstPageBtn" style="padding: 4px 8px; font-size: 12px;">首页</button>
-                    <button class="action-btn btn-secondary" onclick="goToAlarmPage(window.alarmCurrentPage - 1)" id="alarmPrevPageBtn" style="padding: 4px 8px; font-size: 12px;">上一页</button>
-                    <span style="color: #ffffff;">第 <span id="alarmCurrentPageSpan">1</span>/<span id="alarmTotalPagesSpan">1</span> 页</span>
-                    <button class="action-btn btn-secondary" onclick="goToAlarmPage(window.alarmCurrentPage + 1)" id="alarmNextPageBtn" style="padding: 4px 8px; font-size: 12px;">下一页</button>
-                    <button class="action-btn btn-secondary" onclick="goToAlarmPage(window.alarmTotalPages)" id="alarmLastPageBtn" style="padding: 4px 8px; font-size: 12px;">末页</button>
+                    <button class="action-btn btn-secondary" onclick="goToAlarmPage(1)" id="alarmFirstPageBtn"
+                        style="padding: 4px 8px; font-size: 12px;">首页</button>
+                    <button class="action-btn btn-secondary" onclick="goToAlarmPage(window.alarmCurrentPage - 1)"
+                        id="alarmPrevPageBtn" style="padding: 4px 8px; font-size: 12px;">上一页</button>
+                    <span style="color: #ffffff;">第 <span id="alarmCurrentPageSpan">1</span>/<span
+                            id="alarmTotalPagesSpan">1</span> 页</span>
+                    <button class="action-btn btn-secondary" onclick="goToAlarmPage(window.alarmCurrentPage + 1)"
+                        id="alarmNextPageBtn" style="padding: 4px 8px; font-size: 12px;">下一页</button>
+                    <button class="action-btn btn-secondary" onclick="goToAlarmPage(window.alarmTotalPages)"
+                        id="alarmLastPageBtn" style="padding: 4px 8px; font-size: 12px;">末页</button>
                 </div>
             </div>
         </div>
@@ -606,7 +616,7 @@
                 const status = type.isDisposable ? alarmStatuses[Math.floor(Math.random() * alarmStatuses.length)] : 'resolved';
                 const device = devices[Math.floor(Math.random() * devices.length)];
                 const location = locations[Math.floor(Math.random() * locations.length)];
-                
+
                 // 随机生成过去24小时内的时间
                 const timeOffset = Math.floor(Math.random() * 24 * 60 * 60 * 1000);
                 const alarmTime = new Date(now.getTime() - timeOffset);
@@ -637,7 +647,7 @@
         // 页面数据
         let allAlarms = [];
         let filteredAlarms = [];
-        
+
         // 分页变量
         window.alarmCurrentPage = 1;
         window.alarmPageSize = 20;
@@ -720,7 +730,7 @@
             const startIndex = (window.alarmCurrentPage - 1) * window.alarmPageSize;
             const endIndex = startIndex + window.alarmPageSize;
             const pagedData = filteredAlarms.slice(startIndex, endIndex);
-            
+
             renderAlarmList(pagedData);
         }
 
@@ -728,7 +738,7 @@
         function updateAlarmPaginationUI() {
             document.getElementById('alarmCurrentPageSpan').textContent = window.alarmCurrentPage;
             document.getElementById('alarmTotalPagesSpan').textContent = window.alarmTotalPages;
-            
+
             // 更新按钮状态
             document.getElementById('alarmFirstPageBtn').disabled = window.alarmCurrentPage === 1;
             document.getElementById('alarmPrevPageBtn').disabled = window.alarmCurrentPage === 1;
@@ -741,7 +751,7 @@
             if (pageNumber < 1 || pageNumber > window.alarmTotalPages) {
                 return;
             }
-            
+
             window.alarmCurrentPage = pageNumber;
             renderPagedAlarmList();
             updateAlarmPaginationUI();
@@ -752,7 +762,7 @@
             const selectElement = document.getElementById('alarmPageSizeSelect');
             window.alarmPageSize = parseInt(selectElement.value);
             window.alarmCurrentPage = 1;
-            
+
             calculateAlarmTotalPages();
             renderPagedAlarmList();
             updateAlarmPaginationUI();
@@ -856,7 +866,7 @@
             if (!alarm) return;
 
             const comment = document.getElementById('processComment').value;
-            
+
             alarm.status = 'resolved';
             alarm.statusName = '已解决';
             alarm.processTime = new Date().toLocaleString('zh-CN');
@@ -883,7 +893,7 @@
             if (!alarm) return;
 
             const comment = document.getElementById('processComment').value;
-            
+
             alarm.status = 'closed';
             alarm.statusName = '已关闭';
             alarm.processTime = new Date().toLocaleString('zh-CN');
@@ -923,7 +933,7 @@
                 const matchesLevel = level === '' || alarm.level === level;
                 const matchesStatus = status === '' || alarm.status === status;
                 const matchesDisposable = disposable === '' || alarm.isDisposable === (disposable === 'true');
-                const matchesSearch = search === '' || 
+                const matchesSearch = search === '' ||
                     alarm.typeName.toLowerCase().includes(search) ||
                     alarm.description.toLowerCase().includes(search) ||
                     alarm.device.toLowerCase().includes(search) ||
@@ -935,7 +945,7 @@
             // 重置页码并重新计算总页数
             window.alarmCurrentPage = 1;
             calculateAlarmTotalPages();
-            
+
             // 重新渲染告警列表
             renderPagedAlarmList();
             updateAlarmPaginationUI();
@@ -950,11 +960,11 @@
             document.getElementById('searchInput').value = '';
 
             filteredAlarms = [...allAlarms];
-            
+
             // 重置页码并重新计算总页数
             window.alarmCurrentPage = 1;
             calculateAlarmTotalPages();
-            
+
             // 重新渲染告警列表
             renderPagedAlarmList();
             updateAlarmPaginationUI();
@@ -989,4 +999,5 @@
         document.addEventListener('DOMContentLoaded', initPage);
     </script>
 </body>
+
 </html>

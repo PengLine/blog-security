@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
+    <meta name="robots" content="noindex, nofollow">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>人脸识别管理</title>
-    
+
     <style>
         /* 全局样式重置 */
         * {
@@ -316,6 +318,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="page-header">
@@ -333,7 +336,7 @@
                 <a href="config.html">系统配置</a>
             </div>
         </div>
-        
+
         <!-- 标签页导航 -->
         <div class="tab-nav">
             <div class="tab-nav-item active" data-tab="personnel">人员管理</div>
@@ -341,7 +344,7 @@
             <div class="tab-nav-item" data-tab="records">识别记录</div>
             <div class="tab-nav-item" data-tab="blacklist">黑名单管理</div>
         </div>
-        
+
         <!-- 人员管理标签页 -->
         <div class="tab-content active" id="personnel">
             <div class="personnel-section">
@@ -411,12 +414,14 @@
                         <tbody id="personnelTableBody"></tbody>
                     </table>
                 </div>
-                
+
                 <!-- 人员列表分页控制 -->
-                <div class="pagination-controls" style="margin-top: 15px; padding: 15px 0; border-top: 1px solid #1e3a5f; display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
+                <div class="pagination-controls"
+                    style="margin-top: 15px; padding: 15px 0; border-top: 1px solid #1e3a5f; display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
                     <div style="display: flex; align-items: center;">
                         <label for="personnelPageSizeSelect" style="color: #909399; margin-right: 8px;">每页显示:</label>
-                        <select id="personnelPageSizeSelect" onchange="changePageSize('personnel')" style="padding: 4px 8px; background-color: #18304a; border: 1px solid #1e3a5f; color: #ffffff; border-radius: 4px; font-size: 12px;">
+                        <select id="personnelPageSizeSelect" onchange="changePageSize('personnel')"
+                            style="padding: 4px 8px; background-color: #18304a; border: 1px solid #1e3a5f; color: #ffffff; border-radius: 4px; font-size: 12px;">
                             <option value="10">10条</option>
                             <option value="20" selected>20条</option>
                             <option value="30">30条</option>
@@ -424,16 +429,24 @@
                         </select>
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
-                        <button class="btn btn-secondary" onclick="goToPage('personnel', 1)" id="personnelFirstPageBtn" style="font-size: 12px; padding: 4px 8px;">首页</button>
-                        <button class="btn btn-secondary" onclick="goToPage('personnel', window.pagination.personnel.currentPage - 1)" id="personnelPrevPageBtn" style="font-size: 12px; padding: 4px 8px;">上一页</button>
-                        <span style="color: #ffffff;">第 <span id="personnelCurrentPageSpan">1</span>/<span id="personnelTotalPagesSpan">1</span> 页</span>
-                        <button class="btn btn-secondary" onclick="goToPage('personnel', window.pagination.personnel.currentPage + 1)" id="personnelNextPageBtn" style="font-size: 12px; padding: 4px 8px;">下一页</button>
-                        <button class="btn btn-secondary" onclick="goToPage('personnel', window.pagination.personnel.totalPages)" id="personnelLastPageBtn" style="font-size: 12px; padding: 4px 8px;">末页</button>
+                        <button class="btn btn-secondary" onclick="goToPage('personnel', 1)" id="personnelFirstPageBtn"
+                            style="font-size: 12px; padding: 4px 8px;">首页</button>
+                        <button class="btn btn-secondary"
+                            onclick="goToPage('personnel', window.pagination.personnel.currentPage - 1)"
+                            id="personnelPrevPageBtn" style="font-size: 12px; padding: 4px 8px;">上一页</button>
+                        <span style="color: #ffffff;">第 <span id="personnelCurrentPageSpan">1</span>/<span
+                                id="personnelTotalPagesSpan">1</span> 页</span>
+                        <button class="btn btn-secondary"
+                            onclick="goToPage('personnel', window.pagination.personnel.currentPage + 1)"
+                            id="personnelNextPageBtn" style="font-size: 12px; padding: 4px 8px;">下一页</button>
+                        <button class="btn btn-secondary"
+                            onclick="goToPage('personnel', window.pagination.personnel.totalPages)"
+                            id="personnelLastPageBtn" style="font-size: 12px; padding: 4px 8px;">末页</button>
                     </div>
                 </div>
             </div>
         </div>
-        
+
         <!-- 人脸录入标签页 -->
         <div class="tab-content" id="enroll">
             <div class="section-title">人脸录入</div>
@@ -456,58 +469,73 @@
                         </select>
                     </div>
                     <div class="form-item" style="margin-top: 10px;">
-                        <button class="btn btn-primary" onclick="startEnroll()" style="width: 100%; padding: 10px 0;">开始录入</button>
+                        <button class="btn btn-primary" onclick="startEnroll()"
+                            style="width: 100%; padding: 10px 0;">开始录入</button>
                     </div>
                     <div class="form-item">
-                        <button class="btn btn-success" onclick="saveEnroll()" style="width: 100%; padding: 10px 0;">保存人脸</button>
+                        <button class="btn btn-success" onclick="saveEnroll()"
+                            style="width: 100%; padding: 10px 0;">保存人脸</button>
                     </div>
                     <div class="form-item">
-                        <button class="btn btn-danger" onclick="cancelEnroll()" style="width: 100%; padding: 10px 0;">取消</button>
+                        <button class="btn btn-danger" onclick="cancelEnroll()"
+                            style="width: 100%; padding: 10px 0;">取消</button>
                     </div>
                     <div class="form-item">
-                        <input type="file" id="faceImageUpload" accept="image/*" style="display: none;" onchange="handleFaceImageUpload()">
-                        <button class="btn btn-secondary" onclick="document.getElementById('faceImageUpload').click()" style="width: 100%; padding: 10px 0;">上传图片</button>
+                        <input type="file" id="faceImageUpload" accept="image/*" style="display: none;"
+                            onchange="handleFaceImageUpload()">
+                        <button class="btn btn-secondary" onclick="document.getElementById('faceImageUpload').click()"
+                            style="width: 100%; padding: 10px 0;">上传图片</button>
                     </div>
                 </div>
             </div>
             <div class="table-container">
-                    <table class="data-table" id="enrollHistoryTable">
-                        <thead>
-                            <tr>
-                                <th>时间</th>
-                                <th>人员ID</th>
-                                <th>姓名</th>
-                                <th>录入方式</th>
-                                <th>状态</th>
-                                <th>相似度</th>
-                                <th>操作</th>
-                            </tr>
-                        </thead>
-                        <tbody id="enrollHistoryTableBody"></tbody>
-                    </table>
+                <table class="data-table" id="enrollHistoryTable">
+                    <thead>
+                        <tr>
+                            <th>时间</th>
+                            <th>人员ID</th>
+                            <th>姓名</th>
+                            <th>录入方式</th>
+                            <th>状态</th>
+                            <th>相似度</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="enrollHistoryTableBody"></tbody>
+                </table>
+            </div>
+
+            <!-- 录入历史分页控制 -->
+            <div class="pagination-controls"
+                style="margin-top: 15px; padding: 15px 0; border-top: 1px solid #1e3a5f; display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
+                <div style="display: flex; align-items: center;">
+                    <label for="enrollHistoryPageSizeSelect" style="color: #909399; margin-right: 8px;">每页显示:</label>
+                    <select id="enrollHistoryPageSizeSelect" onchange="changePageSize('enrollHistory')"
+                        style="padding: 4px 8px; background-color: #18304a; border: 1px solid #1e3a5f; color: #ffffff; border-radius: 4px; font-size: 12px;">
+                        <option value="10">10条</option>
+                        <option value="20" selected>20条</option>
+                        <option value="30">30条</option>
+                        <option value="50">50条</option>
+                    </select>
                 </div>
-                
-                <!-- 录入历史分页控制 -->
-                <div class="pagination-controls" style="margin-top: 15px; padding: 15px 0; border-top: 1px solid #1e3a5f; display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
-                    <div style="display: flex; align-items: center;">
-                        <label for="enrollHistoryPageSizeSelect" style="color: #909399; margin-right: 8px;">每页显示:</label>
-                        <select id="enrollHistoryPageSizeSelect" onchange="changePageSize('enrollHistory')" style="padding: 4px 8px; background-color: #18304a; border: 1px solid #1e3a5f; color: #ffffff; border-radius: 4px; font-size: 12px;">
-                            <option value="10">10条</option>
-                            <option value="20" selected>20条</option>
-                            <option value="30">30条</option>
-                            <option value="50">50条</option>
-                        </select>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <button class="btn btn-secondary" onclick="goToPage('enrollHistory', 1)" id="enrollHistoryFirstPageBtn" style="font-size: 12px; padding: 4px 8px;">首页</button>
-                        <button class="btn btn-secondary" onclick="goToPage('enrollHistory', window.pagination.enrollHistory.currentPage - 1)" id="enrollHistoryPrevPageBtn" style="font-size: 12px; padding: 4px 8px;">上一页</button>
-                        <span style="color: #ffffff;">第 <span id="enrollHistoryCurrentPageSpan">1</span>/<span id="enrollHistoryTotalPagesSpan">1</span> 页</span>
-                        <button class="btn btn-secondary" onclick="goToPage('enrollHistory', window.pagination.enrollHistory.currentPage + 1)" id="enrollHistoryNextPageBtn" style="font-size: 12px; padding: 4px 8px;">下一页</button>
-                        <button class="btn btn-secondary" onclick="goToPage('enrollHistory', window.pagination.enrollHistory.totalPages)" id="enrollHistoryLastPageBtn" style="font-size: 12px; padding: 4px 8px;">末页</button>
-                    </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <button class="btn btn-secondary" onclick="goToPage('enrollHistory', 1)"
+                        id="enrollHistoryFirstPageBtn" style="font-size: 12px; padding: 4px 8px;">首页</button>
+                    <button class="btn btn-secondary"
+                        onclick="goToPage('enrollHistory', window.pagination.enrollHistory.currentPage - 1)"
+                        id="enrollHistoryPrevPageBtn" style="font-size: 12px; padding: 4px 8px;">上一页</button>
+                    <span style="color: #ffffff;">第 <span id="enrollHistoryCurrentPageSpan">1</span>/<span
+                            id="enrollHistoryTotalPagesSpan">1</span> 页</span>
+                    <button class="btn btn-secondary"
+                        onclick="goToPage('enrollHistory', window.pagination.enrollHistory.currentPage + 1)"
+                        id="enrollHistoryNextPageBtn" style="font-size: 12px; padding: 4px 8px;">下一页</button>
+                    <button class="btn btn-secondary"
+                        onclick="goToPage('enrollHistory', window.pagination.enrollHistory.totalPages)"
+                        id="enrollHistoryLastPageBtn" style="font-size: 12px; padding: 4px 8px;">末页</button>
                 </div>
+            </div>
         </div>
-        
+
         <!-- 识别记录标签页 -->
         <div class="tab-content" id="records">
             <div class="stats-cards">
@@ -529,44 +557,55 @@
                 </div>
             </div>
             <div class="table-container">
-                    <table class="data-table" id="recognitionRecordsTable">
-                        <thead>
-                            <tr>
-                                <th>时间</th>
-                                <th>人员ID</th>
-                                <th>姓名</th>
-                                <th>通道</th>
-                                <th>相似度</th>
-                                <th>状态</th>
-                                <th>体温</th>
-                                <th>操作</th>
-                            </tr>
-                        </thead>
-                        <tbody id="recognitionRecordsTableBody"></tbody>
-                    </table>
+                <table class="data-table" id="recognitionRecordsTable">
+                    <thead>
+                        <tr>
+                            <th>时间</th>
+                            <th>人员ID</th>
+                            <th>姓名</th>
+                            <th>通道</th>
+                            <th>相似度</th>
+                            <th>状态</th>
+                            <th>体温</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recognitionRecordsTableBody"></tbody>
+                </table>
+            </div>
+
+            <!-- 识别记录分页控制 -->
+            <div class="pagination-controls"
+                style="margin-top: 15px; padding: 15px 0; border-top: 1px solid #1e3a5f; display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
+                <div style="display: flex; align-items: center;">
+                    <label for="recognitionRecordsPageSizeSelect"
+                        style="color: #909399; margin-right: 8px;">每页显示:</label>
+                    <select id="recognitionRecordsPageSizeSelect" onchange="changePageSize('recognitionRecords')"
+                        style="padding: 4px 8px; background-color: #18304a; border: 1px solid #1e3a5f; color: #ffffff; border-radius: 4px; font-size: 12px;">
+                        <option value="10">10条</option>
+                        <option value="20" selected>20条</option>
+                        <option value="30">30条</option>
+                        <option value="50">50条</option>
+                    </select>
                 </div>
-                
-                <!-- 识别记录分页控制 -->
-                <div class="pagination-controls" style="margin-top: 15px; padding: 15px 0; border-top: 1px solid #1e3a5f; display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
-                    <div style="display: flex; align-items: center;">
-                        <label for="recognitionRecordsPageSizeSelect" style="color: #909399; margin-right: 8px;">每页显示:</label>
-                        <select id="recognitionRecordsPageSizeSelect" onchange="changePageSize('recognitionRecords')" style="padding: 4px 8px; background-color: #18304a; border: 1px solid #1e3a5f; color: #ffffff; border-radius: 4px; font-size: 12px;">
-                            <option value="10">10条</option>
-                            <option value="20" selected>20条</option>
-                            <option value="30">30条</option>
-                            <option value="50">50条</option>
-                        </select>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <button class="btn btn-secondary" onclick="goToPage('recognitionRecords', 1)" id="recognitionRecordsFirstPageBtn" style="font-size: 12px; padding: 4px 8px;">首页</button>
-                        <button class="btn btn-secondary" onclick="goToPage('recognitionRecords', window.pagination.recognitionRecords.currentPage - 1)" id="recognitionRecordsPrevPageBtn" style="font-size: 12px; padding: 4px 8px;">上一页</button>
-                        <span style="color: #ffffff;">第 <span id="recognitionRecordsCurrentPageSpan">1</span>/<span id="recognitionRecordsTotalPagesSpan">1</span> 页</span>
-                        <button class="btn btn-secondary" onclick="goToPage('recognitionRecords', window.pagination.recognitionRecords.currentPage + 1)" id="recognitionRecordsNextPageBtn" style="font-size: 12px; padding: 4px 8px;">下一页</button>
-                        <button class="btn btn-secondary" onclick="goToPage('recognitionRecords', window.pagination.recognitionRecords.totalPages)" id="recognitionRecordsLastPageBtn" style="font-size: 12px; padding: 4px 8px;">末页</button>
-                    </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <button class="btn btn-secondary" onclick="goToPage('recognitionRecords', 1)"
+                        id="recognitionRecordsFirstPageBtn" style="font-size: 12px; padding: 4px 8px;">首页</button>
+                    <button class="btn btn-secondary"
+                        onclick="goToPage('recognitionRecords', window.pagination.recognitionRecords.currentPage - 1)"
+                        id="recognitionRecordsPrevPageBtn" style="font-size: 12px; padding: 4px 8px;">上一页</button>
+                    <span style="color: #ffffff;">第 <span id="recognitionRecordsCurrentPageSpan">1</span>/<span
+                            id="recognitionRecordsTotalPagesSpan">1</span> 页</span>
+                    <button class="btn btn-secondary"
+                        onclick="goToPage('recognitionRecords', window.pagination.recognitionRecords.currentPage + 1)"
+                        id="recognitionRecordsNextPageBtn" style="font-size: 12px; padding: 4px 8px;">下一页</button>
+                    <button class="btn btn-secondary"
+                        onclick="goToPage('recognitionRecords', window.pagination.recognitionRecords.totalPages)"
+                        id="recognitionRecordsLastPageBtn" style="font-size: 12px; padding: 4px 8px;">末页</button>
                 </div>
+            </div>
         </div>
-        
+
         <!-- 黑名单管理标签页 -->
         <div class="tab-content" id="blacklist">
             <div class="blacklist-section">
@@ -582,7 +621,8 @@
                     </div>
                     <div class="form-item">
                         <label class="form-label">黑名单原因</label>
-                        <textarea class="form-control" id="blacklistReason" rows="3" placeholder="请输入加入黑名单的原因"></textarea>
+                        <textarea class="form-control" id="blacklistReason" rows="3"
+                            placeholder="请输入加入黑名单的原因"></textarea>
                     </div>
                     <div class="form-item">
                         <label class="form-label">操作</label>
@@ -606,12 +646,14 @@
                         <tbody id="blacklistTableBody"></tbody>
                     </table>
                 </div>
-                
+
                 <!-- 黑名单分页控制 -->
-                <div class="pagination-controls" style="margin-top: 15px; padding: 15px 0; border-top: 1px solid #1e3a5f; display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
+                <div class="pagination-controls"
+                    style="margin-top: 15px; padding: 15px 0; border-top: 1px solid #1e3a5f; display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
                     <div style="display: flex; align-items: center;">
                         <label for="blacklistPageSizeSelect" style="color: #909399; margin-right: 8px;">每页显示:</label>
-                        <select id="blacklistPageSizeSelect" onchange="changePageSize('blacklist')" style="padding: 4px 8px; background-color: #18304a; border: 1px solid #1e3a5f; color: #ffffff; border-radius: 4px; font-size: 12px;">
+                        <select id="blacklistPageSizeSelect" onchange="changePageSize('blacklist')"
+                            style="padding: 4px 8px; background-color: #18304a; border: 1px solid #1e3a5f; color: #ffffff; border-radius: 4px; font-size: 12px;">
                             <option value="10">10条</option>
                             <option value="20" selected>20条</option>
                             <option value="30">30条</option>
@@ -619,11 +661,19 @@
                         </select>
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
-                        <button class="btn btn-secondary" onclick="goToPage('blacklist', 1)" id="blacklistFirstPageBtn" style="font-size: 12px; padding: 4px 8px;">首页</button>
-                        <button class="btn btn-secondary" onclick="goToPage('blacklist', window.pagination.blacklist.currentPage - 1)" id="blacklistPrevPageBtn" style="font-size: 12px; padding: 4px 8px;">上一页</button>
-                        <span style="color: #ffffff;">第 <span id="blacklistCurrentPageSpan">1</span>/<span id="blacklistTotalPagesSpan">1</span> 页</span>
-                        <button class="btn btn-secondary" onclick="goToPage('blacklist', window.pagination.blacklist.currentPage + 1)" id="blacklistNextPageBtn" style="font-size: 12px; padding: 4px 8px;">下一页</button>
-                        <button class="btn btn-secondary" onclick="goToPage('blacklist', window.pagination.blacklist.totalPages)" id="blacklistLastPageBtn" style="font-size: 12px; padding: 4px 8px;">末页</button>
+                        <button class="btn btn-secondary" onclick="goToPage('blacklist', 1)" id="blacklistFirstPageBtn"
+                            style="font-size: 12px; padding: 4px 8px;">首页</button>
+                        <button class="btn btn-secondary"
+                            onclick="goToPage('blacklist', window.pagination.blacklist.currentPage - 1)"
+                            id="blacklistPrevPageBtn" style="font-size: 12px; padding: 4px 8px;">上一页</button>
+                        <span style="color: #ffffff;">第 <span id="blacklistCurrentPageSpan">1</span>/<span
+                                id="blacklistTotalPagesSpan">1</span> 页</span>
+                        <button class="btn btn-secondary"
+                            onclick="goToPage('blacklist', window.pagination.blacklist.currentPage + 1)"
+                            id="blacklistNextPageBtn" style="font-size: 12px; padding: 4px 8px;">下一页</button>
+                        <button class="btn btn-secondary"
+                            onclick="goToPage('blacklist', window.pagination.blacklist.totalPages)"
+                            id="blacklistLastPageBtn" style="font-size: 12px; padding: 4px 8px;">末页</button>
                     </div>
                 </div>
             </div>
@@ -711,7 +761,7 @@
         // 全局数据变量
         let mockData = {};
         let currentPersonnel = null;
-        
+
         // 分页配置
         window.pagination = {
             personnel: { currentPage: 1, pageSize: 20, totalPages: 1 },
@@ -752,11 +802,11 @@
             tabNavItems.forEach(item => {
                 item.addEventListener('click', () => {
                     const tabId = item.getAttribute('data-tab');
-                    
+
                     // 移除所有活动状态
                     tabNavItems.forEach(nav => nav.classList.remove('active'));
                     tabContents.forEach(content => content.classList.remove('active'));
-                    
+
                     // 添加当前活动状态
                     item.classList.add('active');
                     document.getElementById(tabId).classList.add('active');
@@ -874,11 +924,11 @@
         function initFaceCanvas() {
             const canvas = document.getElementById('faceCanvas');
             const ctx = canvas.getContext('2d');
-            
+
             // 绘制默认图像
             ctx.fillStyle = '#000';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
+
             ctx.fillStyle = '#909399';
             ctx.font = '16px Microsoft YaHei';
             ctx.textAlign = 'center';
@@ -999,33 +1049,33 @@
         function startEnroll() {
             const personId = document.getElementById('enrollPersonSelect').value;
             const method = document.getElementById('enrollMethodSelect').value;
-            
+
             // 模拟人脸录入过程
             const canvas = document.getElementById('faceCanvas');
             const ctx = canvas.getContext('2d');
-            
+
             // 绘制模拟人脸图像
             ctx.fillStyle = '#000';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
+
             // 绘制简单的人脸轮廓
             ctx.fillStyle = '#ffdbac';
             ctx.beginPath();
             ctx.arc(canvas.width / 2, canvas.height / 2, 80, 0, Math.PI * 2);
             ctx.fill();
-            
+
             // 绘制眼睛
             ctx.fillStyle = '#000';
             ctx.beginPath();
             ctx.arc(canvas.width / 2 - 30, canvas.height / 2 - 20, 10, 0, Math.PI * 2);
             ctx.arc(canvas.width / 2 + 30, canvas.height / 2 - 20, 10, 0, Math.PI * 2);
             ctx.fill();
-            
+
             // 绘制嘴巴
             ctx.beginPath();
             ctx.arc(canvas.width / 2, canvas.height / 2 + 30, 20, 0, Math.PI);
             ctx.stroke();
-            
+
             // 绘制文字
             ctx.fillStyle = '#409eff';
             ctx.font = '14px Microsoft YaHei';
@@ -1037,11 +1087,11 @@
         function saveEnroll() {
             const personId = document.getElementById('enrollPersonSelect').value;
             const method = document.getElementById('enrollMethodSelect').value;
-            
+
             const person = mockData.personnel.find(p => p.id === personId);
             if (person) {
                 person.faceStatus = '已录入';
-                
+
                 // 添加录入历史
                 const newEnrollRecord = {
                     id: `ENROLL-${Date.now()}`,
@@ -1053,12 +1103,12 @@
                     similarity: (Math.random() * 10 + 90).toFixed(1)
                 };
                 mockData.enrollHistory.unshift(newEnrollRecord);
-                
+
                 // 更新界面
                 renderPersonnelList();
                 renderEnrollHistory();
                 updatePersonnelSelect();
-                
+
                 alert('人脸录入成功');
             }
         }
@@ -1072,21 +1122,21 @@
         function handleFaceImageUpload() {
             const fileInput = document.getElementById('faceImageUpload');
             const file = fileInput.files[0];
-            
+
             if (file) {
                 const reader = new FileReader();
-                reader.onload = function(e) {
+                reader.onload = function (e) {
                     const canvas = document.getElementById('faceCanvas');
                     const ctx = canvas.getContext('2d');
-                    
+
                     // 创建图像对象
                     const img = new Image();
-                    img.onload = function() {
+                    img.onload = function () {
                         // 计算缩放比例
                         const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
                         const width = img.width * scale;
                         const height = img.height * scale;
-                        
+
                         // 清空画布并绘制图像
                         ctx.fillStyle = '#000';
                         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -1118,7 +1168,7 @@
         function enrollPersonFace(personId) {
             const tabNav = document.querySelector('.tab-nav-item[data-tab="enroll"]');
             tabNav.click();
-            
+
             // 设置人员选择
             document.getElementById('enrollPersonSelect').value = personId;
         }
@@ -1144,7 +1194,7 @@
 
             mockData.blacklist.push(newBlacklistItem);
             renderBlacklist();
-            
+
             // 清空表单
             document.getElementById('blacklistPersonId').value = '';
             document.getElementById('blacklistPersonName').value = '';
@@ -1173,55 +1223,55 @@
         function calculateTotalPages(type) {
             const data = mockData[type];
             if (!data) return;
-            
+
             const pagination = window.pagination[type];
             pagination.totalPages = Math.ceil(data.length / pagination.pageSize);
             if (pagination.totalPages < 1) {
                 pagination.totalPages = 1;
             }
         }
-        
+
         // 更新分页UI
         function updatePaginationUI(type) {
             const pagination = window.pagination[type];
             const currentPageSpan = document.getElementById(`${type}CurrentPageSpan`);
             const totalPagesSpan = document.getElementById(`${type}TotalPagesSpan`);
-            
+
             if (currentPageSpan && totalPagesSpan) {
                 currentPageSpan.textContent = pagination.currentPage;
                 totalPagesSpan.textContent = pagination.totalPages;
             }
-            
+
             // 启用/禁用按钮
             const firstPageBtn = document.getElementById(`${type}FirstPageBtn`);
             const prevPageBtn = document.getElementById(`${type}PrevPageBtn`);
             const nextPageBtn = document.getElementById(`${type}NextPageBtn`);
             const lastPageBtn = document.getElementById(`${type}LastPageBtn`);
-            
+
             if (firstPageBtn && prevPageBtn) {
                 firstPageBtn.disabled = pagination.currentPage === 1;
                 prevPageBtn.disabled = pagination.currentPage === 1;
             }
-            
+
             if (nextPageBtn && lastPageBtn) {
                 nextPageBtn.disabled = pagination.currentPage === pagination.totalPages;
                 lastPageBtn.disabled = pagination.currentPage === pagination.totalPages;
             }
         }
-        
+
         // 改变每页显示数量
         function changePageSize(type) {
             const selectElement = document.getElementById(`${type}PageSizeSelect`);
             if (selectElement) {
                 window.pagination[type].pageSize = parseInt(selectElement.value);
                 window.pagination[type].currentPage = 1;
-                
+
                 // 重新计算总页数
                 calculateTotalPages(type);
-                
+
                 // 更新分页UI
                 updatePaginationUI(type);
-                
+
                 // 渲染分页数据
                 if (type === 'personnel') {
                     renderPagedPersonnelList();
@@ -1234,20 +1284,20 @@
                 }
             }
         }
-        
+
         // 跳转到指定页面
         function goToPage(type, pageNum) {
             const pagination = window.pagination[type];
-            
+
             if (pageNum < 1 || pageNum > pagination.totalPages) {
                 return;
             }
-            
+
             pagination.currentPage = pageNum;
-            
+
             // 更新分页UI
             updatePaginationUI(type);
-            
+
             // 渲染分页数据
             if (type === 'personnel') {
                 renderPagedPersonnelList();
@@ -1259,14 +1309,14 @@
                 renderPagedBlacklist();
             }
         }
-        
+
         // 渲染分页人员列表
         function renderPagedPersonnelList() {
             const pagination = window.pagination.personnel;
             const startIndex = (pagination.currentPage - 1) * pagination.pageSize;
             const endIndex = startIndex + pagination.pageSize;
             const pagedData = mockData.personnel.slice(startIndex, endIndex);
-            
+
             const tbody = document.getElementById('personnelTableBody');
             tbody.innerHTML = '';
 
@@ -1289,18 +1339,18 @@
                 `;
                 tbody.appendChild(row);
             });
-            
+
             // 更新分页UI
             updatePaginationUI('personnel');
         }
-        
+
         // 渲染分页录入历史
         function renderPagedEnrollHistory() {
             const pagination = window.pagination.enrollHistory;
             const startIndex = (pagination.currentPage - 1) * pagination.pageSize;
             const endIndex = startIndex + pagination.pageSize;
             const pagedData = mockData.enrollHistory.slice(startIndex, endIndex);
-            
+
             const tbody = document.getElementById('enrollHistoryTableBody');
             tbody.innerHTML = '';
 
@@ -1317,18 +1367,18 @@
                 `;
                 tbody.appendChild(row);
             });
-            
+
             // 更新分页UI
             updatePaginationUI('enrollHistory');
         }
-        
+
         // 渲染分页识别记录
         function renderPagedRecognitionRecords() {
             const pagination = window.pagination.recognitionRecords;
             const startIndex = (pagination.currentPage - 1) * pagination.pageSize;
             const endIndex = startIndex + pagination.pageSize;
             const pagedData = mockData.recognitionRecords.slice(startIndex, endIndex);
-            
+
             const tbody = document.getElementById('recognitionRecordsTableBody');
             tbody.innerHTML = '';
 
@@ -1346,18 +1396,18 @@
                 `;
                 tbody.appendChild(row);
             });
-            
+
             // 更新分页UI
             updatePaginationUI('recognitionRecords');
         }
-        
+
         // 渲染分页黑名单
         function renderPagedBlacklist() {
             const pagination = window.pagination.blacklist;
             const startIndex = (pagination.currentPage - 1) * pagination.pageSize;
             const endIndex = startIndex + pagination.pageSize;
             const pagedData = mockData.blacklist.slice(startIndex, endIndex);
-            
+
             const tbody = document.getElementById('blacklistTableBody');
             tbody.innerHTML = '';
 
@@ -1372,14 +1422,14 @@
                 `;
                 tbody.appendChild(row);
             });
-            
+
             // 更新分页UI
             updatePaginationUI('blacklist');
         }
-        
+
         // 更新addPersonnel函数以支持分页
         const originalAddPersonnel = addPersonnel;
-        addPersonnel = function() {
+        addPersonnel = function () {
             originalAddPersonnel.call(this);
             // 重新计算总页数
             calculateTotalPages('personnel');
@@ -1388,10 +1438,10 @@
             // 渲染分页数据
             renderPagedPersonnelList();
         };
-        
+
         // 更新deletePersonnel函数以支持分页
         const originalDeletePersonnel = deletePersonnel;
-        deletePersonnel = function(personId) {
+        deletePersonnel = function (personId) {
             originalDeletePersonnel.call(this, personId);
             // 重新计算总页数
             calculateTotalPages('personnel');
@@ -1400,10 +1450,10 @@
             // 渲染分页数据
             renderPagedPersonnelList();
         };
-        
+
         // 更新addBlacklist函数以支持分页
         const originalAddBlacklist = addBlacklist;
-        addBlacklist = function() {
+        addBlacklist = function () {
             originalAddBlacklist.call(this);
             // 重新计算总页数
             calculateTotalPages('blacklist');
@@ -1412,10 +1462,10 @@
             // 渲染分页数据
             renderPagedBlacklist();
         };
-        
+
         // 更新saveEnroll函数以支持分页
         const originalSaveEnroll = saveEnroll;
-        saveEnroll = function() {
+        saveEnroll = function () {
             originalSaveEnroll.call(this);
             // 重新计算总页数
             calculateTotalPages('enrollHistory');
@@ -1427,9 +1477,10 @@
             renderPagedEnrollHistory();
             renderPagedPersonnelList();
         };
-        
+
         // 页面加载完成后初始化
         document.addEventListener('DOMContentLoaded', initPage);
     </script>
 </body>
+
 </html>

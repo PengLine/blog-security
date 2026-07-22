@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
+    <meta name="robots" content="noindex, nofollow">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>智慧安检系统 - 集中判图</title>
-    
+
     <style>
         /* 全局样式重置 */
         * {
@@ -135,9 +137,20 @@
             font-size: 10px;
         }
 
-        .status-pending { background-color: #e6a23c; color: #ffffff; }
-        .status-processing { background-color: #409eff; color: #ffffff; }
-        .status-completed { background-color: #67c23a; color: #ffffff; }
+        .status-pending {
+            background-color: #e6a23c;
+            color: #ffffff;
+        }
+
+        .status-processing {
+            background-color: #409eff;
+            color: #ffffff;
+        }
+
+        .status-completed {
+            background-color: #67c23a;
+            color: #ffffff;
+        }
 
         .judge-item-device {
             font-size: 13px;
@@ -403,6 +416,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="page-header">
@@ -420,299 +434,337 @@
                 <a href="config.html">系统配置</a>
             </div>
         </div>
-        
+
         <!-- 集中判图模块 -->
         <div class="module" id="judge">
             <div class="judge-container">
-            <!-- 判图列表 -->
-            <div class="judge-list-panel">
-                <div class="panel-title">判图任务列表</div>
-                
-                <!-- 批量操作控制 -->
-                <div class="batch-controls" style="margin-bottom: 15px; padding: 10px; background-color: #18304a; border-radius: 4px;">
-                    <div style="display: flex; align-items: center; margin-bottom: 10px;">
-                        <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()" style="margin-right: 8px; accent-color: #409eff;">
-                        <label for="selectAllCheckbox" style="font-size: 13px; color: #ffffff; cursor: pointer;">全选</label>
-                        <span style="margin-left: 10px; font-size: 12px; color: #909399;">已选择: <span id="selectedCount">0</span>项</span>
+                <!-- 判图列表 -->
+                <div class="judge-list-panel">
+                    <div class="panel-title">判图任务列表</div>
+
+                    <!-- 批量操作控制 -->
+                    <div class="batch-controls"
+                        style="margin-bottom: 15px; padding: 10px; background-color: #18304a; border-radius: 4px;">
+                        <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                            <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()"
+                                style="margin-right: 8px; accent-color: #409eff;">
+                            <label for="selectAllCheckbox"
+                                style="font-size: 13px; color: #ffffff; cursor: pointer;">全选</label>
+                            <span style="margin-left: 10px; font-size: 12px; color: #909399;">已选择: <span
+                                    id="selectedCount">0</span>项</span>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px;">
+                            <button class="action-btn btn-primary" onclick="batchAccept()"
+                                style="padding: 6px 0; font-size: 12px; width: 100%;">批量通过</button>
+                            <button class="action-btn btn-danger" onclick="batchReject()"
+                                style="padding: 6px 0; font-size: 12px; width: 100%;">批量可疑</button>
+                            <button class="action-btn btn-secondary" onclick="batchReview()"
+                                style="padding: 6px 0; font-size: 12px; width: 100%;">批量审核</button>
+                        </div>
                     </div>
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px;">
-                        <button class="action-btn btn-primary" onclick="batchAccept()" style="padding: 6px 0; font-size: 12px; width: 100%;">批量通过</button>
-                        <button class="action-btn btn-danger" onclick="batchReject()" style="padding: 6px 0; font-size: 12px; width: 100%;">批量可疑</button>
-                        <button class="action-btn btn-secondary" onclick="batchReview()" style="padding: 6px 0; font-size: 12px; width: 100%;">批量审核</button>
+
+                    <div id="judgeList"></div>
+
+                    <!-- 分页控制 -->
+                    <div class="pagination-controls"
+                        style="margin-top: 15px; padding: 10px; background-color: #18304a; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
+                        <div style="display: flex; align-items: center;">
+                            <label for="pageSizeSelect" style="color: #909399; margin-right: 8px;">每页显示:</label>
+                            <select id="pageSizeSelect" onchange="changePageSize()"
+                                style="padding: 4px 8px; background-color: #0a1929; border: 1px solid #1e3a5f; color: #ffffff; border-radius: 4px; font-size: 12px;">
+                                <option value="10" selected>10条</option>
+                                <option value="20">20条</option>
+                                <option value="30">30条</option>
+                                <option value="50">50条</option>
+                            </select>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <button class="action-btn btn-secondary" onclick="goToPage(1)" id="firstPageBtn"
+                                style="padding: 4px 8px; font-size: 12px;">首页</button>
+                            <button class="action-btn btn-secondary" onclick="goToPage(window.currentPage - 1)"
+                                id="prevPageBtn" style="padding: 4px 8px; font-size: 12px;">上一页</button>
+                            <span style="color: #ffffff;">第 <span id="currentPageSpan">1</span>/<span
+                                    id="totalPagesSpan">1</span> 页</span>
+                            <button class="action-btn btn-secondary" onclick="goToPage(window.currentPage + 1)"
+                                id="nextPageBtn" style="padding: 4px 8px; font-size: 12px;">下一页</button>
+                            <button class="action-btn btn-secondary" onclick="goToPage(window.totalPages)"
+                                id="lastPageBtn" style="padding: 4px 8px; font-size: 12px;">末页</button>
+                        </div>
                     </div>
                 </div>
-                
-                <div id="judgeList"></div>
-                
-                <!-- 分页控制 -->
-                <div class="pagination-controls" style="margin-top: 15px; padding: 10px; background-color: #18304a; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
-                    <div style="display: flex; align-items: center;">
-                        <label for="pageSizeSelect" style="color: #909399; margin-right: 8px;">每页显示:</label>
-                        <select id="pageSizeSelect" onchange="changePageSize()" style="padding: 4px 8px; background-color: #0a1929; border: 1px solid #1e3a5f; color: #ffffff; border-radius: 4px; font-size: 12px;">
-                            <option value="10" selected>10条</option>
-                            <option value="20">20条</option>
-                            <option value="30">30条</option>
-                            <option value="50">50条</option>
+
+                <!-- 图片查看区域 -->
+                <div class="image-panel">
+                    <div class="panel-title">图片查看</div>
+
+                    <!-- 视角切换控制 -->
+                    <div class="view-controls"
+                        style="display: flex; justify-content: center; margin-bottom: 15px; gap: 10px;">
+                        <button class="action-btn btn-secondary" onclick="switchView('single')" id="singleViewBtn"
+                            style="font-size: 13px; padding: 8px 16px;">单视角</button>
+                        <button class="action-btn btn-secondary" onclick="switchView('dual')" id="dualViewBtn"
+                            style="font-size: 13px; padding: 8px 16px;">双视角</button>
+                        <button class="action-btn btn-primary" onclick="toggleMergePreview()" id="mergePreviewBtn"
+                            style="font-size: 13px; padding: 8px 16px;">合并预览</button>
+                        <select id="mergeModeSelect"
+                            style="padding: 8px 12px; background-color: #18304a; border: 1px solid #1e3a5f; color: #ffffff; border-radius: 4px; font-size: 13px; display: none;">
+                            <option value="overlay">叠加</option>
+                            <option value="side-by-side">并排</option>
+                            <option value="blend">混合</option>
                         </select>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <button class="action-btn btn-secondary" onclick="goToPage(1)" id="firstPageBtn" style="padding: 4px 8px; font-size: 12px;">首页</button>
-                        <button class="action-btn btn-secondary" onclick="goToPage(window.currentPage - 1)" id="prevPageBtn" style="padding: 4px 8px; font-size: 12px;">上一页</button>
-                        <span style="color: #ffffff;">第 <span id="currentPageSpan">1</span>/<span id="totalPagesSpan">1</span> 页</span>
-                        <button class="action-btn btn-secondary" onclick="goToPage(window.currentPage + 1)" id="nextPageBtn" style="padding: 4px 8px; font-size: 12px;">下一页</button>
-                        <button class="action-btn btn-secondary" onclick="goToPage(window.totalPages)" id="lastPageBtn" style="padding: 4px 8px; font-size: 12px;">末页</button>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- 图片查看区域 -->
-            <div class="image-panel">
-                <div class="panel-title">图片查看</div>
-                
-                <!-- 视角切换控制 -->
-                <div class="view-controls" style="display: flex; justify-content: center; margin-bottom: 15px; gap: 10px;">
-                    <button class="action-btn btn-secondary" onclick="switchView('single')" id="singleViewBtn" style="font-size: 13px; padding: 8px 16px;">单视角</button>
-                    <button class="action-btn btn-secondary" onclick="switchView('dual')" id="dualViewBtn" style="font-size: 13px; padding: 8px 16px;">双视角</button>
-                    <button class="action-btn btn-primary" onclick="toggleMergePreview()" id="mergePreviewBtn" style="font-size: 13px; padding: 8px 16px;">合并预览</button>
-                    <select id="mergeModeSelect" style="padding: 8px 12px; background-color: #18304a; border: 1px solid #1e3a5f; color: #ffffff; border-radius: 4px; font-size: 13px; display: none;">
-                        <option value="overlay">叠加</option>
-                        <option value="side-by-side">并排</option>
-                        <option value="blend">混合</option>
-                    </select>
-                </div>
-                
-                <div class="image-container" id="imageContainer" style="position: relative;">
-                    <!-- 单视角模式 -->
-                    <div id="singleView" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; background-color: #000;">
-                        <img id="mainImage" class="main-image" src="https://picsum.photos/800/600" alt="安检图片(主视角)">
-                    </div>
-                    
-                    <!-- 双视角模式 -->
-                    <div id="dualView" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none;">
-                        <div style="width: 50%; height: 100%; float: left; display: flex; justify-content: center; align-items: center; background-color: #000;">
-                            <img id="view1Image" class="main-image" src="https://picsum.photos/800/600?random=1" alt="安检图片(视角1)">
+
+                    <div class="image-container" id="imageContainer" style="position: relative;">
+                        <!-- 单视角模式 -->
+                        <div id="singleView"
+                            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; background-color: #000;">
+                            <img id="mainImage" class="main-image" src="https://picsum.photos/800/600" alt="安检图片(主视角)">
                         </div>
-                        <div style="width: 50%; height: 100%; float: right; display: flex; justify-content: center; align-items: center; background-color: #000;">
-                            <img id="view2Image" class="main-image" src="https://picsum.photos/800/600?random=2" alt="安检图片(视角2)">
+
+                        <!-- 双视角模式 -->
+                        <div id="dualView"
+                            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none;">
+                            <div
+                                style="width: 50%; height: 100%; float: left; display: flex; justify-content: center; align-items: center; background-color: #000;">
+                                <img id="view1Image" class="main-image" src="https://picsum.photos/800/600?random=1"
+                                    alt="安检图片(视角1)">
+                            </div>
+                            <div
+                                style="width: 50%; height: 100%; float: right; display: flex; justify-content: center; align-items: center; background-color: #000;">
+                                <img id="view2Image" class="main-image" src="https://picsum.photos/800/600?random=2"
+                                    alt="安检图片(视角2)">
+                            </div>
+                        </div>
+
+                        <!-- 标记用的Canvas -->
+                        <canvas id="markCanvas"
+                            style="position: absolute; top: 0; left: 0; pointer-events: none;"></canvas>
+
+                        <!-- 合并预览覆盖层 -->
+                        <canvas id="mergeCanvas"
+                            style="position: absolute; top: 0; left: 0; pointer-events: none; display: none;"></canvas>
+
+                        <div class="image-info">
+                            <div>图片ID: <span id="imageId">IMG-001</span></div>
+                            <div>设备: <span id="imageDevice">安检机001</span></div>
+                            <div style="display: none;" id="viewInfo">视角: <span id="currentView">主视角</span></div>
+                        </div>
+                        <!-- 图片缩放控制 -->
+                        <div class="zoom-controls">
+                            <button class="zoom-btn" id="zoomOutBtn" onclick="zoomImage(-0.1)">-</button>
+                            <div class="zoom-value" id="zoomValue">100%</div>
+                            <button class="zoom-btn" id="zoomInBtn" onclick="zoomImage(0.1)">+</button>
+                        </div>
+                        <!-- 标记工具 -->
+                        <div class="marking-tools" style="position: absolute; top: 20px; left: 20px; z-index: 10;">
+                            <button class="zoom-btn" onclick="toggleMarking()" id="markingToggleBtn"
+                                title="启用/禁用标记">✏️</button>
                         </div>
                     </div>
-                    
-                    <!-- 标记用的Canvas -->
-                    <canvas id="markCanvas" style="position: absolute; top: 0; left: 0; pointer-events: none;"></canvas>
-                    
-                    <!-- 合并预览覆盖层 -->
-                    <canvas id="mergeCanvas" style="position: absolute; top: 0; left: 0; pointer-events: none; display: none;"></canvas>
-                    
-                    <div class="image-info">
-                        <div>图片ID: <span id="imageId">IMG-001</span></div>
-                        <div>设备: <span id="imageDevice">安检机001</span></div>
-                        <div style="display: none;" id="viewInfo">视角: <span id="currentView">主视角</span></div>
-                    </div>
-                    <!-- 图片缩放控制 -->
-                    <div class="zoom-controls">
-                        <button class="zoom-btn" id="zoomOutBtn" onclick="zoomImage(-0.1)">-</button>
-                        <div class="zoom-value" id="zoomValue">100%</div>
-                        <button class="zoom-btn" id="zoomInBtn" onclick="zoomImage(0.1)">+</button>
-                    </div>
-                    <!-- 标记工具 -->
-                    <div class="marking-tools" style="position: absolute; top: 20px; left: 20px; z-index: 10;">
-                        <button class="zoom-btn" onclick="toggleMarking()" id="markingToggleBtn" title="启用/禁用标记">✏️</button>
+                    <div class="image-actions">
+                        <button class="action-btn btn-primary" onclick="acceptJudgement()">正常通过</button>
+                        <button class="action-btn btn-danger" onclick="rejectJudgement()">可疑</button>
+                        <button class="action-btn btn-secondary" onclick="reviewJudgement()">审核</button>
                     </div>
                 </div>
-                <div class="image-actions">
-                    <button class="action-btn btn-primary" onclick="acceptJudgement()">正常通过</button>
-                    <button class="action-btn btn-danger" onclick="rejectJudgement()">可疑</button>
-                    <button class="action-btn btn-secondary" onclick="reviewJudgement()">审核</button>
-                </div>
-            </div>
-            
-            <!-- 操作面板 -->
-            <div class="operation-panel">
-                <div class="panel-title">操作面板</div>
-                
-                <!-- 标签页切换 -->
-                <div style="display: flex; margin-bottom: 15px; border-bottom: 1px solid #1e3a5f;">
-                    <button class="tab-btn active" onclick="switchTab('current')" style="padding: 8px 15px; background: none; border: none; color: #409eff; font-size: 13px; cursor: pointer; border-bottom: 2px solid #409eff;">当前任务</button>
-                    <button class="tab-btn" onclick="switchTab('history')" style="padding: 8px 15px; background: none; border: none; color: #909399; font-size: 13px; cursor: pointer;">历史记录</button>
-                </div>
-                
-                <!-- 当前任务标签页 -->
-                <div id="currentTab" style="display: block;">
-                    <!-- 图片信息 -->
+
+                <!-- 操作面板 -->
+                <div class="operation-panel">
+                    <div class="panel-title">操作面板</div>
+
+                    <!-- 标签页切换 -->
+                    <div style="display: flex; margin-bottom: 15px; border-bottom: 1px solid #1e3a5f;">
+                        <button class="tab-btn active" onclick="switchTab('current')"
+                            style="padding: 8px 15px; background: none; border: none; color: #409eff; font-size: 13px; cursor: pointer; border-bottom: 2px solid #409eff;">当前任务</button>
+                        <button class="tab-btn" onclick="switchTab('history')"
+                            style="padding: 8px 15px; background: none; border: none; color: #909399; font-size: 13px; cursor: pointer;">历史记录</button>
+                    </div>
+
+                    <!-- 当前任务标签页 -->
+                    <div id="currentTab" style="display: block;">
+                        <!-- 图片信息 -->
+                        <div class="operation-section">
+                            <div class="section-title">图片信息</div>
+                            <div class="info-item">
+                                <span class="info-label">图片ID</span>
+                                <span class="info-value" id="opImageId">IMG-001</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">设备</span>
+                                <span class="info-value" id="opImageDevice">安检机001</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">时间</span>
+                                <span class="info-value" id="opImageTime">2026-01-16 10:30:00</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">位置</span>
+                                <span class="info-value" id="opImageLocation">1号通道</span>
+                            </div>
+                        </div>
+
+                        <!-- 判图结果 -->
+                        <div class="operation-section">
+                            <div class="section-title">判图结果</div>
+                            <select class="contraband-select" id="contrabandType">
+                                <option value="">无违禁品</option>
+                                <option value="刀具">刀具</option>
+                                <option value="液体">液体</option>
+                                <option value="电池">电池</option>
+                                <option value="其他">其他</option>
+                            </select>
+                            <textarea class="remark-input" id="remark" placeholder="请输入判图备注"></textarea>
+                        </div>
+
+                        <!-- 操作按钮 -->
+                        <div class="operation-section">
+                            <div class="section-title">操作</div>
+                            <button class="action-btn btn-primary" onclick="saveJudgement()"
+                                style="width: 100%; margin-bottom: 8px;">保存结果</button>
+                            <button class="action-btn btn-secondary" onclick="skipJudgement()"
+                                style="width: 100%;">跳过</button>
+                            <button class="action-btn btn-danger" onclick="deleteJudgement()"
+                                style="width: 100%; margin-top: 8px;">删除</button>
+                        </div>
+                    </div>
+
+                    <!-- 历史记录标签页 -->
+                    <div id="historyTab" style="display: none;">
+                        <!-- 历史记录列表 -->
+                        <div class="operation-section">
+                            <div class="section-title">历史判图记录</div>
+                            <div style="max-height: 200px; overflow-y: auto; margin-bottom: 10px;">
+                                <div id="historyList"></div>
+                            </div>
+                            <button class="action-btn btn-primary" onclick="loadMoreHistory()"
+                                style="width: 100%; font-size: 12px; padding: 6px 0;">加载更多</button>
+                        </div>
+
+                        <!-- 历史记录详情 -->
+                        <div class="operation-section" id="historyDetail" style="display: none;">
+                            <div class="section-title">历史记录详情</div>
+                            <div class="info-item">
+                                <span class="info-label">处理时间</span>
+                                <span class="info-value" id="historyProcessTime"></span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">处理结果</span>
+                                <span class="info-value" id="historyResult"></span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">违禁品类型</span>
+                                <span class="info-value" id="historyContraband"></span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">处理人</span>
+                                <span class="info-value" id="historyOperator"></span>
+                            </div>
+                            <div style="margin-top: 10px;">
+                                <label
+                                    style="font-size: 12px; color: #909399; margin-bottom: 5px; display: block;">备注</label>
+                                <div id="historyRemark"
+                                    style="font-size: 12px; color: #ffffff; background-color: #18304a; padding: 8px; border-radius: 4px; min-height: 50px;">
+                                </div>
+                            </div>
+                            <button class="action-btn btn-secondary" onclick="closeHistoryDetail()"
+                                style="width: 100%; margin-top: 10px; font-size: 12px; padding: 6px 0;">关闭详情</button>
+                        </div>
+                    </div>
+
+                    <!-- 统计信息 -->
                     <div class="operation-section">
-                        <div class="section-title">图片信息</div>
+                        <div class="section-title">统计信息</div>
                         <div class="info-item">
-                            <span class="info-label">图片ID</span>
-                            <span class="info-value" id="opImageId">IMG-001</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">设备</span>
-                            <span class="info-value" id="opImageDevice">安检机001</span>
+                            <span class="info-label">今日判图</span>
+                            <span class="info-value">125</span>
                         </div>
                         <div class="info-item">
-                            <span class="info-label">时间</span>
-                            <span class="info-value" id="opImageTime">2026-01-16 10:30:00</span>
+                            <span class="info-label">待判图</span>
+                            <span class="info-value">32</span>
                         </div>
                         <div class="info-item">
-                            <span class="info-label">位置</span>
-                            <span class="info-value" id="opImageLocation">1号通道</span>
+                            <span class="info-label">判图准确率</span>
+                            <span class="info-value">98.5%</span>
                         </div>
-                    </div>
-                    
-                    <!-- 判图结果 -->
-                    <div class="operation-section">
-                        <div class="section-title">判图结果</div>
-                        <select class="contraband-select" id="contrabandType">
-                            <option value="">无违禁品</option>
-                            <option value="刀具">刀具</option>
-                            <option value="液体">液体</option>
-                            <option value="电池">电池</option>
-                            <option value="其他">其他</option>
-                        </select>
-                        <textarea class="remark-input" id="remark" placeholder="请输入判图备注"></textarea>
-                    </div>
-                    
-                    <!-- 操作按钮 -->
-                    <div class="operation-section">
-                        <div class="section-title">操作</div>
-                        <button class="action-btn btn-primary" onclick="saveJudgement()" style="width: 100%; margin-bottom: 8px;">保存结果</button>
-                        <button class="action-btn btn-secondary" onclick="skipJudgement()" style="width: 100%;">跳过</button>
-                        <button class="action-btn btn-danger" onclick="deleteJudgement()" style="width: 100%; margin-top: 8px;">删除</button>
-                    </div>
-                </div>
-                
-                <!-- 历史记录标签页 -->
-                <div id="historyTab" style="display: none;">
-                    <!-- 历史记录列表 -->
-                    <div class="operation-section">
-                        <div class="section-title">历史判图记录</div>
-                        <div style="max-height: 200px; overflow-y: auto; margin-bottom: 10px;">
-                            <div id="historyList"></div>
-                        </div>
-                        <button class="action-btn btn-primary" onclick="loadMoreHistory()" style="width: 100%; font-size: 12px; padding: 6px 0;">加载更多</button>
-                    </div>
-                    
-                    <!-- 历史记录详情 -->
-                    <div class="operation-section" id="historyDetail" style="display: none;">
-                        <div class="section-title">历史记录详情</div>
-                        <div class="info-item">
-                            <span class="info-label">处理时间</span>
-                            <span class="info-value" id="historyProcessTime"></span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">处理结果</span>
-                            <span class="info-value" id="historyResult"></span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">违禁品类型</span>
-                            <span class="info-value" id="historyContraband"></span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">处理人</span>
-                            <span class="info-value" id="historyOperator"></span>
-                        </div>
-                        <div style="margin-top: 10px;">
-                            <label style="font-size: 12px; color: #909399; margin-bottom: 5px; display: block;">备注</label>
-                            <div id="historyRemark" style="font-size: 12px; color: #ffffff; background-color: #18304a; padding: 8px; border-radius: 4px; min-height: 50px;"></div>
-                        </div>
-                        <button class="action-btn btn-secondary" onclick="closeHistoryDetail()" style="width: 100%; margin-top: 10px; font-size: 12px; padding: 6px 0;">关闭详情</button>
-                    </div>
-                </div>
-                
-                <!-- 统计信息 -->
-                <div class="operation-section">
-                    <div class="section-title">统计信息</div>
-                    <div class="info-item">
-                        <span class="info-label">今日判图</span>
-                        <span class="info-value">125</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">待判图</span>
-                        <span class="info-value">32</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">判图准确率</span>
-                        <span class="info-value">98.5%</span>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <script>
-        // 模拟数据生成函数
-        function generateMockData() {
-            const judgeResults = ["待处理", "处理中", "已完成"];
-            const devices = ["安检机001", "安检机002", "安检机003", "安检机004", "安检机005"];
-            const locations = ["1号通道", "2号通道", "3号通道", "4号通道", "5号通道"];
-            
-            const judgeItems = [];
-            for (let i = 0; i < 30; i++) {
-                const time = new Date(Date.now() - Math.random() * 3600000);
-                const statusIndex = Math.floor(Math.random() * judgeResults.length);
-                const status = judgeResults[statusIndex];
-                const deviceIndex = Math.floor(Math.random() * devices.length);
-                const locationIndex = Math.floor(Math.random() * locations.length);
-                
-                judgeItems.push({
-                    id: `JUD-${Date.now()}-${i}`,
-                    time: time.toLocaleString(),
-                    device: devices[deviceIndex],
-                    deviceId: `DEV-${deviceIndex + 100}`,
-                    status: status,
-                    statusClass: status === "待处理" ? "status-pending" : (status === "处理中" ? "status-processing" : "status-completed"),
-                    imageId: `IMG-${Date.now()}-${i}`,
-                    imageUrl: `https://picsum.photos/800/600?random=${i}`,
-                    thumbnailUrl: `https://picsum.photos/200/100?random=${i}`,
-                    location: locations[locationIndex],
-                    passengerId: Math.random() > 0.5 ? `PASS-${Math.floor(Math.random() * 10000)}` : "未知"
-                });
+        <script>
+            // 模拟数据生成函数
+            function generateMockData() {
+                const judgeResults = ["待处理", "处理中", "已完成"];
+                const devices = ["安检机001", "安检机002", "安检机003", "安检机004", "安检机005"];
+                const locations = ["1号通道", "2号通道", "3号通道", "4号通道", "5号通道"];
+
+                const judgeItems = [];
+                for (let i = 0; i < 30; i++) {
+                    const time = new Date(Date.now() - Math.random() * 3600000);
+                    const statusIndex = Math.floor(Math.random() * judgeResults.length);
+                    const status = judgeResults[statusIndex];
+                    const deviceIndex = Math.floor(Math.random() * devices.length);
+                    const locationIndex = Math.floor(Math.random() * locations.length);
+
+                    judgeItems.push({
+                        id: `JUD-${Date.now()}-${i}`,
+                        time: time.toLocaleString(),
+                        device: devices[deviceIndex],
+                        deviceId: `DEV-${deviceIndex + 100}`,
+                        status: status,
+                        statusClass: status === "待处理" ? "status-pending" : (status === "处理中" ? "status-processing" : "status-completed"),
+                        imageId: `IMG-${Date.now()}-${i}`,
+                        imageUrl: `https://picsum.photos/800/600?random=${i}`,
+                        thumbnailUrl: `https://picsum.photos/200/100?random=${i}`,
+                        location: locations[locationIndex],
+                        passengerId: Math.random() > 0.5 ? `PASS-${Math.floor(Math.random() * 10000)}` : "未知"
+                    });
+                }
+
+                // 按时间倒序排序
+                judgeItems.sort((a, b) => new Date(b.time) - new Date(a.time));
+
+                return judgeItems;
             }
-            
-            // 按时间倒序排序
-            judgeItems.sort((a, b) => new Date(b.time) - new Date(a.time));
-            
-            return judgeItems;
-        }
 
-        // 更新时间显示
-        function updateTime() {
-            const now = new Date();
-            const timeDisplay = document.getElementById('currentTime');
-            if (timeDisplay) {
-                timeDisplay.textContent = now.toLocaleString();
+            // 更新时间显示
+            function updateTime() {
+                const now = new Date();
+                const timeDisplay = document.getElementById('currentTime');
+                if (timeDisplay) {
+                    timeDisplay.textContent = now.toLocaleString();
+                }
             }
-        }
 
-        // 渲染判图列表
-        function renderJudgeList(items) {
-            const judgeList = document.getElementById('judgeList');
-            if (!judgeList) return;
-            
-            judgeList.innerHTML = '';
+            // 渲染判图列表
+            function renderJudgeList(items) {
+                const judgeList = document.getElementById('judgeList');
+                if (!judgeList) return;
 
-            items.forEach(item => {
-                const judgeItem = document.createElement('div');
-                judgeItem.className = `judge-item ${item.status === '处理中' ? 'active' : ''}`;
-                
-                // 创建内部容器，区分点击选择和点击查看详情
-                const itemContainer = document.createElement('div');
-                itemContainer.style.position = 'relative';
-                
-                // 添加复选框
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.className = 'item-checkbox';
-                checkbox.style = 'position: absolute; top: 12px; left: 12px; accent-color: #409eff;';
-                checkbox.onclick = (e) => {
-                    e.stopPropagation(); // 阻止事件冒泡
-                    toggleSelectItem(item.id);
-                };
-                
-                itemContainer.appendChild(checkbox);
-                
-                // 添加项目内容
-                itemContainer.innerHTML += `
+                judgeList.innerHTML = '';
+
+                items.forEach(item => {
+                    const judgeItem = document.createElement('div');
+                    judgeItem.className = `judge-item ${item.status === '处理中' ? 'active' : ''}`;
+
+                    // 创建内部容器，区分点击选择和点击查看详情
+                    const itemContainer = document.createElement('div');
+                    itemContainer.style.position = 'relative';
+
+                    // 添加复选框
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.className = 'item-checkbox';
+                    checkbox.style = 'position: absolute; top: 12px; left: 12px; accent-color: #409eff;';
+                    checkbox.onclick = (e) => {
+                        e.stopPropagation(); // 阻止事件冒泡
+                        toggleSelectItem(item.id);
+                    };
+
+                    itemContainer.appendChild(checkbox);
+
+                    // 添加项目内容
+                    itemContainer.innerHTML += `
                     <div style="padding-left: 25px;">
                         <div class="judge-item-header">
                             <span class="judge-item-time">${item.time}</span>
@@ -725,465 +777,465 @@
                         </div>
                     </div>
                 `;
-                
-                // 点击项目（除了复选框）查看详情
-                judgeItem.onclick = () => selectJudgementItem(item);
-                judgeItem.appendChild(itemContainer);
-                
-                judgeList.appendChild(judgeItem);
-            });
-        }
 
-        // 图片缩放变量
-        window.currentZoom = 1.0;
-        const minZoom = 0.5;
-        const maxZoom = 3.0;
-        
-        // 图片标记变量
-        window.isMarkingEnabled = false;
-        window.markPoints = [];
-        window.currentMarking = null;
-        window.markCanvas = null;
-        window.markCtx = null;
-        
-        // 批量操作变量
-        window.selectedItems = new Set();
-        
-        // 分页变量
-        window.currentPage = 1;
-        window.pageSize = 10;
-        window.totalPages = 1;
-        
-        // 双视角变量
-        window.currentViewMode = 'single'; // single 或 dual
-        window.isMergePreview = false;
-        window.mergeMode = 'overlay'; // overlay, side-by-side, blend
-        window.currentView = 'main'; // main, view1, view2
-        
-        // 选择判图项
-        function selectJudgementItem(item) {
-            // 更新当前选中项
-            window.currentJudgeItem = item;
-            
-            // 更新UI
-            document.getElementById('imageId').textContent = item.imageId;
-            document.getElementById('imageDevice').textContent = item.device;
-            document.getElementById('mainImage').src = item.imageUrl;
-            
-            document.getElementById('opImageId').textContent = item.imageId;
-            document.getElementById('opImageDevice').textContent = item.device;
-            document.getElementById('opImageTime').textContent = item.time;
-            document.getElementById('opImageLocation').textContent = item.location;
-            
-            // 重置缩放
+                    // 点击项目（除了复选框）查看详情
+                    judgeItem.onclick = () => selectJudgementItem(item);
+                    judgeItem.appendChild(itemContainer);
+
+                    judgeList.appendChild(judgeItem);
+                });
+            }
+
+            // 图片缩放变量
             window.currentZoom = 1.0;
-            updateZoom();
-            
-            // 更新选中状态
-            const judgeItems = document.querySelectorAll('.judge-item');
-            judgeItems.forEach(i => i.classList.remove('active'));
-            event.currentTarget.classList.add('active');
-        }
-        
-        // 图片缩放功能
-        function zoomImage(amount) {
-            const newZoom = window.currentZoom + amount;
-            if (newZoom >= minZoom && newZoom <= maxZoom) {
-                window.currentZoom = newZoom;
+            const minZoom = 0.5;
+            const maxZoom = 3.0;
+
+            // 图片标记变量
+            window.isMarkingEnabled = false;
+            window.markPoints = [];
+            window.currentMarking = null;
+            window.markCanvas = null;
+            window.markCtx = null;
+
+            // 批量操作变量
+            window.selectedItems = new Set();
+
+            // 分页变量
+            window.currentPage = 1;
+            window.pageSize = 10;
+            window.totalPages = 1;
+
+            // 双视角变量
+            window.currentViewMode = 'single'; // single 或 dual
+            window.isMergePreview = false;
+            window.mergeMode = 'overlay'; // overlay, side-by-side, blend
+            window.currentView = 'main'; // main, view1, view2
+
+            // 选择判图项
+            function selectJudgementItem(item) {
+                // 更新当前选中项
+                window.currentJudgeItem = item;
+
+                // 更新UI
+                document.getElementById('imageId').textContent = item.imageId;
+                document.getElementById('imageDevice').textContent = item.device;
+                document.getElementById('mainImage').src = item.imageUrl;
+
+                document.getElementById('opImageId').textContent = item.imageId;
+                document.getElementById('opImageDevice').textContent = item.device;
+                document.getElementById('opImageTime').textContent = item.time;
+                document.getElementById('opImageLocation').textContent = item.location;
+
+                // 重置缩放
+                window.currentZoom = 1.0;
                 updateZoom();
+
+                // 更新选中状态
+                const judgeItems = document.querySelectorAll('.judge-item');
+                judgeItems.forEach(i => i.classList.remove('active'));
+                event.currentTarget.classList.add('active');
             }
-        }
-        
-        // 初始化标记Canvas
-        function initMarkingCanvas() {
-            const image = document.getElementById('mainImage');
-            const canvas = document.getElementById('markCanvas');
-            
-            if (image && canvas) {
-                // 设置Canvas尺寸与图片一致
-                canvas.width = image.offsetWidth;
-                canvas.height = image.offsetHeight;
-                
-                window.markCanvas = canvas;
-                window.markCtx = canvas.getContext('2d');
-                
-                // 添加鼠标事件监听
-                canvas.style.pointerEvents = 'auto';
-                canvas.addEventListener('mousedown', startMarking);
-                canvas.addEventListener('mousemove', drawMarking);
-                canvas.addEventListener('mouseup', finishMarking);
-                canvas.addEventListener('mouseleave', finishMarking);
+
+            // 图片缩放功能
+            function zoomImage(amount) {
+                const newZoom = window.currentZoom + amount;
+                if (newZoom >= minZoom && newZoom <= maxZoom) {
+                    window.currentZoom = newZoom;
+                    updateZoom();
+                }
             }
-        }
-        
-        // 更新缩放显示和图片大小
-        function updateZoom() {
-            const image = document.getElementById('mainImage');
-            const zoomValue = document.getElementById('zoomValue');
-            const canvas = document.getElementById('markCanvas');
-            
-            if (image && zoomValue) {
-                const zoomPercentage = Math.round(window.currentZoom * 100);
-                zoomValue.textContent = `${zoomPercentage}%`;
-                image.style.transform = `scale(${window.currentZoom})`;
-                
-                // 重新调整Canvas尺寸
-                if (canvas) {
+
+            // 初始化标记Canvas
+            function initMarkingCanvas() {
+                const image = document.getElementById('mainImage');
+                const canvas = document.getElementById('markCanvas');
+
+                if (image && canvas) {
+                    // 设置Canvas尺寸与图片一致
                     canvas.width = image.offsetWidth;
                     canvas.height = image.offsetHeight;
+
+                    window.markCanvas = canvas;
+                    window.markCtx = canvas.getContext('2d');
+
+                    // 添加鼠标事件监听
+                    canvas.style.pointerEvents = 'auto';
+                    canvas.addEventListener('mousedown', startMarking);
+                    canvas.addEventListener('mousemove', drawMarking);
+                    canvas.addEventListener('mouseup', finishMarking);
+                    canvas.addEventListener('mouseleave', finishMarking);
                 }
             }
-        }
-        
-        // 切换标记功能
-        function toggleMarking() {
-            window.isMarkingEnabled = !window.isMarkingEnabled;
-            const toggleBtn = document.getElementById('markingToggleBtn');
-            const canvas = document.getElementById('markCanvas');
-            
-            if (toggleBtn) {
-                toggleBtn.style.backgroundColor = window.isMarkingEnabled ? 'rgba(245, 108, 108, 0.6)' : 'rgba(0, 0, 0, 0.6)';
+
+            // 更新缩放显示和图片大小
+            function updateZoom() {
+                const image = document.getElementById('mainImage');
+                const zoomValue = document.getElementById('zoomValue');
+                const canvas = document.getElementById('markCanvas');
+
+                if (image && zoomValue) {
+                    const zoomPercentage = Math.round(window.currentZoom * 100);
+                    zoomValue.textContent = `${zoomPercentage}%`;
+                    image.style.transform = `scale(${window.currentZoom})`;
+
+                    // 重新调整Canvas尺寸
+                    if (canvas) {
+                        canvas.width = image.offsetWidth;
+                        canvas.height = image.offsetHeight;
+                    }
+                }
             }
-            
-            if (canvas) {
-                canvas.style.pointerEvents = window.isMarkingEnabled ? 'auto' : 'none';
+
+            // 切换标记功能
+            function toggleMarking() {
+                window.isMarkingEnabled = !window.isMarkingEnabled;
+                const toggleBtn = document.getElementById('markingToggleBtn');
+                const canvas = document.getElementById('markCanvas');
+
+                if (toggleBtn) {
+                    toggleBtn.style.backgroundColor = window.isMarkingEnabled ? 'rgba(245, 108, 108, 0.6)' : 'rgba(0, 0, 0, 0.6)';
+                }
+
+                if (canvas) {
+                    canvas.style.pointerEvents = window.isMarkingEnabled ? 'auto' : 'none';
+                }
             }
-        }
-        
-        // 开始标记
-        function startMarking(e) {
-            if (!window.isMarkingEnabled) return;
-            
-            const canvas = document.getElementById('markCanvas');
-            if (!canvas) return;
-            
-            // 获取鼠标在Canvas上的坐标
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            
-            // 开始新的标记
-            window.currentMarking = { startX: x, startY: y, endX: x, endY: y };
-        }
-        
-        // 绘制标记
-        function drawMarking(e) {
-            if (!window.isMarkingEnabled || !window.currentMarking) return;
-            
-            const canvas = document.getElementById('markCanvas');
-            const ctx = canvas.getContext('2d');
-            if (!canvas || !ctx) return;
-            
-            // 获取鼠标在Canvas上的坐标
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            
-            // 更新当前标记的结束坐标
-            window.currentMarking.endX = x;
-            window.currentMarking.endY = y;
-            
+
+            // 开始标记
+            function startMarking(e) {
+                if (!window.isMarkingEnabled) return;
+
+                const canvas = document.getElementById('markCanvas');
+                if (!canvas) return;
+
+                // 获取鼠标在Canvas上的坐标
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                // 开始新的标记
+                window.currentMarking = { startX: x, startY: y, endX: x, endY: y };
+            }
+
+            // 绘制标记
+            function drawMarking(e) {
+                if (!window.isMarkingEnabled || !window.currentMarking) return;
+
+                const canvas = document.getElementById('markCanvas');
+                const ctx = canvas.getContext('2d');
+                if (!canvas || !ctx) return;
+
+                // 获取鼠标在Canvas上的坐标
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                // 更新当前标记的结束坐标
+                window.currentMarking.endX = x;
+                window.currentMarking.endY = y;
+
+                // 重新绘制所有标记
+                redrawAllMarks();
+
+                // 绘制当前进行中的标记
+                drawSingleMark(ctx, window.currentMarking, true);
+            }
+
+            // 完成标记
+            function finishMarking() {
+                if (!window.isMarkingEnabled || !window.currentMarking) return;
+
+                // 保存完成的标记
+                window.markPoints.push(window.currentMarking);
+                window.currentMarking = null;
+
+                // 重新绘制所有标记
+                redrawAllMarks();
+            }
+
             // 重新绘制所有标记
-            redrawAllMarks();
-            
-            // 绘制当前进行中的标记
-            drawSingleMark(ctx, window.currentMarking, true);
-        }
-        
-        // 完成标记
-        function finishMarking() {
-            if (!window.isMarkingEnabled || !window.currentMarking) return;
-            
-            // 保存完成的标记
-            window.markPoints.push(window.currentMarking);
-            window.currentMarking = null;
-            
-            // 重新绘制所有标记
-            redrawAllMarks();
-        }
-        
-        // 重新绘制所有标记
-        function redrawAllMarks() {
-            const canvas = document.getElementById('markCanvas');
-            const ctx = canvas.getContext('2d');
-            if (!canvas || !ctx) return;
-            
-            // 清除Canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // 绘制所有已保存的标记
-            window.markPoints.forEach(mark => drawSingleMark(ctx, mark, false));
-        }
-        
-        // 绘制单个标记
-        function drawSingleMark(ctx, mark, isCurrent) {
-            // 计算矩形坐标
-            const x = Math.min(mark.startX, mark.endX);
-            const y = Math.min(mark.startY, mark.endY);
-            const width = Math.abs(mark.endX - mark.startX);
-            const height = Math.abs(mark.endY - mark.startY);
-            
-            // 设置样式
-            ctx.strokeStyle = isCurrent ? '#ff4d4f' : '#409eff';
-            ctx.lineWidth = 2;
-            ctx.setLineDash(isCurrent ? [5, 5] : []);
-            
-            // 绘制矩形
-            ctx.strokeRect(x, y, width, height);
-            
-            // 绘制对角线
-            ctx.beginPath();
-            ctx.moveTo(mark.startX, mark.startY);
-            ctx.lineTo(mark.endX, mark.endY);
-            ctx.moveTo(mark.startX, mark.endY);
-            ctx.lineTo(mark.endX, mark.startY);
-            ctx.stroke();
-            
-            // 重置样式
-            ctx.setLineDash([]);
-        }
+            function redrawAllMarks() {
+                const canvas = document.getElementById('markCanvas');
+                const ctx = canvas.getContext('2d');
+                if (!canvas || !ctx) return;
 
-        // 接受判图
-        function acceptJudgement() {
-            if (!window.currentJudgeItem) return;
-            alert(`接受判图：${window.currentJudgeItem.imageId}`);
-            // 这里可以实现接受判图的逻辑
-        }
+                // 清除Canvas
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // 拒绝判图
-        function rejectJudgement() {
-            if (!window.currentJudgeItem) return;
-            alert(`拒绝判图：${window.currentJudgeItem.imageId}`);
-            // 这里可以实现拒绝判图的逻辑
-        }
+                // 绘制所有已保存的标记
+                window.markPoints.forEach(mark => drawSingleMark(ctx, mark, false));
+            }
 
-        // 审核判图
-        function reviewJudgement() {
-            if (!window.currentJudgeItem) return;
-            alert(`审核判图：${window.currentJudgeItem.imageId}`);
-            // 这里可以实现审核判图的逻辑
-        }
+            // 绘制单个标记
+            function drawSingleMark(ctx, mark, isCurrent) {
+                // 计算矩形坐标
+                const x = Math.min(mark.startX, mark.endX);
+                const y = Math.min(mark.startY, mark.endY);
+                const width = Math.abs(mark.endX - mark.startX);
+                const height = Math.abs(mark.endY - mark.startY);
 
-        // 保存判图结果
-        function saveJudgement() {
-            if (!window.currentJudgeItem) return;
-            
-            const contrabandType = document.getElementById('contrabandType').value;
-            const remark = document.getElementById('remark').value;
-            
-            alert(`保存判图结果：${window.currentJudgeItem.imageId}\n违禁品类型：${contrabandType || '无'}\n备注：${remark}`);
-            // 这里可以实现保存判图结果的逻辑
-        }
+                // 设置样式
+                ctx.strokeStyle = isCurrent ? '#ff4d4f' : '#409eff';
+                ctx.lineWidth = 2;
+                ctx.setLineDash(isCurrent ? [5, 5] : []);
 
-        // 跳过判图
-        function skipJudgement() {
-            if (!window.currentJudgeItem) return;
-            alert(`跳过判图：${window.currentJudgeItem.imageId}`);
-            // 这里可以实现跳过判图的逻辑
-        }
+                // 绘制矩形
+                ctx.strokeRect(x, y, width, height);
 
-        // 删除判图
-        function deleteJudgement() {
-            if (!window.currentJudgeItem) return;
-            alert(`删除判图：${window.currentJudgeItem.imageId}`);
-            // 这里可以实现删除判图的逻辑
-        }
-        
-        // 批量操作功能
-        
-        // 全选/取消全选
-        function toggleSelectAll() {
-            const selectAllCheckbox = document.getElementById('selectAllCheckbox');
-            const checkboxes = document.querySelectorAll('.item-checkbox');
-            
-            window.selectedItems.clear();
-            
-            if (selectAllCheckbox.checked) {
-                checkboxes.forEach(checkbox => {
-                    checkbox.checked = true;
-                    const itemId = checkbox.closest('.judge-item').querySelector('.judge-item-info').textContent.match(/图片ID: (JUD-\d+)/)[1];
+                // 绘制对角线
+                ctx.beginPath();
+                ctx.moveTo(mark.startX, mark.startY);
+                ctx.lineTo(mark.endX, mark.endY);
+                ctx.moveTo(mark.startX, mark.endY);
+                ctx.lineTo(mark.endX, mark.startY);
+                ctx.stroke();
+
+                // 重置样式
+                ctx.setLineDash([]);
+            }
+
+            // 接受判图
+            function acceptJudgement() {
+                if (!window.currentJudgeItem) return;
+                alert(`接受判图：${window.currentJudgeItem.imageId}`);
+                // 这里可以实现接受判图的逻辑
+            }
+
+            // 拒绝判图
+            function rejectJudgement() {
+                if (!window.currentJudgeItem) return;
+                alert(`拒绝判图：${window.currentJudgeItem.imageId}`);
+                // 这里可以实现拒绝判图的逻辑
+            }
+
+            // 审核判图
+            function reviewJudgement() {
+                if (!window.currentJudgeItem) return;
+                alert(`审核判图：${window.currentJudgeItem.imageId}`);
+                // 这里可以实现审核判图的逻辑
+            }
+
+            // 保存判图结果
+            function saveJudgement() {
+                if (!window.currentJudgeItem) return;
+
+                const contrabandType = document.getElementById('contrabandType').value;
+                const remark = document.getElementById('remark').value;
+
+                alert(`保存判图结果：${window.currentJudgeItem.imageId}\n违禁品类型：${contrabandType || '无'}\n备注：${remark}`);
+                // 这里可以实现保存判图结果的逻辑
+            }
+
+            // 跳过判图
+            function skipJudgement() {
+                if (!window.currentJudgeItem) return;
+                alert(`跳过判图：${window.currentJudgeItem.imageId}`);
+                // 这里可以实现跳过判图的逻辑
+            }
+
+            // 删除判图
+            function deleteJudgement() {
+                if (!window.currentJudgeItem) return;
+                alert(`删除判图：${window.currentJudgeItem.imageId}`);
+                // 这里可以实现删除判图的逻辑
+            }
+
+            // 批量操作功能
+
+            // 全选/取消全选
+            function toggleSelectAll() {
+                const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+                const checkboxes = document.querySelectorAll('.item-checkbox');
+
+                window.selectedItems.clear();
+
+                if (selectAllCheckbox.checked) {
+                    checkboxes.forEach(checkbox => {
+                        checkbox.checked = true;
+                        const itemId = checkbox.closest('.judge-item').querySelector('.judge-item-info').textContent.match(/图片ID: (JUD-\d+)/)[1];
+                        window.selectedItems.add(itemId);
+                    });
+                } else {
+                    checkboxes.forEach(checkbox => checkbox.checked = false);
+                }
+
+                updateSelectedCount();
+            }
+
+            // 切换选择单个项
+            function toggleSelectItem(itemId) {
+                const checkbox = document.querySelector(`[onclick="toggleSelectItem('${itemId}')"]`);
+
+                if (checkbox.checked) {
                     window.selectedItems.add(itemId);
-                });
-            } else {
-                checkboxes.forEach(checkbox => checkbox.checked = false);
+                } else {
+                    window.selectedItems.delete(itemId);
+                }
+
+                // 更新全选复选框状态
+                const allCheckboxes = document.querySelectorAll('.item-checkbox');
+                const checkedCount = document.querySelectorAll('.item-checkbox:checked').length;
+                const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+
+                selectAllCheckbox.checked = checkedCount === allCheckboxes.length;
+                selectAllCheckbox.indeterminate = checkedCount > 0 && checkedCount < allCheckboxes.length;
+
+                updateSelectedCount();
             }
-            
-            updateSelectedCount();
-        }
-        
-        // 切换选择单个项
-        function toggleSelectItem(itemId) {
-            const checkbox = document.querySelector(`[onclick="toggleSelectItem('${itemId}')"]`);
-            
-            if (checkbox.checked) {
-                window.selectedItems.add(itemId);
-            } else {
-                window.selectedItems.delete(itemId);
-            }
-            
-            // 更新全选复选框状态
-            const allCheckboxes = document.querySelectorAll('.item-checkbox');
-            const checkedCount = document.querySelectorAll('.item-checkbox:checked').length;
-            const selectAllCheckbox = document.getElementById('selectAllCheckbox');
-            
-            selectAllCheckbox.checked = checkedCount === allCheckboxes.length;
-            selectAllCheckbox.indeterminate = checkedCount > 0 && checkedCount < allCheckboxes.length;
-            
-            updateSelectedCount();
-        }
-        
-        // 更新已选择计数
-        function updateSelectedCount() {
-            const selectedCount = document.getElementById('selectedCount');
-            if (selectedCount) {
-                selectedCount.textContent = window.selectedItems.size;
-            }
-        }
-        
-        // 批量通过
-        function batchAccept() {
-            if (window.selectedItems.size === 0) {
-                alert('请先选择要处理的项目');
-                return;
-            }
-            
-            alert(`批量通过 ${window.selectedItems.size} 项判图`);
-            // 这里可以实现批量通过的逻辑
-            clearSelection();
-        }
-        
-        // 批量可疑
-        function batchReject() {
-            if (window.selectedItems.size === 0) {
-                alert('请先选择要处理的项目');
-                return;
-            }
-            
-            alert(`批量标记 ${window.selectedItems.size} 项为可疑`);
-            // 这里可以实现批量标记为可疑的逻辑
-            clearSelection();
-        }
-        
-        // 批量审核
-        function batchReview() {
-            if (window.selectedItems.size === 0) {
-                alert('请先选择要处理的项目');
-                return;
-            }
-            
-            alert(`批量标记 ${window.selectedItems.size} 项为需要审核`);
-            // 这里可以实现批量标记为需要审核的逻辑
-            clearSelection();
-        }
-        
-        // 清除选择
-        function clearSelection() {
-            window.selectedItems.clear();
-            
-            const checkboxes = document.querySelectorAll('.item-checkbox');
-            checkboxes.forEach(checkbox => checkbox.checked = false);
-            
-            const selectAllCheckbox = document.getElementById('selectAllCheckbox');
-            selectAllCheckbox.checked = false;
-            selectAllCheckbox.indeterminate = false;
-            
-            updateSelectedCount();
-        }
-        
-        // 历史记录功能
-        
-        // 标签页切换
-        function switchTab(tabName) {
-            // 隐藏所有标签页
-            const tabs = document.querySelectorAll('.tab-btn');
-            const tabContents = document.querySelectorAll('#currentTab, #historyTab');
-            
-            tabs.forEach(tab => {
-                tab.classList.remove('active');
-                tab.style.color = '#909399';
-                tab.style.borderBottom = 'none';
-            });
-            
-            tabContents.forEach(content => {
-                content.style.display = 'none';
-            });
-            
-            // 显示选中的标签页
-            const activeTab = document.querySelector(`.tab-btn[onclick="switchTab('${tabName}')"]`);
-            const activeContent = document.getElementById(`${tabName}Tab`);
-            
-            if (activeTab) {
-                activeTab.classList.add('active');
-                activeTab.style.color = '#409eff';
-                activeTab.style.borderBottom = '2px solid #409eff';
-            }
-            
-            if (activeContent) {
-                activeContent.style.display = 'block';
-                
-                // 如果切换到历史记录标签页，加载历史记录
-                if (tabName === 'history' && document.getElementById('historyList').innerHTML === '') {
-                    loadHistoryRecords();
+
+            // 更新已选择计数
+            function updateSelectedCount() {
+                const selectedCount = document.getElementById('selectedCount');
+                if (selectedCount) {
+                    selectedCount.textContent = window.selectedItems.size;
                 }
             }
-        }
-        
-        // 生成历史记录数据
-        function generateHistoryData() {
-            const results = ['正常通过', '可疑', '审核', '已处理'];
-            const contrabandTypes = ['', '刀具', '液体', '电池', '其他'];
-            const operators = ['张三', '李四', '王五', '赵六'];
-            
-            const historyRecords = [];
-            for (let i = 0; i < 20; i++) {
-                const time = new Date(Date.now() - Math.random() * 86400000 * 30); // 近30天
-                const result = results[Math.floor(Math.random() * results.length)];
-                const contrabandType = result !== '正常通过' ? contrabandTypes[Math.floor(Math.random() * contrabandTypes.length)] : '';
-                const operator = operators[Math.floor(Math.random() * operators.length)];
-                
-                historyRecords.push({
-                    id: `HIST-${Date.now()}-${i}`,
-                    imageId: `IMG-${Date.now()}-${i}`,
-                    device: `安检机00${Math.floor(Math.random() * 5) + 1}`,
-                    time: time.toLocaleString(),
-                    processTime: time.toLocaleString(),
-                    result: result,
-                    contrabandType: contrabandType,
-                    operator: operator,
-                    remark: result !== '正常通过' ? `发现${contrabandType || '可疑物品'}，已${result}` : '无异常'
+
+            // 批量通过
+            function batchAccept() {
+                if (window.selectedItems.size === 0) {
+                    alert('请先选择要处理的项目');
+                    return;
+                }
+
+                alert(`批量通过 ${window.selectedItems.size} 项判图`);
+                // 这里可以实现批量通过的逻辑
+                clearSelection();
+            }
+
+            // 批量可疑
+            function batchReject() {
+                if (window.selectedItems.size === 0) {
+                    alert('请先选择要处理的项目');
+                    return;
+                }
+
+                alert(`批量标记 ${window.selectedItems.size} 项为可疑`);
+                // 这里可以实现批量标记为可疑的逻辑
+                clearSelection();
+            }
+
+            // 批量审核
+            function batchReview() {
+                if (window.selectedItems.size === 0) {
+                    alert('请先选择要处理的项目');
+                    return;
+                }
+
+                alert(`批量标记 ${window.selectedItems.size} 项为需要审核`);
+                // 这里可以实现批量标记为需要审核的逻辑
+                clearSelection();
+            }
+
+            // 清除选择
+            function clearSelection() {
+                window.selectedItems.clear();
+
+                const checkboxes = document.querySelectorAll('.item-checkbox');
+                checkboxes.forEach(checkbox => checkbox.checked = false);
+
+                const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+
+                updateSelectedCount();
+            }
+
+            // 历史记录功能
+
+            // 标签页切换
+            function switchTab(tabName) {
+                // 隐藏所有标签页
+                const tabs = document.querySelectorAll('.tab-btn');
+                const tabContents = document.querySelectorAll('#currentTab, #historyTab');
+
+                tabs.forEach(tab => {
+                    tab.classList.remove('active');
+                    tab.style.color = '#909399';
+                    tab.style.borderBottom = 'none';
                 });
+
+                tabContents.forEach(content => {
+                    content.style.display = 'none';
+                });
+
+                // 显示选中的标签页
+                const activeTab = document.querySelector(`.tab-btn[onclick="switchTab('${tabName}')"]`);
+                const activeContent = document.getElementById(`${tabName}Tab`);
+
+                if (activeTab) {
+                    activeTab.classList.add('active');
+                    activeTab.style.color = '#409eff';
+                    activeTab.style.borderBottom = '2px solid #409eff';
+                }
+
+                if (activeContent) {
+                    activeContent.style.display = 'block';
+
+                    // 如果切换到历史记录标签页，加载历史记录
+                    if (tabName === 'history' && document.getElementById('historyList').innerHTML === '') {
+                        loadHistoryRecords();
+                    }
+                }
             }
-            
-            // 按时间倒序排序
-            historyRecords.sort((a, b) => new Date(b.time) - new Date(a.time));
-            
-            return historyRecords;
-        }
-        
-        // 加载历史记录
-        function loadHistoryRecords() {
-            if (!window.historyData) {
-                window.historyData = generateHistoryData();
+
+            // 生成历史记录数据
+            function generateHistoryData() {
+                const results = ['正常通过', '可疑', '审核', '已处理'];
+                const contrabandTypes = ['', '刀具', '液体', '电池', '其他'];
+                const operators = ['张三', '李四', '王五', '赵六'];
+
+                const historyRecords = [];
+                for (let i = 0; i < 20; i++) {
+                    const time = new Date(Date.now() - Math.random() * 86400000 * 30); // 近30天
+                    const result = results[Math.floor(Math.random() * results.length)];
+                    const contrabandType = result !== '正常通过' ? contrabandTypes[Math.floor(Math.random() * contrabandTypes.length)] : '';
+                    const operator = operators[Math.floor(Math.random() * operators.length)];
+
+                    historyRecords.push({
+                        id: `HIST-${Date.now()}-${i}`,
+                        imageId: `IMG-${Date.now()}-${i}`,
+                        device: `安检机00${Math.floor(Math.random() * 5) + 1}`,
+                        time: time.toLocaleString(),
+                        processTime: time.toLocaleString(),
+                        result: result,
+                        contrabandType: contrabandType,
+                        operator: operator,
+                        remark: result !== '正常通过' ? `发现${contrabandType || '可疑物品'}，已${result}` : '无异常'
+                    });
+                }
+
+                // 按时间倒序排序
+                historyRecords.sort((a, b) => new Date(b.time) - new Date(a.time));
+
+                return historyRecords;
             }
-            
-            renderHistoryList(window.historyData.slice(0, 10)); // 先显示前10条
-        }
-        
-        // 渲染历史记录列表
-        function renderHistoryList(records) {
-            const historyList = document.getElementById('historyList');
-            if (!historyList) return;
-            
-            records.forEach(record => {
-                const historyItem = document.createElement('div');
-                historyItem.className = 'judge-item';
-                historyItem.style.padding = '8px';
-                historyItem.style.marginBottom = '5px';
-                historyItem.style.cursor = 'pointer';
-                historyItem.style.transition = 'all 0.3s ease';
-                historyItem.onclick = () => showHistoryDetail(record);
-                
-                historyItem.innerHTML = `
+
+            // 加载历史记录
+            function loadHistoryRecords() {
+                if (!window.historyData) {
+                    window.historyData = generateHistoryData();
+                }
+
+                renderHistoryList(window.historyData.slice(0, 10)); // 先显示前10条
+            }
+
+            // 渲染历史记录列表
+            function renderHistoryList(records) {
+                const historyList = document.getElementById('historyList');
+                if (!historyList) return;
+
+                records.forEach(record => {
+                    const historyItem = document.createElement('div');
+                    historyItem.className = 'judge-item';
+                    historyItem.style.padding = '8px';
+                    historyItem.style.marginBottom = '5px';
+                    historyItem.style.cursor = 'pointer';
+                    historyItem.style.transition = 'all 0.3s ease';
+                    historyItem.onclick = () => showHistoryDetail(record);
+
+                    historyItem.innerHTML = `
                     <div style="font-size: 12px; color: #ffffff; margin-bottom: 4px;">${record.imageId} - ${record.device}</div>
                     <div style="font-size: 11px; color: #909399; margin-bottom: 4px;">${record.time}</div>
                     <div style="font-size: 11px; display: flex; justify-content: space-between;">
@@ -1191,292 +1243,293 @@
                         <span style="color: #909399;">${record.contrabandType || '无'}</span>
                     </div>
                 `;
-                
-                // 添加悬停效果
-                historyItem.addEventListener('mouseenter', () => {
-                    historyItem.style.backgroundColor = '#204060';
+
+                    // 添加悬停效果
+                    historyItem.addEventListener('mouseenter', () => {
+                        historyItem.style.backgroundColor = '#204060';
+                    });
+
+                    historyItem.addEventListener('mouseleave', () => {
+                        historyItem.style.backgroundColor = '#18304a';
+                    });
+
+                    historyList.appendChild(historyItem);
                 });
-                
-                historyItem.addEventListener('mouseleave', () => {
-                    historyItem.style.backgroundColor = '#18304a';
-                });
-                
-                historyList.appendChild(historyItem);
-            });
-        }
-        
-        // 显示历史记录详情
-        function showHistoryDetail(record) {
-            const historyDetail = document.getElementById('historyDetail');
-            if (!historyDetail) return;
-            
-            // 更新详情信息
-            document.getElementById('historyProcessTime').textContent = record.processTime;
-            document.getElementById('historyResult').textContent = record.result;
-            document.getElementById('historyContraband').textContent = record.contrabandType || '无';
-            document.getElementById('historyOperator').textContent = record.operator;
-            document.getElementById('historyRemark').textContent = record.remark;
-            
-            // 显示详情
-            historyDetail.style.display = 'block';
-        }
-        
-        // 关闭历史记录详情
-        function closeHistoryDetail() {
-            const historyDetail = document.getElementById('historyDetail');
-            if (historyDetail) {
-                historyDetail.style.display = 'none';
             }
-        }
-        
-        // 加载更多历史记录
-        function loadMoreHistory() {
-            if (!window.historyData) return;
-            
-            const currentCount = document.querySelectorAll('#historyList .judge-item').length;
-            const nextRecords = window.historyData.slice(currentCount, currentCount + 10);
-            
-            if (nextRecords.length > 0) {
-                renderHistoryList(nextRecords);
-            } else {
-                alert('已经加载完所有历史记录');
+
+            // 显示历史记录详情
+            function showHistoryDetail(record) {
+                const historyDetail = document.getElementById('historyDetail');
+                if (!historyDetail) return;
+
+                // 更新详情信息
+                document.getElementById('historyProcessTime').textContent = record.processTime;
+                document.getElementById('historyResult').textContent = record.result;
+                document.getElementById('historyContraband').textContent = record.contrabandType || '无';
+                document.getElementById('historyOperator').textContent = record.operator;
+                document.getElementById('historyRemark').textContent = record.remark;
+
+                // 显示详情
+                historyDetail.style.display = 'block';
             }
-        }
-        
-        // 分页功能
-        
-        // 初始化分页
-        function initPagination() {
-            calculateTotalPages();
-            renderPagedJudgeList();
-            updatePaginationUI();
-        }
-        
-        // 计算总页数
-        function calculateTotalPages() {
-            if (!window.judgeData) return;
-            window.totalPages = Math.ceil(window.judgeData.length / window.pageSize);
-            if (window.totalPages < 1) {
-                window.totalPages = 1;
-            }
-        }
-        
-        // 渲染分页数据
-        function renderPagedJudgeList() {
-            if (!window.judgeData) return;
-            
-            const startIndex = (window.currentPage - 1) * window.pageSize;
-            const endIndex = startIndex + window.pageSize;
-            const pagedData = window.judgeData.slice(startIndex, endIndex);
-            
-            renderJudgeList(pagedData);
-        }
-        
-        // 更新分页UI
-        function updatePaginationUI() {
-            document.getElementById('currentPageSpan').textContent = window.currentPage;
-            document.getElementById('totalPagesSpan').textContent = window.totalPages;
-            
-            // 更新按钮状态
-            document.getElementById('firstPageBtn').disabled = window.currentPage === 1;
-            document.getElementById('prevPageBtn').disabled = window.currentPage === 1;
-            document.getElementById('nextPageBtn').disabled = window.currentPage === window.totalPages;
-            document.getElementById('lastPageBtn').disabled = window.currentPage === window.totalPages;
-        }
-        
-        // 跳转到指定页码
-        function goToPage(pageNumber) {
-            if (pageNumber < 1 || pageNumber > window.totalPages) {
-                return;
-            }
-            
-            // 页面切换时清除之前的选择状态
-            clearSelection();
-            
-            window.currentPage = pageNumber;
-            renderPagedJudgeList();
-            updatePaginationUI();
-        }
-        
-        // 改变每页显示数量
-        function changePageSize() {
-            const selectElement = document.getElementById('pageSizeSelect');
-            window.pageSize = parseInt(selectElement.value);
-            window.currentPage = 1;
-            
-            // 改变每页显示数量时清除之前的选择状态
-            clearSelection();
-            
-            calculateTotalPages();
-            renderPagedJudgeList();
-            updatePaginationUI();
-        }
-        
-        // 双视角合并功能
-        
-        // 切换视角模式
-        function switchView(viewMode) {
-            window.currentViewMode = viewMode;
-            
-            // 更新按钮状态
-            document.getElementById('singleViewBtn').classList.toggle('btn-primary', viewMode === 'single');
-            document.getElementById('singleViewBtn').classList.toggle('btn-secondary', viewMode !== 'single');
-            document.getElementById('dualViewBtn').classList.toggle('btn-primary', viewMode === 'dual');
-            document.getElementById('dualViewBtn').classList.toggle('btn-secondary', viewMode !== 'dual');
-            
-            // 更新视图显示
-            document.getElementById('singleView').style.display = viewMode === 'single' ? 'flex' : 'none';
-            document.getElementById('dualView').style.display = viewMode === 'dual' ? 'block' : 'none';
-            document.getElementById('viewInfo').style.display = viewMode === 'dual' ? 'block' : 'none';
-            
-            // 如果在双视角模式下，隐藏合并预览
-            if (viewMode === 'dual') {
-                toggleMergePreview(false);
-            }
-            
-            // 更新缩放和标记
-            updateZoom();
-            redrawAllMarks();
-        }
-        
-        // 切换合并预览
-        function toggleMergePreview(forceState = null) {
-            if (forceState !== null) {
-                window.isMergePreview = forceState;
-            } else {
-                window.isMergePreview = !window.isMergePreview;
-            }
-            
-            // 更新按钮状态
-            const mergeBtn = document.getElementById('mergePreviewBtn');
-            mergeBtn.classList.toggle('btn-primary', window.isMergePreview);
-            mergeBtn.classList.toggle('btn-secondary', !window.isMergePreview);
-            mergeBtn.textContent = window.isMergePreview ? '取消合并预览' : '合并预览';
-            
-            // 更新合并模式选择器显示
-            const mergeModeSelect = document.getElementById('mergeModeSelect');
-            mergeModeSelect.style.display = window.isMergePreview ? 'block' : 'none';
-            
-            // 更新合并画布显示
-            const mergeCanvas = document.getElementById('mergeCanvas');
-            mergeCanvas.style.display = window.isMergePreview ? 'block' : 'none';
-            
-            // 如果启用合并预览，更新预览
-            if (window.isMergePreview) {
-                updateMergePreview();
-            }
-        }
-        
-        // 更新合并预览
-        function updateMergePreview() {
-            const mergeCanvas = document.getElementById('mergeCanvas');
-            const mainImage = document.getElementById('mainImage');
-            const view1Image = document.getElementById('view1Image');
-            const view2Image = document.getElementById('view2Image');
-            
-            if (!mergeCanvas || !mainImage || !view1Image || !view2Image) return;
-            
-            // 设置画布尺寸
-            mergeCanvas.width = mainImage.offsetWidth;
-            mergeCanvas.height = mainImage.offsetHeight;
-            
-            const ctx = mergeCanvas.getContext('2d');
-            if (!ctx) return;
-            
-            // 清除画布
-            ctx.clearRect(0, 0, mergeCanvas.width, mergeCanvas.height);
-            
-            // 根据合并模式进行合并
-            if (window.mergeMode === 'overlay') {
-                // 叠加模式
-                ctx.globalAlpha = 0.5;
-                ctx.drawImage(view1Image, 0, 0, mergeCanvas.width, mergeCanvas.height);
-                ctx.globalAlpha = 0.5;
-                ctx.drawImage(view2Image, 0, 0, mergeCanvas.width, mergeCanvas.height);
-                ctx.globalAlpha = 1.0;
-            } else if (window.mergeMode === 'side-by-side') {
-                // 并排模式
-                const halfWidth = mergeCanvas.width / 2;
-                ctx.drawImage(view1Image, 0, 0, halfWidth, mergeCanvas.height);
-                ctx.drawImage(view2Image, halfWidth, 0, halfWidth, mergeCanvas.height);
-            } else if (window.mergeMode === 'blend') {
-                // 混合模式
-                ctx.drawImage(view1Image, 0, 0, mergeCanvas.width, mergeCanvas.height);
-                ctx.globalCompositeOperation = 'multiply';
-                ctx.drawImage(view2Image, 0, 0, mergeCanvas.width, mergeCanvas.height);
-                ctx.globalCompositeOperation = 'source-over';
-            }
-        }
-        
-        // 改变合并模式
-        function changeMergeMode() {
-            const selectElement = document.getElementById('mergeModeSelect');
-            window.mergeMode = selectElement.value;
-            
-            if (window.isMergePreview) {
-                updateMergePreview();
-            }
-        }
-        
-        // 更新缩放功能以支持双视角
-        function updateZoom() {
-            const image = document.getElementById('mainImage');
-            const view1Image = document.getElementById('view1Image');
-            const view2Image = document.getElementById('view2Image');
-            const zoomValue = document.getElementById('zoomValue');
-            const canvas = document.getElementById('markCanvas');
-            const mergeCanvas = document.getElementById('mergeCanvas');
-            
-            if (image && zoomValue) {
-                const zoomPercentage = Math.round(window.currentZoom * 100);
-                zoomValue.textContent = `${zoomPercentage}%`;
-                
-                // 应用缩放到所有图片
-                image.style.transform = `scale(${window.currentZoom})`;
-                if (view1Image) view1Image.style.transform = `scale(${window.currentZoom})`;
-                if (view2Image) view2Image.style.transform = `scale(${window.currentZoom})`;
-                
-                // 重新调整Canvas尺寸
-                if (canvas) {
-                    canvas.width = image.offsetWidth;
-                    canvas.height = image.offsetHeight;
+
+            // 关闭历史记录详情
+            function closeHistoryDetail() {
+                const historyDetail = document.getElementById('historyDetail');
+                if (historyDetail) {
+                    historyDetail.style.display = 'none';
                 }
-                
-                if (mergeCanvas) {
-                    mergeCanvas.width = image.offsetWidth;
-                    mergeCanvas.height = image.offsetHeight;
+            }
+
+            // 加载更多历史记录
+            function loadMoreHistory() {
+                if (!window.historyData) return;
+
+                const currentCount = document.querySelectorAll('#historyList .judge-item').length;
+                const nextRecords = window.historyData.slice(currentCount, currentCount + 10);
+
+                if (nextRecords.length > 0) {
+                    renderHistoryList(nextRecords);
+                } else {
+                    alert('已经加载完所有历史记录');
                 }
-                
-                // 更新合并预览
+            }
+
+            // 分页功能
+
+            // 初始化分页
+            function initPagination() {
+                calculateTotalPages();
+                renderPagedJudgeList();
+                updatePaginationUI();
+            }
+
+            // 计算总页数
+            function calculateTotalPages() {
+                if (!window.judgeData) return;
+                window.totalPages = Math.ceil(window.judgeData.length / window.pageSize);
+                if (window.totalPages < 1) {
+                    window.totalPages = 1;
+                }
+            }
+
+            // 渲染分页数据
+            function renderPagedJudgeList() {
+                if (!window.judgeData) return;
+
+                const startIndex = (window.currentPage - 1) * window.pageSize;
+                const endIndex = startIndex + window.pageSize;
+                const pagedData = window.judgeData.slice(startIndex, endIndex);
+
+                renderJudgeList(pagedData);
+            }
+
+            // 更新分页UI
+            function updatePaginationUI() {
+                document.getElementById('currentPageSpan').textContent = window.currentPage;
+                document.getElementById('totalPagesSpan').textContent = window.totalPages;
+
+                // 更新按钮状态
+                document.getElementById('firstPageBtn').disabled = window.currentPage === 1;
+                document.getElementById('prevPageBtn').disabled = window.currentPage === 1;
+                document.getElementById('nextPageBtn').disabled = window.currentPage === window.totalPages;
+                document.getElementById('lastPageBtn').disabled = window.currentPage === window.totalPages;
+            }
+
+            // 跳转到指定页码
+            function goToPage(pageNumber) {
+                if (pageNumber < 1 || pageNumber > window.totalPages) {
+                    return;
+                }
+
+                // 页面切换时清除之前的选择状态
+                clearSelection();
+
+                window.currentPage = pageNumber;
+                renderPagedJudgeList();
+                updatePaginationUI();
+            }
+
+            // 改变每页显示数量
+            function changePageSize() {
+                const selectElement = document.getElementById('pageSizeSelect');
+                window.pageSize = parseInt(selectElement.value);
+                window.currentPage = 1;
+
+                // 改变每页显示数量时清除之前的选择状态
+                clearSelection();
+
+                calculateTotalPages();
+                renderPagedJudgeList();
+                updatePaginationUI();
+            }
+
+            // 双视角合并功能
+
+            // 切换视角模式
+            function switchView(viewMode) {
+                window.currentViewMode = viewMode;
+
+                // 更新按钮状态
+                document.getElementById('singleViewBtn').classList.toggle('btn-primary', viewMode === 'single');
+                document.getElementById('singleViewBtn').classList.toggle('btn-secondary', viewMode !== 'single');
+                document.getElementById('dualViewBtn').classList.toggle('btn-primary', viewMode === 'dual');
+                document.getElementById('dualViewBtn').classList.toggle('btn-secondary', viewMode !== 'dual');
+
+                // 更新视图显示
+                document.getElementById('singleView').style.display = viewMode === 'single' ? 'flex' : 'none';
+                document.getElementById('dualView').style.display = viewMode === 'dual' ? 'block' : 'none';
+                document.getElementById('viewInfo').style.display = viewMode === 'dual' ? 'block' : 'none';
+
+                // 如果在双视角模式下，隐藏合并预览
+                if (viewMode === 'dual') {
+                    toggleMergePreview(false);
+                }
+
+                // 更新缩放和标记
+                updateZoom();
+                redrawAllMarks();
+            }
+
+            // 切换合并预览
+            function toggleMergePreview(forceState = null) {
+                if (forceState !== null) {
+                    window.isMergePreview = forceState;
+                } else {
+                    window.isMergePreview = !window.isMergePreview;
+                }
+
+                // 更新按钮状态
+                const mergeBtn = document.getElementById('mergePreviewBtn');
+                mergeBtn.classList.toggle('btn-primary', window.isMergePreview);
+                mergeBtn.classList.toggle('btn-secondary', !window.isMergePreview);
+                mergeBtn.textContent = window.isMergePreview ? '取消合并预览' : '合并预览';
+
+                // 更新合并模式选择器显示
+                const mergeModeSelect = document.getElementById('mergeModeSelect');
+                mergeModeSelect.style.display = window.isMergePreview ? 'block' : 'none';
+
+                // 更新合并画布显示
+                const mergeCanvas = document.getElementById('mergeCanvas');
+                mergeCanvas.style.display = window.isMergePreview ? 'block' : 'none';
+
+                // 如果启用合并预览，更新预览
                 if (window.isMergePreview) {
                     updateMergePreview();
                 }
             }
-        }
 
-        // 页面加载完成后初始化
-        document.addEventListener('DOMContentLoaded', () => {
-            // 生成并渲染数据
-            const judgeItems = generateMockData();
-            window.judgeData = judgeItems;
-            
-            // 初始化分页
-            initPagination();
-            
-            // 选择第一个项
-            if (judgeItems.length > 0) {
-                window.currentJudgeItem = judgeItems[0];
-                document.getElementById('imageId').textContent = judgeItems[0].imageId;
-                document.getElementById('imageDevice').textContent = judgeItems[0].device;
-                document.getElementById('mainImage').src = judgeItems[0].imageUrl;
-                
-                document.getElementById('opImageId').textContent = judgeItems[0].imageId;
-                document.getElementById('opImageDevice').textContent = judgeItems[0].device;
-                document.getElementById('opImageTime').textContent = judgeItems[0].time;
-                document.getElementById('opImageLocation').textContent = judgeItems[0].location;
+            // 更新合并预览
+            function updateMergePreview() {
+                const mergeCanvas = document.getElementById('mergeCanvas');
+                const mainImage = document.getElementById('mainImage');
+                const view1Image = document.getElementById('view1Image');
+                const view2Image = document.getElementById('view2Image');
+
+                if (!mergeCanvas || !mainImage || !view1Image || !view2Image) return;
+
+                // 设置画布尺寸
+                mergeCanvas.width = mainImage.offsetWidth;
+                mergeCanvas.height = mainImage.offsetHeight;
+
+                const ctx = mergeCanvas.getContext('2d');
+                if (!ctx) return;
+
+                // 清除画布
+                ctx.clearRect(0, 0, mergeCanvas.width, mergeCanvas.height);
+
+                // 根据合并模式进行合并
+                if (window.mergeMode === 'overlay') {
+                    // 叠加模式
+                    ctx.globalAlpha = 0.5;
+                    ctx.drawImage(view1Image, 0, 0, mergeCanvas.width, mergeCanvas.height);
+                    ctx.globalAlpha = 0.5;
+                    ctx.drawImage(view2Image, 0, 0, mergeCanvas.width, mergeCanvas.height);
+                    ctx.globalAlpha = 1.0;
+                } else if (window.mergeMode === 'side-by-side') {
+                    // 并排模式
+                    const halfWidth = mergeCanvas.width / 2;
+                    ctx.drawImage(view1Image, 0, 0, halfWidth, mergeCanvas.height);
+                    ctx.drawImage(view2Image, halfWidth, 0, halfWidth, mergeCanvas.height);
+                } else if (window.mergeMode === 'blend') {
+                    // 混合模式
+                    ctx.drawImage(view1Image, 0, 0, mergeCanvas.width, mergeCanvas.height);
+                    ctx.globalCompositeOperation = 'multiply';
+                    ctx.drawImage(view2Image, 0, 0, mergeCanvas.width, mergeCanvas.height);
+                    ctx.globalCompositeOperation = 'source-over';
+                }
             }
-        });
-    </script>
-</div>
+
+            // 改变合并模式
+            function changeMergeMode() {
+                const selectElement = document.getElementById('mergeModeSelect');
+                window.mergeMode = selectElement.value;
+
+                if (window.isMergePreview) {
+                    updateMergePreview();
+                }
+            }
+
+            // 更新缩放功能以支持双视角
+            function updateZoom() {
+                const image = document.getElementById('mainImage');
+                const view1Image = document.getElementById('view1Image');
+                const view2Image = document.getElementById('view2Image');
+                const zoomValue = document.getElementById('zoomValue');
+                const canvas = document.getElementById('markCanvas');
+                const mergeCanvas = document.getElementById('mergeCanvas');
+
+                if (image && zoomValue) {
+                    const zoomPercentage = Math.round(window.currentZoom * 100);
+                    zoomValue.textContent = `${zoomPercentage}%`;
+
+                    // 应用缩放到所有图片
+                    image.style.transform = `scale(${window.currentZoom})`;
+                    if (view1Image) view1Image.style.transform = `scale(${window.currentZoom})`;
+                    if (view2Image) view2Image.style.transform = `scale(${window.currentZoom})`;
+
+                    // 重新调整Canvas尺寸
+                    if (canvas) {
+                        canvas.width = image.offsetWidth;
+                        canvas.height = image.offsetHeight;
+                    }
+
+                    if (mergeCanvas) {
+                        mergeCanvas.width = image.offsetWidth;
+                        mergeCanvas.height = image.offsetHeight;
+                    }
+
+                    // 更新合并预览
+                    if (window.isMergePreview) {
+                        updateMergePreview();
+                    }
+                }
+            }
+
+            // 页面加载完成后初始化
+            document.addEventListener('DOMContentLoaded', () => {
+                // 生成并渲染数据
+                const judgeItems = generateMockData();
+                window.judgeData = judgeItems;
+
+                // 初始化分页
+                initPagination();
+
+                // 选择第一个项
+                if (judgeItems.length > 0) {
+                    window.currentJudgeItem = judgeItems[0];
+                    document.getElementById('imageId').textContent = judgeItems[0].imageId;
+                    document.getElementById('imageDevice').textContent = judgeItems[0].device;
+                    document.getElementById('mainImage').src = judgeItems[0].imageUrl;
+
+                    document.getElementById('opImageId').textContent = judgeItems[0].imageId;
+                    document.getElementById('opImageDevice').textContent = judgeItems[0].device;
+                    document.getElementById('opImageTime').textContent = judgeItems[0].time;
+                    document.getElementById('opImageLocation').textContent = judgeItems[0].location;
+                }
+            });
+        </script>
+    </div>
 </body>
+
 </html>

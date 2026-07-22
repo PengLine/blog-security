@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
+    <meta name="robots" content="noindex, nofollow">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>系统配置</title>
-    
+
     <style>
         * {
             margin: 0;
@@ -355,6 +357,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="page-header">
@@ -480,12 +483,14 @@
                             </tbody>
                         </table>
                     </div>
-                    
+
                     <!-- 设备列表分页控制 -->
-                    <div class="pagination-controls" style="margin-top: 15px; padding: 15px 0; border-top: 1px solid #18304a; display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
+                    <div class="pagination-controls"
+                        style="margin-top: 15px; padding: 15px 0; border-top: 1px solid #18304a; display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
                         <div style="display: flex; align-items: center;">
                             <label for="devicePageSizeSelect" style="color: #909399; margin-right: 8px;">每页显示:</label>
-                            <select id="devicePageSizeSelect" onchange="changePageSize('device')" style="padding: 4px 8px; background-color: #18304a; border: 1px solid #1e3a5f; color: #ffffff; border-radius: 4px; font-size: 12px;">
+                            <select id="devicePageSizeSelect" onchange="changePageSize('device')"
+                                style="padding: 4px 8px; background-color: #18304a; border: 1px solid #1e3a5f; color: #ffffff; border-radius: 4px; font-size: 12px;">
                                 <option value="10">10条</option>
                                 <option value="20" selected>20条</option>
                                 <option value="30">30条</option>
@@ -493,11 +498,19 @@
                             </select>
                         </div>
                         <div style="display: flex; align-items: center; gap: 8px;">
-                            <button class="btn btn-secondary" onclick="goToPage('device', 1)" id="deviceFirstPageBtn" style="font-size: 12px; padding: 4px 8px;">首页</button>
-                            <button class="btn btn-secondary" onclick="goToPage('device', window.pagination.device.currentPage - 1)" id="devicePrevPageBtn" style="font-size: 12px; padding: 4px 8px;">上一页</button>
-                            <span style="color: #ffffff;">第 <span id="deviceCurrentPageSpan">1</span>/<span id="deviceTotalPagesSpan">1</span> 页</span>
-                            <button class="btn btn-secondary" onclick="goToPage('device', window.pagination.device.currentPage + 1)" id="deviceNextPageBtn" style="font-size: 12px; padding: 4px 8px;">下一页</button>
-                            <button class="btn btn-secondary" onclick="goToPage('device', window.pagination.device.totalPages)" id="deviceLastPageBtn" style="font-size: 12px; padding: 4px 8px;">末页</button>
+                            <button class="btn btn-secondary" onclick="goToPage('device', 1)" id="deviceFirstPageBtn"
+                                style="font-size: 12px; padding: 4px 8px;">首页</button>
+                            <button class="btn btn-secondary"
+                                onclick="goToPage('device', window.pagination.device.currentPage - 1)"
+                                id="devicePrevPageBtn" style="font-size: 12px; padding: 4px 8px;">上一页</button>
+                            <span style="color: #ffffff;">第 <span id="deviceCurrentPageSpan">1</span>/<span
+                                    id="deviceTotalPagesSpan">1</span> 页</span>
+                            <button class="btn btn-secondary"
+                                onclick="goToPage('device', window.pagination.device.currentPage + 1)"
+                                id="deviceNextPageBtn" style="font-size: 12px; padding: 4px 8px;">下一页</button>
+                            <button class="btn btn-secondary"
+                                onclick="goToPage('device', window.pagination.device.totalPages)" id="deviceLastPageBtn"
+                                style="font-size: 12px; padding: 4px 8px;">末页</button>
                         </div>
                     </div>
                 </div>
@@ -568,12 +581,14 @@
                             </tbody>
                         </table>
                     </div>
-                    
+
                     <!-- 告警类型列表分页控制 -->
-                    <div class="pagination-controls" style="margin-top: 15px; padding: 15px 0; border-top: 1px solid #18304a; display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
+                    <div class="pagination-controls"
+                        style="margin-top: 15px; padding: 15px 0; border-top: 1px solid #18304a; display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
                         <div style="display: flex; align-items: center;">
                             <label for="alarmPageSizeSelect" style="color: #909399; margin-right: 8px;">每页显示:</label>
-                            <select id="alarmPageSizeSelect" onchange="changePageSize('alarm')" style="padding: 4px 8px; background-color: #18304a; border: 1px solid #1e3a5f; color: #ffffff; border-radius: 4px; font-size: 12px;">
+                            <select id="alarmPageSizeSelect" onchange="changePageSize('alarm')"
+                                style="padding: 4px 8px; background-color: #18304a; border: 1px solid #1e3a5f; color: #ffffff; border-radius: 4px; font-size: 12px;">
                                 <option value="10">10条</option>
                                 <option value="20" selected>20条</option>
                                 <option value="30">30条</option>
@@ -581,11 +596,19 @@
                             </select>
                         </div>
                         <div style="display: flex; align-items: center; gap: 8px;">
-                            <button class="btn btn-secondary" onclick="goToPage('alarm', 1)" id="alarmFirstPageBtn" style="font-size: 12px; padding: 4px 8px;">首页</button>
-                            <button class="btn btn-secondary" onclick="goToPage('alarm', window.pagination.alarm.currentPage - 1)" id="alarmPrevPageBtn" style="font-size: 12px; padding: 4px 8px;">上一页</button>
-                            <span style="color: #ffffff;">第 <span id="alarmCurrentPageSpan">1</span>/<span id="alarmTotalPagesSpan">1</span> 页</span>
-                            <button class="btn btn-secondary" onclick="goToPage('alarm', window.pagination.alarm.currentPage + 1)" id="alarmNextPageBtn" style="font-size: 12px; padding: 4px 8px;">下一页</button>
-                            <button class="btn btn-secondary" onclick="goToPage('alarm', window.pagination.alarm.totalPages)" id="alarmLastPageBtn" style="font-size: 12px; padding: 4px 8px;">末页</button>
+                            <button class="btn btn-secondary" onclick="goToPage('alarm', 1)" id="alarmFirstPageBtn"
+                                style="font-size: 12px; padding: 4px 8px;">首页</button>
+                            <button class="btn btn-secondary"
+                                onclick="goToPage('alarm', window.pagination.alarm.currentPage - 1)"
+                                id="alarmPrevPageBtn" style="font-size: 12px; padding: 4px 8px;">上一页</button>
+                            <span style="color: #ffffff;">第 <span id="alarmCurrentPageSpan">1</span>/<span
+                                    id="alarmTotalPagesSpan">1</span> 页</span>
+                            <button class="btn btn-secondary"
+                                onclick="goToPage('alarm', window.pagination.alarm.currentPage + 1)"
+                                id="alarmNextPageBtn" style="font-size: 12px; padding: 4px 8px;">下一页</button>
+                            <button class="btn btn-secondary"
+                                onclick="goToPage('alarm', window.pagination.alarm.totalPages)" id="alarmLastPageBtn"
+                                style="font-size: 12px; padding: 4px 8px;">末页</button>
                         </div>
                     </div>
                 </div>
@@ -615,12 +638,14 @@
                             </tbody>
                         </table>
                     </div>
-                    
+
                     <!-- 用户列表分页控制 -->
-                    <div class="pagination-controls" style="margin-top: 15px; padding: 15px 0; border-top: 1px solid #18304a; display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
+                    <div class="pagination-controls"
+                        style="margin-top: 15px; padding: 15px 0; border-top: 1px solid #18304a; display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
                         <div style="display: flex; align-items: center;">
                             <label for="userPageSizeSelect" style="color: #909399; margin-right: 8px;">每页显示:</label>
-                            <select id="userPageSizeSelect" onchange="changePageSize('user')" style="padding: 4px 8px; background-color: #18304a; border: 1px solid #1e3a5f; color: #ffffff; border-radius: 4px; font-size: 12px;">
+                            <select id="userPageSizeSelect" onchange="changePageSize('user')"
+                                style="padding: 4px 8px; background-color: #18304a; border: 1px solid #1e3a5f; color: #ffffff; border-radius: 4px; font-size: 12px;">
                                 <option value="10">10条</option>
                                 <option value="20" selected>20条</option>
                                 <option value="30">30条</option>
@@ -628,11 +653,19 @@
                             </select>
                         </div>
                         <div style="display: flex; align-items: center; gap: 8px;">
-                            <button class="btn btn-secondary" onclick="goToPage('user', 1)" id="userFirstPageBtn" style="font-size: 12px; padding: 4px 8px;">首页</button>
-                            <button class="btn btn-secondary" onclick="goToPage('user', window.pagination.user.currentPage - 1)" id="userPrevPageBtn" style="font-size: 12px; padding: 4px 8px;">上一页</button>
-                            <span style="color: #ffffff;">第 <span id="userCurrentPageSpan">1</span>/<span id="userTotalPagesSpan">1</span> 页</span>
-                            <button class="btn btn-secondary" onclick="goToPage('user', window.pagination.user.currentPage + 1)" id="userNextPageBtn" style="font-size: 12px; padding: 4px 8px;">下一页</button>
-                            <button class="btn btn-secondary" onclick="goToPage('user', window.pagination.user.totalPages)" id="userLastPageBtn" style="font-size: 12px; padding: 4px 8px;">末页</button>
+                            <button class="btn btn-secondary" onclick="goToPage('user', 1)" id="userFirstPageBtn"
+                                style="font-size: 12px; padding: 4px 8px;">首页</button>
+                            <button class="btn btn-secondary"
+                                onclick="goToPage('user', window.pagination.user.currentPage - 1)" id="userPrevPageBtn"
+                                style="font-size: 12px; padding: 4px 8px;">上一页</button>
+                            <span style="color: #ffffff;">第 <span id="userCurrentPageSpan">1</span>/<span
+                                    id="userTotalPagesSpan">1</span> 页</span>
+                            <button class="btn btn-secondary"
+                                onclick="goToPage('user', window.pagination.user.currentPage + 1)" id="userNextPageBtn"
+                                style="font-size: 12px; padding: 4px 8px;">下一页</button>
+                            <button class="btn btn-secondary"
+                                onclick="goToPage('user', window.pagination.user.totalPages)" id="userLastPageBtn"
+                                style="font-size: 12px; padding: 4px 8px;">末页</button>
                         </div>
                     </div>
                 </div>
@@ -661,12 +694,15 @@
                             </tbody>
                         </table>
                     </div>
-                    
+
                     <!-- 违禁品列表分页控制 -->
-                    <div class="pagination-controls" style="margin-top: 15px; padding: 15px 0; border-top: 1px solid #18304a; display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
+                    <div class="pagination-controls"
+                        style="margin-top: 15px; padding: 15px 0; border-top: 1px solid #18304a; display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
                         <div style="display: flex; align-items: center;">
-                            <label for="contrabandPageSizeSelect" style="color: #909399; margin-right: 8px;">每页显示:</label>
-                            <select id="contrabandPageSizeSelect" onchange="changePageSize('contraband')" style="padding: 4px 8px; background-color: #18304a; border: 1px solid #1e3a5f; color: #ffffff; border-radius: 4px; font-size: 12px;">
+                            <label for="contrabandPageSizeSelect"
+                                style="color: #909399; margin-right: 8px;">每页显示:</label>
+                            <select id="contrabandPageSizeSelect" onchange="changePageSize('contraband')"
+                                style="padding: 4px 8px; background-color: #18304a; border: 1px solid #1e3a5f; color: #ffffff; border-radius: 4px; font-size: 12px;">
                                 <option value="10">10条</option>
                                 <option value="20" selected>20条</option>
                                 <option value="30">30条</option>
@@ -674,11 +710,19 @@
                             </select>
                         </div>
                         <div style="display: flex; align-items: center; gap: 8px;">
-                            <button class="btn btn-secondary" onclick="goToPage('contraband', 1)" id="contrabandFirstPageBtn" style="font-size: 12px; padding: 4px 8px;">首页</button>
-                            <button class="btn btn-secondary" onclick="goToPage('contraband', window.pagination.contraband.currentPage - 1)" id="contrabandPrevPageBtn" style="font-size: 12px; padding: 4px 8px;">上一页</button>
-                            <span style="color: #ffffff;">第 <span id="contrabandCurrentPageSpan">1</span>/<span id="contrabandTotalPagesSpan">1</span> 页</span>
-                            <button class="btn btn-secondary" onclick="goToPage('contraband', window.pagination.contraband.currentPage + 1)" id="contrabandNextPageBtn" style="font-size: 12px; padding: 4px 8px;">下一页</button>
-                            <button class="btn btn-secondary" onclick="goToPage('contraband', window.pagination.contraband.totalPages)" id="contrabandLastPageBtn" style="font-size: 12px; padding: 4px 8px;">末页</button>
+                            <button class="btn btn-secondary" onclick="goToPage('contraband', 1)"
+                                id="contrabandFirstPageBtn" style="font-size: 12px; padding: 4px 8px;">首页</button>
+                            <button class="btn btn-secondary"
+                                onclick="goToPage('contraband', window.pagination.contraband.currentPage - 1)"
+                                id="contrabandPrevPageBtn" style="font-size: 12px; padding: 4px 8px;">上一页</button>
+                            <span style="color: #ffffff;">第 <span id="contrabandCurrentPageSpan">1</span>/<span
+                                    id="contrabandTotalPagesSpan">1</span> 页</span>
+                            <button class="btn btn-secondary"
+                                onclick="goToPage('contraband', window.pagination.contraband.currentPage + 1)"
+                                id="contrabandNextPageBtn" style="font-size: 12px; padding: 4px 8px;">下一页</button>
+                            <button class="btn btn-secondary"
+                                onclick="goToPage('contraband', window.pagination.contraband.totalPages)"
+                                id="contrabandLastPageBtn" style="font-size: 12px; padding: 4px 8px;">末页</button>
                         </div>
                     </div>
                 </div>
@@ -706,12 +750,14 @@
                             </tbody>
                         </table>
                     </div>
-                    
+
                     <!-- 角色列表分页控制 -->
-                    <div class="pagination-controls" style="margin-top: 15px; padding: 15px 0; border-top: 1px solid #18304a; display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
+                    <div class="pagination-controls"
+                        style="margin-top: 15px; padding: 15px 0; border-top: 1px solid #18304a; display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
                         <div style="display: flex; align-items: center;">
                             <label for="rolePageSizeSelect" style="color: #909399; margin-right: 8px;">每页显示:</label>
-                            <select id="rolePageSizeSelect" onchange="changePageSize('role')" style="padding: 4px 8px; background-color: #18304a; border: 1px solid #1e3a5f; color: #ffffff; border-radius: 4px; font-size: 12px;">
+                            <select id="rolePageSizeSelect" onchange="changePageSize('role')"
+                                style="padding: 4px 8px; background-color: #18304a; border: 1px solid #1e3a5f; color: #ffffff; border-radius: 4px; font-size: 12px;">
                                 <option value="10">10条</option>
                                 <option value="20" selected>20条</option>
                                 <option value="30">30条</option>
@@ -719,11 +765,19 @@
                             </select>
                         </div>
                         <div style="display: flex; align-items: center; gap: 8px;">
-                            <button class="btn btn-secondary" onclick="goToPage('role', 1)" id="roleFirstPageBtn" style="font-size: 12px; padding: 4px 8px;">首页</button>
-                            <button class="btn btn-secondary" onclick="goToPage('role', window.pagination.role.currentPage - 1)" id="rolePrevPageBtn" style="font-size: 12px; padding: 4px 8px;">上一页</button>
-                            <span style="color: #ffffff;">第 <span id="roleCurrentPageSpan">1</span>/<span id="roleTotalPagesSpan">1</span> 页</span>
-                            <button class="btn btn-secondary" onclick="goToPage('role', window.pagination.role.currentPage + 1)" id="roleNextPageBtn" style="font-size: 12px; padding: 4px 8px;">下一页</button>
-                            <button class="btn btn-secondary" onclick="goToPage('role', window.pagination.role.totalPages)" id="roleLastPageBtn" style="font-size: 12px; padding: 4px 8px;">末页</button>
+                            <button class="btn btn-secondary" onclick="goToPage('role', 1)" id="roleFirstPageBtn"
+                                style="font-size: 12px; padding: 4px 8px;">首页</button>
+                            <button class="btn btn-secondary"
+                                onclick="goToPage('role', window.pagination.role.currentPage - 1)" id="rolePrevPageBtn"
+                                style="font-size: 12px; padding: 4px 8px;">上一页</button>
+                            <span style="color: #ffffff;">第 <span id="roleCurrentPageSpan">1</span>/<span
+                                    id="roleTotalPagesSpan">1</span> 页</span>
+                            <button class="btn btn-secondary"
+                                onclick="goToPage('role', window.pagination.role.currentPage + 1)" id="roleNextPageBtn"
+                                style="font-size: 12px; padding: 4px 8px;">下一页</button>
+                            <button class="btn btn-secondary"
+                                onclick="goToPage('role', window.pagination.role.totalPages)" id="roleLastPageBtn"
+                                style="font-size: 12px; padding: 4px 8px;">末页</button>
                         </div>
                     </div>
                 </div>
@@ -878,7 +932,7 @@
         function calculateTotalPages(type) {
             const data = mockData[type + (type === 'alarm' ? 'Types' : type + 's')];
             if (!data) return;
-            
+
             const pagination = window.pagination[type];
             pagination.totalPages = Math.ceil(data.length / pagination.pageSize);
             if (pagination.totalPages < 1) {
@@ -916,7 +970,7 @@
             const startIndex = (pagination.currentPage - 1) * pagination.pageSize;
             const endIndex = startIndex + pagination.pageSize;
             const pagedData = mockData.devices.slice(startIndex, endIndex);
-            
+
             renderDeviceTable(pagedData);
         }
 
@@ -945,7 +999,7 @@
             const startIndex = (pagination.currentPage - 1) * pagination.pageSize;
             const endIndex = startIndex + pagination.pageSize;
             const pagedData = mockData.alarmTypes.slice(startIndex, endIndex);
-            
+
             renderAlarmTable(pagedData);
         }
 
@@ -976,7 +1030,7 @@
             const startIndex = (pagination.currentPage - 1) * pagination.pageSize;
             const endIndex = startIndex + pagination.pageSize;
             const pagedData = mockData.users.slice(startIndex, endIndex);
-            
+
             renderUserTable(pagedData);
         }
 
@@ -1006,7 +1060,7 @@
             const startIndex = (pagination.currentPage - 1) * pagination.pageSize;
             const endIndex = startIndex + pagination.pageSize;
             const pagedData = mockData.roles.slice(startIndex, endIndex);
-            
+
             renderRoleTable(pagedData);
         }
 
@@ -1037,7 +1091,7 @@
             const startIndex = (pagination.currentPage - 1) * pagination.pageSize;
             const endIndex = startIndex + pagination.pageSize;
             const pagedData = mockData.contrabandItems.slice(startIndex, endIndex);
-            
+
             renderContrabandTable(pagedData);
         }
 
@@ -1289,30 +1343,30 @@
         // 更新分页UI
         function updatePaginationUI(type) {
             const pagination = window.pagination[type];
-            
+
             // 更新页码显示
             document.getElementById(`${type}CurrentPageSpan`).textContent = pagination.currentPage;
             document.getElementById(`${type}TotalPagesSpan`).textContent = pagination.totalPages;
-            
+
             // 更新按钮状态
             document.getElementById(`${type}FirstPageBtn`).disabled = pagination.currentPage === 1;
             document.getElementById(`${type}PrevPageBtn`).disabled = pagination.currentPage === 1;
             document.getElementById(`${type}NextPageBtn`).disabled = pagination.currentPage === pagination.totalPages;
             document.getElementById(`${type}LastPageBtn`).disabled = pagination.currentPage === pagination.totalPages;
         }
-        
+
         // 跳转到指定页码
         function goToPage(type, pageNumber) {
             const pagination = window.pagination[type];
-            
+
             if (pageNumber < 1 || pageNumber > pagination.totalPages) {
                 return;
             }
-            
+
             pagination.currentPage = pageNumber;
-            
+
             // 根据类型重新渲染表格
-            switch(type) {
+            switch (type) {
                 case 'device':
                     renderPagedDeviceTable();
                     break;
@@ -1329,25 +1383,25 @@
                     renderPagedContrabandTable();
                     break;
             }
-            
+
             // 更新分页UI
             updatePaginationUI(type);
         }
-        
+
         // 改变每页显示数量
         function changePageSize(type) {
             const selectElement = document.getElementById(`${type}PageSizeSelect`);
             const pageSize = parseInt(selectElement.value);
-            
+
             const pagination = window.pagination[type];
             pagination.pageSize = pageSize;
             pagination.currentPage = 1;
-            
+
             // 重新计算总页数
             calculateTotalPages(type);
-            
+
             // 根据类型重新渲染表格
-            switch(type) {
+            switch (type) {
                 case 'device':
                     renderPagedDeviceTable();
                     break;
@@ -1364,13 +1418,14 @@
                     renderPagedContrabandTable();
                     break;
             }
-            
+
             // 更新分页UI
             updatePaginationUI(type);
         }
-        
+
         // 页面加载完成后初始化
         document.addEventListener('DOMContentLoaded', initPage);
     </script>
 </body>
+
 </html>

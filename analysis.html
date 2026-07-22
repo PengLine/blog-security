@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
+    <meta name="robots" content="noindex, nofollow">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>统计分析</title>
-    
+
     <style>
         * {
             margin: 0;
@@ -332,6 +334,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="page-header">
@@ -420,7 +423,8 @@
                     <div class="pie-chart">
                         <svg class="pie-svg" viewBox="0 0 200 200">
                             <g id="alarmTypePie"></g>
-                            <text x="100" y="100" text-anchor="middle" dominant-baseline="middle" font-size="16" fill="#666">告警类型</text>
+                            <text x="100" y="100" text-anchor="middle" dominant-baseline="middle" font-size="16"
+                                fill="#666">告警类型</text>
                         </svg>
                         <div class="pie-legend">
                             <div class="legend-item">
@@ -447,7 +451,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- 新增违禁品统计图表 -->
             <div class="chart-card">
                 <h3>违禁品级别分布</h3>
@@ -455,7 +459,8 @@
                     <div class="pie-chart">
                         <svg class="pie-svg" viewBox="0 0 200 200">
                             <g id="contrabandLevelPie"></g>
-                            <text x="100" y="100" text-anchor="middle" dominant-baseline="middle" font-size="16" fill="#666">违禁品级别</text>
+                            <text x="100" y="100" text-anchor="middle" dominant-baseline="middle" font-size="16"
+                                fill="#666">违禁品级别</text>
                         </svg>
                         <div class="pie-legend">
                             <div class="legend-item">
@@ -477,7 +482,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="chart-card">
                 <h3>违禁品类型分布</h3>
                 <div class="chart-placeholder">
@@ -517,14 +522,14 @@
         function generateMockData(days = 30) {
             const data = [];
             const now = new Date();
-            
+
             for (let i = days - 1; i >= 0; i--) {
                 const date = new Date(now);
                 date.setDate(date.getDate() - i);
-                
+
                 // 生成模拟客流量（100-500之间的随机数）
                 const passengerCount = Math.floor(Math.random() * 400) + 100;
-                
+
                 // 生成模拟告警数据
                 const alarmTypes = {
                     intrusion: Math.floor(Math.random() * 10) + 1,
@@ -532,28 +537,28 @@
                     device: Math.floor(Math.random() * 15) + 1,
                     access: Math.floor(Math.random() * 8) + 1
                 };
-                
+
                 const totalAlarms = Object.values(alarmTypes).reduce((sum, count) => sum + count, 0);
-                
+
                 // 生成设备在线率（95%-100%之间的随机数）
                 const onlineRate = Math.round((Math.random() * 5 + 95) * 10) / 10;
-                
+
                 // 生成模拟违禁品数据
                 const contrabandLevels = {
                     high: Math.floor(Math.random() * 3) + 1,   // 高级违禁品：1-3个
                     medium: Math.floor(Math.random() * 5) + 2, // 中级违禁品：2-6个
                     low: Math.floor(Math.random() * 10) + 5    // 低级违禁品：5-14个
                 };
-                
+
                 const contrabandTypes = {
                     刀具: Math.floor(Math.random() * 5) + 1,
                     液体: Math.floor(Math.random() * 8) + 2,
                     电池: Math.floor(Math.random() * 6) + 3,
                     其他: Math.floor(Math.random() * 7) + 2
                 };
-                
+
                 const totalContraband = Object.values(contrabandLevels).reduce((sum, count) => sum + count, 0);
-                
+
                 data.push({
                     date: date.toISOString().split('T')[0],
                     dateFormatted: date.toLocaleDateString('zh-CN'),
@@ -566,7 +571,7 @@
                     totalContraband: totalContraband
                 });
             }
-            
+
             return data;
         }
 
@@ -610,10 +615,10 @@
         function renderCharts() {
             // 渲染客流趋势图
             renderPassengerTrend();
-            
+
             // 渲染告警类型分布饼图
             renderAlarmTypePie();
-            
+
             // 渲染违禁品相关图表
             renderContrabandLevelPie();
             renderContrabandTypeBarChart();
@@ -934,8 +939,8 @@
                 tempData = tempData.filter(item => new Date(item.date) >= ninetyDaysAgo);
             } else if (timeRange === 'custom') {
                 if (startDate && endDate) {
-                    tempData = tempData.filter(item => 
-                        new Date(item.date) >= new Date(startDate) && 
+                    tempData = tempData.filter(item =>
+                        new Date(item.date) >= new Date(startDate) &&
                         new Date(item.date) <= new Date(endDate)
                     );
                 }
@@ -960,4 +965,5 @@
         document.addEventListener('DOMContentLoaded', initPage);
     </script>
 </body>
+
 </html>
