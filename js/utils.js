@@ -148,6 +148,26 @@ export function setupNavigation() {
         console.error('导航元素或内容容器未找到');
         return;
     }
+
+    // 分组菜单：点击标题展开/收起，点击空白处或子项后收起
+    const groups = document.querySelectorAll('.nav-group');
+    const closeGroups = () => groups.forEach(g => g.classList.remove('open'));
+    const syncGroupActive = () => groups.forEach(g => {
+        g.classList.remove('open');
+        g.classList.toggle('has-active', !!g.querySelector('.nav-item.active'));
+    });
+
+    groups.forEach(group => {
+        const title = group.querySelector('.nav-group-title');
+        if (!title) return;
+        title.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isOpen = group.classList.contains('open');
+            closeGroups();
+            if (!isOpen) group.classList.add('open');
+        });
+    });
+    document.addEventListener('click', closeGroups);
     
     navItems.forEach(item => {
         item.addEventListener('click', function() {
@@ -157,6 +177,7 @@ export function setupNavigation() {
             // 更新导航状态
             navItems.forEach(i => i.classList.remove('active'));
             this.classList.add('active');
+            syncGroupActive();
             
             // 显示加载状态
             contentDiv.innerHTML = '<div class="loading">加载中...</div>';
@@ -199,6 +220,7 @@ function loadModuleScript(navId) {
         handoff: 'js/handoff.js',
         schedule: 'js/schedule.js',
         performance: 'js/performance.js',
+        datacenter: 'js/datacenter.js',
         config: 'js/config.js'
     };
     
@@ -289,7 +311,12 @@ function loadDeviceModuleThenDetail(deviceType) {
                     const navItems = document.querySelectorAll('.nav-item');
                     navItems.forEach(nav => nav.classList.remove('active'));
                     const deviceNav = document.querySelector('.nav-item[data-nav="device"]');
-                    if (deviceNav) deviceNav.classList.add('active');
+                    if (deviceNav) {
+                        deviceNav.classList.add('active');
+                        // 同步分组高亮
+                        const grp = deviceNav.closest('.nav-group');
+                        document.querySelectorAll('.nav-group').forEach(g => g.classList.toggle('has-active', g === grp));
+                    }
                     
                     // 调用设备详情函数
                     if (typeof window.loadDeviceDetail === 'function') {
@@ -578,7 +605,8 @@ export function refreshNavBadges() {
         { nav: 'judge', count: store.bags.filter(b => b.status === 'pending').length },
         { nav: 'handoff', count: store.handoffs.filter(h => h.status !== '已完成').length },
         { nav: 'workorder', count: store.workorders.filter(w => w.status !== '已完成').length },
-        { nav: 'recheck', count: store.bags.filter(b => b.recheck && b.recheck.status !== '已完成').length }
+        { nav: 'recheck', count: store.bags.filter(b => b.recheck && b.recheck.status !== '已完成').length },
+        { nav: 'datacenter', count: store.dataSources.filter(s => s.status === '离线').length }
     ];
     sets.forEach(s => {
         const el = document.querySelector(`.nav-item[data-nav="${s.nav}"] .nav-badge`);

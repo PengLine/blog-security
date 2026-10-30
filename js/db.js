@@ -27,7 +27,7 @@ export function fmtDateTime(ts) {
 }
 
 // 会话内稳定随机数（首次生成后不再变化）
-let seq = { evt: 0, bag: 0, emp: 0, alm: 0, ho: 0, rec: 0, enr: 0, wo: 0 };
+let seq = { evt: 0, bag: 0, emp: 0, alm: 0, ho: 0, rec: 0, enr: 0, wo: 0, dt: 0, sub: 0 };
 
 // 班次定义：两班倒（白班在岗 / 夜班值守），夜班时段跨天
 export const SHIFT_DEFS = [
@@ -833,6 +833,143 @@ export function addRecognitionRecord({ person, device, channel, similarity, stat
     return rec;
 }
 
+// ---------- 数据中台：多协议采集 → 链路处理 → 分级存储 → 订阅分发 ----------
+export const PROTOCOLS = ['MQTT', 'Modbus TCP', 'OPC UA', 'HTTP/HTTPS', 'RTSP', 'GB/T 28181', 'WebSocket', 'SNMP'];
+
+// 设备类型 → 采集协议/主题/端口/单日基准数据量
+const COLLECT_PROFILE = {
+    securityCheckMachine: { protocol: 'OPC UA', topic: 'xray/image.meta', freq: 1, port: 4840, rows: 2600 },
+    recheckTable: { protocol: 'MQTT', topic: 'recheck/result', freq: 5, port: 1883, rows: 320 },
+    metalDoor: { protocol: 'Modbus TCP', topic: 'door/alarm.raw', freq: 2, port: 502, rows: 980 },
+    millimeterWaveDoor: { protocol: 'OPC UA', topic: 'mmw/scan', freq: 1, port: 4840, rows: 1250 },
+    antiTheftDoor: { protocol: 'Modbus TCP', topic: 'door/antiTheft.raw', freq: 2, port: 502, rows: 760 },
+    classificationDoor: { protocol: 'Modbus TCP', topic: 'door/classify.raw', freq: 2, port: 502, rows: 700 },
+    accessControl: { protocol: 'HTTP/HTTPS', topic: 'access/gate.event', freq: 3, port: 8080, rows: 640 },
+    accessVideo: { protocol: 'RTSP', topic: 'video/frame.meta', freq: 1, port: 554, rows: 3200 },
+    personCertCompare: { protocol: 'WebSocket', topic: 'face/verify.result', freq: 1, port: 9000, rows: 1450 },
+    explosiveDetector: { protocol: 'SNMP', topic: 'detector/explosive.status', freq: 10, port: 161, rows: 260 },
+    liquidDetector: { protocol: 'SNMP', topic: 'detector/liquid.status', freq: 10, port: 161, rows: 240 }
+};
+
+function makeDataSources(devices, now) {
+    return devices.map((d, i) => {
+        const p = COLLECT_PROFILE[d.key] || { protocol: 'MQTT', topic: 'misc/telemetry', freq: 5, port: 1883, rows: 200 };
+        const offline = d.status === 'offline';
+        const unstable = d.status === 'warning';
+        return {
+            id: `DS-${String(2001 + i)}`,
+            deviceId: d.id, deviceName: d.name, displayName: d.displayName,
+            category: d.category, channel: d.channel,
+            protocol: p.protocol, endpoint: `${d.ip}:${p.port}`,
+            topic: `security/${d.channel.toLowerCase()}/${p.topic}`,
+            freq: p.freq,
+            status: offline ? '离线' : unstable ? '重连中' : '在线',
+            latencyMs: offline ? 0 : (unstable ? 120 + Math.round(Math.random() * 260) : 6 + Math.round(Math.random() * 42)),
+            errorRate: offline ? 100 : (unstable ? 2 + Math.random() * 4 : Math.random() * 0.6),
+            todayRows: Math.round(p.rows * (0.6 + Math.random() * 0.8) * (offline ? 0.3 : 1)),
+            lastHeartbeat: offline ? now - (2 + (i % 3)) * 3600000 : now - Math.round(3000 + Math.random() * 90000)
+        };
+    });
+}
+
+function makePipelines() {
+    const build = (id, name, source, protocol, topic, rows, base) => {
+        const qps = Math.max(1, Math.round(rows / 7200));
+        const stages = [
+            { name: '采集接入', latencyMs: base, qps, errors: 0 },
+            { name: '解析校验', latencyMs: base + 6, qps, errors: 2 },
+            { name: '清洗标准化', latencyMs: base + 9, qps, errors: 0 },
+            { name: '分级入库', latencyMs: base + 14, qps, errors: 1 },
+            { name: '订阅分发', latencyMs: base + 4, qps: qps * 2, errors: 0 }
+        ];
+        return {
+            id, name, source, protocol, topic, mode: '实时',
+            todayRows: rows, backlog: 0, status: '运行中',
+            latencyMs: stages.reduce((s, x) => s + x.latencyMs, 0),
+            stages
+        };
+    };
+    return [
+        build('PIPE-01', 'X光图像元数据流', '安检机 ×6', 'OPC UA → Kafka', 'xray/image.meta', 182430, 8),
+        build('PIPE-02', '安检门告警流', '金属门/毫米波门/防损门 ×18', 'Modbus TCP → MQTT', 'door/alarm.raw', 64210, 5),
+        build('PIPE-03', '人证核验结果流', '人证对比终端 ×6', 'WebSocket → Kafka', 'face/verify.result', 18320, 12),
+        build('PIPE-04', '设备遥测心跳流', '全量设备 ×66', 'SNMP / Modbus → Kafka', 'device/telemetry', 96300, 3),
+        build('PIPE-05', '判图结果回流', '集中判图工作台', 'HTTP → Kafka', 'judge/result', 26400, 18)
+    ];
+}
+
+function makeStorages() {
+    return [
+        { id: 'STG-01', layer: '实时缓存', engine: 'Redis Cluster', data: '判图队列 / 告警队列 / 会话', capacity: '32 GB', usedPct: 46, retention: '24 小时', writeRate: '2.8k msg/s', status: '健康' },
+        { id: 'STG-02', layer: '时序库', engine: 'InfluxDB', data: '设备遥测 / 心跳 / 温度', capacity: '2 TB', usedPct: 38, retention: '90 天', writeRate: '1.6k point/s', status: '健康' },
+        { id: 'STG-03', layer: '关系库', engine: 'PostgreSQL', data: '旅客 / 包裹 / 交接台账', capacity: '1 TB', usedPct: 52, retention: '长期', writeRate: '120 tps', status: '健康' },
+        { id: 'STG-04', layer: '对象存储', engine: 'MinIO', data: 'X光原图 / 开包影像 / 抓拍', capacity: '20 TB', usedPct: 61, retention: '180 天', writeRate: '35 MB/s', status: '健康' },
+        { id: 'STG-05', layer: '消息总线', engine: 'Kafka', data: '采集主题 / 分发主题', capacity: '—', usedPct: 24, retention: '7 天', writeRate: '4.2k msg/s', status: '健康' }
+    ];
+}
+
+function makeSubscriptions() {
+    const now = Date.now();
+    return [
+        { id: 'SUB-2026-101', subscriber: '集中判图工作台', topic: 'xray/image.ready', protocol: 'WebSocket 推送', desc: '新过检图像实时推送至判图队列', status: '启用', qps: 42, todayCount: 182430, lastPush: fmtDateTime(now - 12000) },
+        { id: 'SUB-2026-102', subscriber: '告警中心', topic: 'alarm/created', protocol: 'MQTT 订阅', desc: '设备告警 / 违禁检出即时告警', status: '启用', qps: 6, todayCount: 4180, lastPush: fmtDateTime(now - 42000) },
+        { id: 'SUB-2026-103', subscriber: '事件中心', topic: 'event/log', protocol: 'Kafka 消费组', desc: '全量事件日志归集与检索', status: '启用', qps: 18, todayCount: 26400, lastPush: fmtDateTime(now - 8000) },
+        { id: 'SUB-2026-104', subscriber: '统计分析', topic: 'agg/metrics.5m', protocol: 'Kafka 消费组', desc: '5 分钟聚合指标（客流/判图/查获）', status: '启用', qps: 2, todayCount: 5760, lastPush: fmtDateTime(now - 32000) },
+        { id: 'SUB-2026-105', subscriber: '维保工单', topic: 'device/telemetry', protocol: 'HTTP 回调', desc: '设备异常遥测触发报修建议', status: '启用', qps: 4, todayCount: 9630, lastPush: fmtDateTime(now - 26000) },
+        { id: 'SUB-2026-106', subscriber: '运营大屏', topic: 'dashboard/realtime', protocol: 'WebSocket 推送', desc: '大屏实时指标与告警滚动', status: '停用', qps: 0, todayCount: 0, lastPush: '—' }
+    ];
+}
+
+// 新建数据订阅（防止重复订阅同一主题）
+export function addSubscription({ subscriber, topic, protocol, desc }) {
+    const store = getStore();
+    if (!subscriber || !topic) return { ok: false, msg: '请填写订阅方与订阅主题' };
+    if (store.subscriptions.some(s => s.subscriber === subscriber && s.topic === topic)) {
+        return { ok: false, msg: '该订阅方已订阅此主题，请勿重复创建订阅' };
+    }
+    const now = Date.now();
+    const item = {
+        id: `SUB-${fmtDate(now).replace(/-/g, '')}-${String(200 + seq.sub++)}`,
+        subscriber, topic, protocol: protocol || 'MQTT 订阅',
+        desc: desc || '由数据中台新增的订阅', status: '启用',
+        qps: 0, todayCount: 0, lastPush: '—'
+    };
+    store.subscriptions.unshift(item);
+    store.auditLogs.unshift({ time: fmtDateTime(now), user: '系统管理员', action: `新增数据订阅：${subscriber} → ${topic}`, target: item.id });
+    return { ok: true, item };
+}
+
+// 启用 / 停用订阅
+export function toggleSubscription(id) {
+    const store = getStore();
+    const item = store.subscriptions.find(s => s.id === id);
+    if (!item) return null;
+    item.status = item.status === '启用' ? '停用' : '启用';
+    if (item.status === '停用') { item.qps = 0; }
+    store.auditLogs.unshift({ time: fmtDateTime(Date.now()), user: '系统管理员', action: `${item.status}数据订阅：${item.subscriber} → ${item.topic}`, target: item.id });
+    return item;
+}
+
+// 模拟一轮设备上报，驱动接入量 / 分发计数增长
+export function simulateIngest() {
+    const store = getStore();
+    const online = store.dataSources.filter(s => s.status === '在线');
+    let rows = 0;
+    online.forEach(s => {
+        const add = Math.max(1, Math.round(s.todayRows * (0.0005 + Math.random() * 0.0015)));
+        s.todayRows += add;
+        s.lastHeartbeat = Date.now();
+        rows += add;
+    });
+    store.pipelines.forEach(p => { p.todayRows += Math.round(rows / store.pipelines.length); });
+    store.subscriptions.filter(s => s.status === '启用').forEach(s => {
+        s.todayCount += Math.round(rows / 4);
+        s.lastPush = fmtDateTime(Date.now());
+    });
+    store.auditLogs.unshift({ time: fmtDateTime(Date.now()), user: '数据中台·调度器', action: `模拟一轮设备上报，新增采集 ${rows} 条`, target: 'DC-INGEST' });
+    return rows;
+}
+
 // ---------- 排班计划（按班组对应班次，全员每日单班） ----------
 function makeShiftPlan(employees) {
     return SHIFT_DEFS.map(def => ({
@@ -1147,6 +1284,10 @@ export function getStore() {
     const shifts = makeShiftPlan(employees);
     const workorders = makeWorkorders(devices, employees);
     const spareParts = makeSpareParts();
+    const dataSources = makeDataSources(devices, Date.now());
+    const pipelines = makePipelines();
+    const storages = makeStorages();
+    const subscriptions = makeSubscriptions();
 
     const store = {
         initAt: Date.now(),
@@ -1162,6 +1303,7 @@ export function getStore() {
         shifts,
         workorders,
         spareParts,
+        dataSources, pipelines, storages, subscriptions,
         configs: makeConfigs(),
         auditLogs: [
             { time: fmtDateTime(Date.now() - 2 * 86400000), user: '系统管理员', action: '更新违禁品数据库至 v3.5.2', target: 'CFG-004' },

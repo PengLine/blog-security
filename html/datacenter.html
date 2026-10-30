@@ -1,0 +1,197 @@
+<div class="module" id="datacenter">
+    <div class="module-header">
+        <h2>数据中台</h2>
+        <div class="module-actions">
+            <button class="btn btn-primary" id="dcIngestBtn">模拟一轮设备上报</button>
+            <button class="btn btn-secondary" id="dcExportBtn">导出接入台账</button>
+        </div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>接入设备</h3>
+                <div class="stat-value" id="dcStatSources">0</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>接入在线率</h3>
+                <div class="stat-value" id="dcStatOnline" style="color:#67c23a;">0%</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>今日采集条数</h3>
+                <div class="stat-value" id="dcStatRows" style="color:#409eff;">0</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>协议种类</h3>
+                <div class="stat-value" id="dcStatProtocols">0</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>平均链路时延</h3>
+                <div class="stat-value" id="dcStatLatency">0ms</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>启用订阅</h3>
+                <div class="stat-value" id="dcStatSubs" style="color:#e6a23c;">0</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-nav">
+        <div class="tab-nav-item active" data-tab="collect">采集接入</div>
+        <div class="tab-nav-item" data-tab="pipeline">数据链路</div>
+        <div class="tab-nav-item" data-tab="storage">分级存储</div>
+        <div class="tab-nav-item" data-tab="subscribe">订阅分发</div>
+    </div>
+
+    <!-- 采集接入 -->
+    <div class="tab-content active" id="collect">
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label class="filter-label">协议：</label>
+                <select class="form-control" id="dcProtocolFilter"></select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">状态：</label>
+                <select class="form-control" id="dcStatusFilter">
+                    <option value="">全部</option>
+                    <option value="在线">在线</option>
+                    <option value="重连中">重连中</option>
+                    <option value="离线">离线</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">关键字：</label>
+                <input type="text" class="form-control" id="dcKeyword" placeholder="设备 / 端点 / 主题">
+            </div>
+            <div class="filter-group">
+                <span class="filter-label" id="dcSourceStat"></span>
+            </div>
+        </div>
+
+        <div style="display:flex;gap:16px;margin-bottom:16px;">
+            <div class="chart-container" id="dcProtocolChart" style="flex:1;height:240px;"></div>
+            <div class="chart-container" id="dcStatusChart" style="flex:1;height:240px;"></div>
+        </div>
+
+        <div class="table-section">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>接入编号</th>
+                        <th>设备</th>
+                        <th>类别</th>
+                        <th>协议</th>
+                        <th>端点</th>
+                        <th>主题（Topic）</th>
+                        <th>频率</th>
+                        <th>状态</th>
+                        <th>今日条数</th>
+                        <th>时延</th>
+                        <th>最近心跳</th>
+                    </tr>
+                </thead>
+                <tbody id="dcSourceBody"></tbody>
+            </table>
+            <div class="pagination-page" id="dcSourcePagination"></div>
+        </div>
+    </div>
+
+    <!-- 数据链路 -->
+    <div class="tab-content" id="pipeline">
+        <div class="pipe-flow">
+            <b>设备侧</b> 多协议采集 → <b>采集接入</b> → <b>解析校验</b> → <b>清洗标准化</b> → <b>分级入库</b> → <b>订阅分发</b> → <span
+                style="color:#67c23a;">各业务平台</span>
+        </div>
+        <div id="pipeCards"></div>
+
+        <div class="table-section">
+            <div class="table-title">链路实例</div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>链路编号</th>
+                        <th>链路名称</th>
+                        <th>数据源</th>
+                        <th>协议链路</th>
+                        <th>主题</th>
+                        <th>今日流量</th>
+                        <th>端到端时延</th>
+                        <th>积压</th>
+                        <th>状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="pipeTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 分级存储 -->
+    <div class="tab-content" id="storage">
+        <div class="table-section">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>存储编号</th>
+                        <th>存储层级</th>
+                        <th>引擎</th>
+                        <th>承载数据</th>
+                        <th>容量</th>
+                        <th>使用率</th>
+                        <th>保留期</th>
+                        <th>写入速率</th>
+                        <th>状态</th>
+                    </tr>
+                </thead>
+                <tbody id="storageTableBody"></tbody>
+            </table>
+        </div>
+        <div class="sub-title">分层说明</div>
+        <p style="font-size:12px;color:#909399;line-height:1.9;">
+            热数据（实时缓存 Redis）承接判图/告警队列，保证毫秒级响应；温数据（时序库 InfluxDB + 关系库 PostgreSQL）
+            承载设备遥测与业务台账；冷数据（对象存储 MinIO）归档 X 光原图、开包影像与抓拍；
+            消息总线 Kafka 负责链路解耦、削峰与 7 天回放能力。
+        </p>
+    </div>
+
+    <!-- 订阅分发 -->
+    <div class="tab-content" id="subscribe">
+        <div class="filter-bar">
+            <div class="filter-group">
+                <button class="btn btn-success" id="dcNewSubBtn">＋ 新建订阅</button>
+            </div>
+            <div class="filter-group">
+                <span class="filter-label" id="dcSubStat"></span>
+            </div>
+        </div>
+        <div class="table-section">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>订阅编号</th>
+                        <th>订阅方</th>
+                        <th>主题（Topic）</th>
+                        <th>推送方式</th>
+                        <th>说明</th>
+                        <th>今日推送</th>
+                        <th>QPS</th>
+                        <th>最近推送</th>
+                        <th>状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="dcSubBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>

@@ -17,19 +17,55 @@
             <div class="logo">智慧安检系统</div>
             <div class="main-nav">
                 <div class="nav-item active" data-nav="dashboard">首页</div>
-                <div class="nav-item" data-nav="device">设备管理</div>
-                <div class="nav-item" data-nav="workorder">维保工单<span class="nav-badge" id="badgeWorkorder"></span></div>
-                <div class="nav-item" data-nav="events">事件中心</div>
-                <div class="nav-item" data-nav="judge">集中判图<span class="nav-badge" id="badgeJudge"></span></div>
-                <div class="nav-item" data-nav="recheck">复检开包<span class="nav-badge" id="badgeRecheck"></span></div>
-                <div class="nav-item" data-nav="alarm">告警中心<span class="nav-badge" id="badgeAlarm"></span></div>
-                <div class="nav-item" data-nav="analysis">统计分析</div>
-                <div class="nav-item" data-nav="passage">通行管理</div>
-                <div class="nav-item" data-nav="face">人脸识别</div>
-                <div class="nav-item" data-nav="handoff">处置交接<span class="nav-badge" id="badgeHandoff"></span></div>
-                <div class="nav-item" data-nav="schedule">排班管理</div>
-                <div class="nav-item" data-nav="performance">绩效考核</div>
-                <div class="nav-item" data-nav="config">配置管理</div>
+
+                <div class="nav-group">
+                    <div class="nav-group-title">安检作业</div>
+                    <div class="nav-group-menu">
+                        <div class="nav-item" data-nav="judge">集中判图<span class="nav-badge" id="badgeJudge"></span></div>
+                        <div class="nav-item" data-nav="recheck">复检开包<span class="nav-badge" id="badgeRecheck"></span>
+                        </div>
+                        <div class="nav-item" data-nav="handoff">处置交接<span class="nav-badge" id="badgeHandoff"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="nav-group">
+                    <div class="nav-group-title">通行核验</div>
+                    <div class="nav-group-menu">
+                        <div class="nav-item" data-nav="face">人脸识别</div>
+                        <div class="nav-item" data-nav="passage">通行管理</div>
+                    </div>
+                </div>
+
+                <div class="nav-group">
+                    <div class="nav-group-title">设备运维</div>
+                    <div class="nav-group-menu">
+                        <div class="nav-item" data-nav="device">设备管理</div>
+                        <div class="nav-item" data-nav="workorder">维保工单<span class="nav-badge"
+                                id="badgeWorkorder"></span></div>
+                        <div class="nav-item" data-nav="alarm">告警中心<span class="nav-badge" id="badgeAlarm"></span></div>
+                    </div>
+                </div>
+
+                <div class="nav-group">
+                    <div class="nav-group-title">监控分析</div>
+                    <div class="nav-group-menu">
+                        <div class="nav-item" data-nav="events">事件中心</div>
+                        <div class="nav-item" data-nav="analysis">统计分析</div>
+                    </div>
+                </div>
+
+                <div class="nav-group">
+                    <div class="nav-group-title">运营管理</div>
+                    <div class="nav-group-menu">
+                        <div class="nav-item" data-nav="schedule">排班管理</div>
+                        <div class="nav-item" data-nav="performance">绩效考核</div>
+                        <div class="nav-item" data-nav="config">配置管理</div>
+                    </div>
+                </div>
+
+                <div class="nav-item" data-nav="datacenter">数据中台<span class="nav-badge" id="badgeDatacenter"></span>
+                </div>
             </div>
             <div class="system-info">
                 <div class="time-display" id="currentTime"></div>
@@ -89,7 +125,7 @@
             </div>
         </div>
 
-        <script type="module" src="js/utils.js?v=4"></script>
+        <script type="module" src="js/utils.js?v=5"></script>
     </div>
 </body>
 
