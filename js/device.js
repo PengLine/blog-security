@@ -1,9 +1,46 @@
-import { generateMockData, paginateData } from './utils.js';
+import { getStore } from './db.js';
+import { paginateData, toast, openModal } from './utils.js';
 
 // 分页变量
 let currentDevicePage = 1;
 const devicesPerPage = 20;
-let allDevices = [];
+let filteredDevices = [];
+
+// 各类型设备的实时状态项（键为数据键，值为显示名）
+const STATUS_LABELS = {
+    temperature: '机身温度', voltage: '供电电压', current: '工作电流', xRayDose: 'X光剂量',
+    lampStatus: '光源状态', sensitivity: '灵敏度', alarmVolume: '告警音量', mode: '工作模式',
+    lockStatus: '门磁状态', videoStatus: '视频流', recognitionRate: '识别成功率',
+    battery: '电量', calibration: '校准状态', heartbeat: '心跳延迟'
+};
+
+// 按设备类型生成实时状态与可用操作
+function buildDeviceRuntime(device, store) {
+    const base = { heartbeat: `${30 + Math.floor(Math.random() * 40)}ms` };
+    const byKey = {
+        securityCheckMachine: { temperature: `${36 + Math.floor(Math.random() * 5)}℃`, voltage: '220V', current: '2.5A', xRayDose: '0.1μSv/h' },
+        recheckTable: { temperature: `${33 + Math.floor(Math.random() * 4)}℃`, voltage: '220V', current: '1.2A', lampStatus: '正常' },
+        metalDoor: { sensitivity: '中（18区）', voltage: '220V', current: '0.8A', alarmVolume: '70dB' },
+        millimeterWaveDoor: { temperature: '44℃（偏高）', voltage: '220V', current: '1.5A', mode: '快速检查' },
+        antiTheftDoor: { voltage: '220V', current: '0.5A', alarmVolume: '65dB' },
+        classificationDoor: { voltage: device.status === 'offline' ? '0V（断电）' : '220V', current: device.status === 'offline' ? '0A' : '0.6A' },
+        accessControl: { voltage: '12V', current: '0.3A', lockStatus: '正常' },
+        accessVideo: { temperature: '36℃', voltage: '220V', current: '1.0A', videoStatus: device.status === 'warning' ? '偶发丢帧' : '正常' },
+        personCertCompare: { temperature: '37℃', voltage: '220V', current: '1.2A', recognitionRate: '99.5%' },
+        explosiveDetector: { battery: `${80 + Math.floor(Math.random() * 20)}%`, calibration: '已校准', mode: '标准模式' },
+        liquidDetector: { battery: `${85 + Math.floor(Math.random() * 15)}%`, sensitivity: '高', mode: '自动模式' }
+    };
+    const opsByCategory = {
+        '核心设备': ['校准', '灵敏度调整', '固件更新', '查看日志'],
+        '安检门': ['切换模式', '调整灵敏度', '固件更新', '查看日志'],
+        '明眸设备': ['远程开关门', '下发人脸库', '固件更新', '查看日志'],
+        '探测设备': ['校准', '切换模式', '固件更新', '查看日志']
+    };
+    return {
+        statusData: Object.assign({}, byKey[device.key] || {}, base),
+        operations: ['重启设备'].concat(opsByCategory[device.category] || ['查看日志'])
+    };
+}
 
 // 渲染设备列表
 function renderDevices(devices) {
@@ -13,470 +50,188 @@ function renderDevices(devices) {
     deviceTableBody.innerHTML = '';
 
     devices.forEach(device => {
+        const statusMap = { online: ['在线', 'status-normal'], warning: ['告警', 'status-warning'], offline: ['离线', 'status-danger'] };
+        const [sName, sClass] = statusMap[device.status];
+        const typeMap = { security: '核心安检', door: '安检门', access: '明眸设备', detection: '探测设备' };
+        const categoryType = device.category === '安检门' ? 'door' : device.type;
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>${device.id}</td>
-            <td>${device.name}</td>
-            <td>${device.type === 'security' ? '安检设备' : device.type === 'access' ? '门禁设备' : '探测设备'}</td>
+            <td>${device.displayName}</td>
+            <td>${typeMap[categoryType] || device.category}</td>
             <td>${device.ip}</td>
-            <td><span class="status-tag ${device.status.class}">${device.status.name}</span></td>
+            <td><span class="status-tag ${sClass}">${sName}</span></td>
             <td>${device.location}</td>
             <td>
-                <button class="btn btn-primary">详情</button>
-                <button class="btn btn-secondary">配置</button>
+                <button class="btn btn-primary" data-detail="${device.id}">详情</button>
+                <button class="btn btn-secondary" data-log="${device.id}">日志</button>
             </td>
         `;
         deviceTableBody.appendChild(row);
     });
+
+    deviceTableBody.querySelectorAll('[data-detail]').forEach(btn => {
+        btn.onclick = () => renderDeviceDetail(btn.dataset.detail);
+    });
+    deviceTableBody.querySelectorAll('[data-log]').forEach(btn => {
+        btn.onclick = () => {
+            const dev = getStore().devices.find(d => d.id === btn.dataset.log);
+            const logs = [
+                `${dev.name} 心跳正常 (${30 + Math.floor(Math.random() * 40)}ms)`,
+                `${dev.name} 上传自检数据帧 seq=${Math.floor(Math.random() * 90000 + 10000)}`,
+                dev.status === 'online' ? `${dev.name} 业务量上报：今日处理 ${Math.floor(Math.random() * 800 + 100)} 次` : `${dev.name} 链路异常，请检查供电与网口`,
+                `${dev.name} 固件校验通过 ${dev.firmware}`
+            ];
+            openModal({
+                title: `运行日志 - ${dev.displayName}`,
+                width: 560,
+                bodyHTML: `<div style="font-family:Consolas,monospace;font-size:12px;line-height:2;">${logs.map(l => `<div>[${new Date().toLocaleTimeString()}] ${l}</div>`).join('')}</div>`
+            });
+        };
+    });
 }
 
-// 设备操作函数
-function performDeviceOperation(operation, deviceId) {
-    // 模拟设备操作
-    console.log('执行设备操作:', operation, '设备ID:', deviceId);
-    alert(`已执行操作: ${operation}`);
-}
-
-// 加载设备详情
-window.loadDeviceDetail = function(deviceType) {
-    // 模拟不同类型设备的详情数据
-    const deviceDetails = {
-        securityCheckMachine: {
-            id: 'DEV-1001',
-            name: '安检机001',
-            type: '安检机',
-            ip: '192.168.1.101',
-            status: 'online',
-            location: '1号通道',
-            model: 'DS-8065',
-            serialNumber: '20230801001',
-            softwareVersion: 'V2.5.1',
-            hardwareVersion: 'V1.0',
-            lastMaintenance: '2024-01-15',
-            nextMaintenance: '2024-04-15',
-            statistics: {
-                todayPass: 1256,
-                todayAlarms: 3,
-                totalPass: 125678,
-                totalAlarms: 234
-            },
-            statusData: {
-                temperature: '38°C',
-                voltage: '220V',
-                current: '2.5A',
-                xRayDose: '0.1μSv/h'
-            },
-            operations: ['重启设备', '校准', '灵敏度调整', '固件更新', '查看日志']
-        },
-        recheckTable: {
-            id: 'DEV-1002',
-            name: '复检台001',
-            type: '复检台',
-            ip: '192.168.1.102',
-            status: 'online',
-            location: '2号通道',
-            model: 'DS-RECHECK01',
-            serialNumber: '20230901001',
-            softwareVersion: 'V1.2.0',
-            hardwareVersion: 'V1.0',
-            lastMaintenance: '2024-01-20',
-            nextMaintenance: '2024-04-20',
-            statistics: {
-                todayCheck: 156,
-                todayAlarms: 5,
-                totalCheck: 12345,
-                totalAlarms: 189
-            },
-            statusData: {
-                temperature: '35°C',
-                voltage: '220V',
-                current: '1.2A',
-                lampStatus: '正常'
-            },
-            operations: ['重启设备', '调整亮度', '固件更新', '查看日志']
-        },
-        metalDoor: {
-            id: 'DEV-1003',
-            name: '金属门001',
-            type: '金属门',
-            ip: '192.168.1.103',
-            status: 'online',
-            location: '3号通道',
-            model: 'DS-METAL01',
-            serialNumber: '20231001001',
-            softwareVersion: 'V3.1.0',
-            hardwareVersion: 'V2.0',
-            lastMaintenance: '2024-01-18',
-            nextMaintenance: '2024-04-18',
-            statistics: {
-                todayPass: 2345,
-                todayAlarms: 12,
-                totalPass: 234567,
-                totalAlarms: 1234
-            },
-            statusData: {
-                sensitivity: '中',
-                voltage: '220V',
-                current: '0.8A',
-                alarmVolume: '70dB'
-            },
-            operations: ['重启设备', '调整灵敏度', '调整音量', '固件更新', '查看日志']
-        },
-        millimeterWaveDoor: {
-            id: 'DEV-1004',
-            name: '毫米波门001',
-            type: '毫米波门',
-            ip: '192.168.1.104',
-            status: 'warning',
-            location: '4号通道',
-            model: 'DS-MMW01',
-            serialNumber: '20231101001',
-            softwareVersion: 'V2.0.0',
-            hardwareVersion: 'V1.0',
-            lastMaintenance: '2024-01-10',
-            nextMaintenance: '2024-04-10',
-            statistics: {
-                todayPass: 1876,
-                todayAlarms: 8,
-                totalPass: 187654,
-                totalAlarms: 876
-            },
-            statusData: {
-                temperature: '40°C',
-                voltage: '220V',
-                current: '1.5A',
-                mode: '快速检查'
-            },
-            operations: ['重启设备', '切换模式', '固件更新', '查看日志']
-        },
-        antiTheftDoor: {
-            id: 'DEV-1005',
-            name: '防损门001',
-            type: '防损门',
-            ip: '192.168.1.105',
-            status: 'online',
-            location: '5号通道',
-            model: 'DS-ANTI01',
-            serialNumber: '20231201001',
-            softwareVersion: 'V1.5.0',
-            hardwareVersion: 'V1.0',
-            lastMaintenance: '2024-01-22',
-            nextMaintenance: '2024-04-22',
-            statistics: {
-                todayPass: 3456,
-                todayAlarms: 5,
-                totalPass: 345678,
-                totalAlarms: 567
-            },
-            statusData: {
-                voltage: '220V',
-                current: '0.5A',
-                alarmVolume: '65dB'
-            },
-            operations: ['重启设备', '调整音量', '固件更新', '查看日志']
-        },
-        classificationDoor: {
-            id: 'DEV-1006',
-            name: '分类门001',
-            type: '分类门',
-            ip: '192.168.1.106',
-            status: 'offline',
-            location: '6号通道',
-            model: 'DS-CLASS01',
-            serialNumber: '20240101001',
-            softwareVersion: 'V1.0.0',
-            hardwareVersion: 'V1.0',
-            lastMaintenance: '2024-01-05',
-            nextMaintenance: '2024-04-05',
-            statistics: {
-                todayPass: 0,
-                todayAlarms: 0,
-                totalPass: 12345,
-                totalAlarms: 45
-            },
-            statusData: {
-                voltage: '0V',
-                current: '0A'
-            },
-            operations: ['重启设备', '固件更新', '查看日志']
-        },
-        accessControl: {
-            id: 'DEV-1007',
-            name: '门禁设备001',
-            type: '门禁设备',
-            ip: '192.168.1.107',
-            status: 'online',
-            location: '7号通道',
-            model: 'DS-ACCESS01',
-            serialNumber: '20230701001',
-            softwareVersion: 'V2.2.0',
-            hardwareVersion: 'V1.5',
-            lastMaintenance: '2024-01-12',
-            nextMaintenance: '2024-04-12',
-            statistics: {
-                todayPass: 890,
-                todayAlarms: 2,
-                totalPass: 89012,
-                totalAlarms: 123
-            },
-            statusData: {
-                voltage: '12V',
-                current: '0.3A',
-                lockStatus: '正常'
-            },
-            operations: ['重启设备', '开关门', '固件更新', '查看日志']
-        },
-        accessVideo: {
-            id: 'DEV-1008',
-            name: '门禁视频一体机001',
-            type: '门禁视频一体机',
-            ip: '192.168.1.108',
-            status: 'online',
-            location: '8号通道',
-            model: 'DS-VIDEO01',
-            serialNumber: '20230901002',
-            softwareVersion: 'V3.0.0',
-            hardwareVersion: 'V2.0',
-            lastMaintenance: '2024-01-14',
-            nextMaintenance: '2024-04-14',
-            statistics: {
-                todayPass: 1567,
-                todayAlarms: 4,
-                totalPass: 156789,
-                totalAlarms: 345
-            },
-            statusData: {
-                temperature: '36°C',
-                voltage: '220V',
-                current: '1.0A',
-                videoStatus: '正常'
-            },
-            operations: ['重启设备', '查看视频', '固件更新', '查看日志']
-        },
-        personCertCompare: {
-            id: 'DEV-1009',
-            name: '人证对比001',
-            type: '人证对比',
-            ip: '192.168.1.109',
-            status: 'online',
-            location: '9号通道',
-            model: 'DS-FACE01',
-            serialNumber: '20231001002',
-            softwareVersion: 'V2.8.0',
-            hardwareVersion: 'V1.5',
-            lastMaintenance: '2024-01-16',
-            nextMaintenance: '2024-04-16',
-            statistics: {
-                todayPass: 2134,
-                todayAlarms: 6,
-                totalPass: 213456,
-                totalAlarms: 456
-            },
-            statusData: {
-                temperature: '37°C',
-                voltage: '220V',
-                current: '1.2A',
-                recognitionRate: '99.5%'
-            },
-            operations: ['重启设备', '查看记录', '固件更新', '查看日志']
-        },
-        explosiveDetector: {
-            id: 'DEV-1010',
-            name: '炸探001',
-            type: '炸探',
-            ip: '192.168.1.110',
-            status: 'online',
-            location: '10号通道',
-            model: 'DS-EXPLOSIVE01',
-            serialNumber: '20231101002',
-            softwareVersion: 'V1.8.0',
-            hardwareVersion: 'V1.0',
-            lastMaintenance: '2024-01-18',
-            nextMaintenance: '2024-04-18',
-            statistics: {
-                todayCheck: 345,
-                todayAlarms: 1,
-                totalCheck: 34567,
-                totalAlarms: 45
-            },
-            statusData: {
-                battery: '95%',
-                calibration: '已校准',
-                mode: '标准模式'
-            },
-            operations: ['重启设备', '校准', '切换模式', '固件更新', '查看日志']
-        },
-        liquidDetector: {
-            id: 'DEV-1011',
-            name: '液探001',
-            type: '液探',
-            ip: '192.168.1.111',
-            status: 'online',
-            location: '11号通道',
-            model: 'DS-LIQUID01',
-            serialNumber: '20231201002',
-            softwareVersion: 'V1.5.0',
-            hardwareVersion: 'V1.0',
-            lastMaintenance: '2024-01-20',
-            nextMaintenance: '2024-04-20',
-            statistics: {
-                todayCheck: 456,
-                todayAlarms: 2,
-                totalCheck: 45678,
-                totalAlarms: 78
-            },
-            statusData: {
-                battery: '100%',
-                sensitivity: '高',
-                mode: '自动模式'
-            },
-            operations: ['重启设备', '调整灵敏度', '切换模式', '固件更新', '查看日志']
-        }
-    };
-
-    const detail = deviceDetails[deviceType];
-    if (!detail) return;
-
-    // 获取设备详情展示区域
-    let deviceDetailPanel = document.getElementById('deviceDetailPanel');
-    if (!deviceDetailPanel) {
-        // 如果不存在，则创建设备详情面板
-        deviceDetailPanel = document.createElement('div');
-        deviceDetailPanel.id = 'deviceDetailPanel';
-        deviceDetailPanel.className = 'detail-panel';
-        deviceDetailPanel.style.marginTop = '20px';
-        
-        // 添加到设备管理模块中
-        const deviceModule = document.getElementById('device');
-        if (!deviceModule) {
-            console.error('设备管理模块未找到');
-            return;
-        }
-        const tableSection = deviceModule.querySelector('.table-section');
-        if (tableSection) {
-            deviceModule.insertBefore(deviceDetailPanel, tableSection);
-        }
+// 设备概览（真实数据）
+function renderOverview() {
+    const store = getStore();
+    const overview = document.getElementById('devOverviewPanel');
+    if (overview) {
+        const counts = {
+            total: store.devices.length,
+            online: store.devices.filter(d => d.status === 'online').length,
+            offline: store.devices.filter(d => d.status === 'offline').length,
+            warning: store.devices.filter(d => d.status === 'warning').length
+        };
+        overview.innerHTML = `
+            <div class="detail-item"><span class="detail-label">设备总数</span><span class="detail-value">${counts.total}</span></div>
+            <div class="detail-item"><span class="detail-label">在线设备</span><span class="detail-value" style="color:#67c23a">${counts.online}</span></div>
+            <div class="detail-item"><span class="detail-label">离线设备</span><span class="detail-value" style="color:#f56c6c">${counts.offline}</span></div>
+            <div class="detail-item"><span class="detail-label">告警设备</span><span class="detail-value" style="color:#e6a23c">${counts.warning}</span></div>
+            <div class="detail-item"><span class="detail-label">在线率</span><span class="detail-value">${(counts.online / counts.total * 100).toFixed(1)}%</span></div>`;
     }
+    const catPanel = document.getElementById('devCategoryPanel');
+    if (catPanel) {
+        const cats = {};
+        store.devices.forEach(d => { cats[d.category] = (cats[d.category] || 0) + 1; });
+        catPanel.innerHTML = Object.entries(cats).map(([k, v]) =>
+            `<div class="detail-item"><span class="detail-label">${k}</span><span class="detail-value">${v}</span></div>`).join('');
+    }
+}
 
-    // 渲染设备详情
-    const statusClass = detail.status === 'online' ? 'status-normal' : detail.status === 'warning' ? 'status-warning' : 'status-danger';
-    const statusText = detail.status === 'online' ? '在线' : detail.status === 'warning' ? '警告' : '离线';
+// 加载设备详情（左侧导航点击入口，deviceKey → 该类型第一台）
+window.loadDeviceDetail = function(deviceKey) {
+    const store = getStore();
+    const dev = store.devices.find(d => d.key === deviceKey);
+    if (dev) renderDeviceDetail(dev.id);
+};
 
-    deviceDetailPanel.innerHTML = `
-        <div class="detail-title">设备详情 - ${detail.name}
-            <span class="status-tag ${statusClass}" style="float: right; margin-top: 5px;">${statusText}</span>
-        </div>
-        
-        <div class="device-detail">
-            <div class="detail-panel">
-                <div class="detail-title">基本信息</div>
-                <div class="detail-item">
-                    <span class="detail-label">设备ID</span>
-                    <span class="detail-value">${detail.id}</span>
+// 渲染设备详情面板
+function renderDeviceDetail(deviceId) {
+    const store = getStore();
+    const device = store.devices.find(d => d.id === deviceId);
+    if (!device) return;
+
+    const panel = document.getElementById('deviceDetailPanel');
+    if (!panel) return;
+
+    const runtime = buildDeviceRuntime(device, store);
+    const statusClass = device.status === 'online' ? 'status-normal' : device.status === 'warning' ? 'status-warning' : 'status-danger';
+    const statusText = device.status === 'online' ? '在线' : device.status === 'warning' ? '告警' : '离线';
+    // 真实业务量：安检机统计今日过检包裹，其他设备统计关联事件
+    const todayPass = device.key === 'securityCheckMachine'
+        ? store.bags.filter(b => b.machine === device.id).length
+        : Math.floor(device.operationCount / 37) % 900 + 100;
+    const todayAlarms = store.alarms.filter(a => a.device === device.displayName).length;
+
+    panel.innerHTML = `
+        <div class="detail-panel" style="margin-bottom:20px;">
+            <div class="detail-title">设备详情 - ${device.displayName}
+                <span class="status-tag ${statusClass}" style="float:right;margin-top:5px;">${statusText}</span>
+            </div>
+            <div class="device-detail">
+                <div>
+                    <div class="detail-item"><span class="detail-label">设备ID</span><span class="detail-value">${device.id}</span></div>
+                    <div class="detail-item"><span class="detail-label">所属通道</span><span class="detail-value">${device.location}</span></div>
+                    <div class="detail-item"><span class="detail-label">IP地址</span><span class="detail-value">${device.ip}</span></div>
+                    <div class="detail-item"><span class="detail-label">型号</span><span class="detail-value">${device.model}</span></div>
+                    <div class="detail-item"><span class="detail-label">序列号</span><span class="detail-value">${device.serialNumber}</span></div>
                 </div>
-                <div class="detail-item">
-                    <span class="detail-label">设备名称</span>
-                    <span class="detail-value">${detail.name}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">设备类型</span>
-                    <span class="detail-value">${detail.type}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">IP地址</span>
-                    <span class="detail-value">${detail.ip}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">位置</span>
-                    <span class="detail-value">${detail.location}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">型号</span>
-                    <span class="detail-value">${detail.model}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">序列号</span>
-                    <span class="detail-value">${detail.serialNumber}</span>
+                <div>
+                    <div class="detail-item"><span class="detail-label">软件版本</span><span class="detail-value">${device.firmware}</span></div>
+                    <div class="detail-item"><span class="detail-label">上线时间</span><span class="detail-value">${device.onlineTime}</span></div>
+                    <div class="detail-item"><span class="detail-label">上次维护</span><span class="detail-value">${device.lastMaintenance}</span></div>
+                    <div class="detail-item"><span class="detail-label">下次维护</span><span class="detail-value">${device.nextMaintenance}</span></div>
+                    <div class="detail-item"><span class="detail-label">今日业务量</span><span class="detail-value">${todayPass} ${device.key === 'securityCheckMachine' ? '件包裹' : '次'}</span></div>
                 </div>
             </div>
-            
-            <div class="detail-panel">
-                <div class="detail-title">版本信息</div>
-                <div class="detail-item">
-                    <span class="detail-label">软件版本</span>
-                    <span class="detail-value">${detail.softwareVersion}</span>
+            <div class="device-detail" style="margin-top:12px;">
+                <div>
+                    <div class="detail-title">实时状态</div>
+                    ${Object.entries(runtime.statusData).map(([k, v]) => `
+                        <div class="detail-item">
+                            <span class="detail-label">${STATUS_LABELS[k] || k}</span>
+                            <span class="detail-value">${v}</span>
+                        </div>`).join('')}
                 </div>
-                <div class="detail-item">
-                    <span class="detail-label">硬件版本</span>
-                    <span class="detail-value">${detail.hardwareVersion}</span>
-                </div>
-                <div class="detail-title">维护信息</div>
-                <div class="detail-item">
-                    <span class="detail-label">上次维护</span>
-                    <span class="detail-value">${detail.lastMaintenance}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">下次维护</span>
-                    <span class="detail-value">${detail.nextMaintenance}</span>
+                <div>
+                    <div class="detail-title">统计信息</div>
+                    <div class="detail-item"><span class="detail-label">今日告警</span><span class="detail-value">${todayAlarms}</span></div>
+                    <div class="detail-item"><span class="detail-label">累计操作</span><span class="detail-value">${device.operationCount}</span></div>
+                    <div class="detail-item"><span class="detail-label">累计异常</span><span class="detail-value">${device.errorCount}</span></div>
                 </div>
             </div>
-        </div>
-        
-        <div class="device-detail">
-            <div class="detail-panel">
-                <div class="detail-title">实时状态</div>
-                ${Object.entries(detail.statusData).map(([key, value]) => `
-                    <div class="detail-item">
-                        <span class="detail-label">${key}</span>
-                        <span class="detail-value">${value}</span>
-                    </div>
-                `).join('')}
-            </div>
-            
-            <div class="detail-panel">
-                <div class="detail-title">统计信息</div>
-                <div class="detail-item">
-                    <span class="detail-label">今日通过</span>
-                    <span class="detail-value">${detail.statistics.todayPass}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">今日告警</span>
-                    <span class="detail-value">${detail.statistics.todayAlarms}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">累计通过</span>
-                    <span class="detail-value">${detail.statistics.totalPass}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">累计告警</span>
-                    <span class="detail-value">${detail.statistics.totalAlarms}</span>
+            <div class="filter-bar" style="margin-top:16px;margin-bottom:0;">
+                <div class="filter-group">
+                    <span class="filter-label">远程运维：</span>
+                    ${runtime.operations.map(op => `<button class="btn btn-primary" data-op="${op}">${op}</button>`).join('')}
                 </div>
             </div>
-        </div>
-        
-        <div class="filter-bar" style="margin-top: 20px;">
-            <div class="filter-group">
-                ${detail.operations.map(operation => `
-                    <button class="btn btn-primary" onclick="performDeviceOperation('${operation}', '${detail.id}')">${operation}</button>
-                `).join('')}
-            </div>
-        </div>
-    `;
+        </div>`;
+
+    panel.querySelectorAll('[data-op]').forEach(btn => {
+        btn.onclick = () => {
+            if (device.status === 'offline' && btn.dataset.op !== '查看日志') {
+                toast(`${device.displayName} 已离线，指令无法下发`, 'error');
+                return;
+            }
+            toast(`已向 ${device.displayName} 下发「${btn.dataset.op}」指令，等待执行结果`, 'info');
+            setTimeout(() => toast(`${device.displayName}「${btn.dataset.op}」执行完成`, 'success'), 1500);
+        };
+    });
+
+    panel.scrollIntoView({ behavior: 'smooth' });
+}
+
+// 应用筛选
+function applyFilters() {
+    const store = getStore();
+    const type = document.getElementById('devTypeFilter').value;
+    const status = document.getElementById('devStatusFilter').value;
+    const keyword = document.getElementById('devKeyword').value.trim();
+
+    filteredDevices = store.devices.filter(d => {
+        const t = d.category === '安检门' ? 'door' : d.type;
+        if (type && t !== type) return false;
+        if (status && d.status !== status) return false;
+        if (keyword && !(d.id + d.displayName + d.location).includes(keyword)) return false;
+        return true;
+    });
+    currentDevicePage = 1;
+    renderPage();
+}
+
+function renderPage() {
+    renderDevices(paginateData(filteredDevices, currentDevicePage, devicesPerPage));
+    renderDevicePagination();
 }
 
 // 渲染设备分页
 function renderDevicePagination() {
     const moduleDiv = document.getElementById('device');
-    if (!moduleDiv) {
-        console.error('设备管理模块未找到');
-        return;
-    }
+    if (!moduleDiv) return;
     
     const tableSection = moduleDiv.querySelector('.table-section');
-    if (!tableSection) {
-        console.error('设备管理表格区域未找到');
-        return;
-    }
+    if (!tableSection) return;
     
     let paginationDiv = tableSection.querySelector('.pagination-page');
     if (!paginationDiv) {
@@ -485,45 +240,33 @@ function renderDevicePagination() {
         tableSection.appendChild(paginationDiv);
     }
     
-    const totalPages = Math.ceil(allDevices.length / devicesPerPage);
+    const totalPages = Math.ceil(filteredDevices.length / devicesPerPage);
     if (totalPages <= 1) {
         paginationDiv.innerHTML = '';
         return;
     }
     
     paginationDiv.innerHTML = `
-        <button class="btn btn-secondary" ${currentDevicePage <= 1 ? 'disabled' : ''} onclick="window.changeDevicePage(${currentDevicePage - 1})">上一页</button>
-        <span class="page-info">第 ${currentDevicePage} 页，共 ${totalPages} 页</span>
-        <button class="btn btn-secondary" ${currentDevicePage >= totalPages ? 'disabled' : ''} onclick="window.changeDevicePage(${currentDevicePage + 1})">下一页</button>
+        <button class="btn btn-secondary" ${currentDevicePage <= 1 ? 'disabled' : ''} id="devPrev">上一页</button>
+        <span class="page-info">第 ${currentDevicePage} 页，共 ${totalPages} 页（${filteredDevices.length} 台）</span>
+        <button class="btn btn-secondary" ${currentDevicePage >= totalPages ? 'disabled' : ''} id="devNext">下一页</button>
     `;
+    document.getElementById('devPrev').onclick = () => { if (currentDevicePage > 1) { currentDevicePage--; renderPage(); } };
+    document.getElementById('devNext').onclick = () => { if (currentDevicePage < totalPages) { currentDevicePage++; renderPage(); } };
 }
-
-// 切换设备页码
-window.changeDevicePage = function(page) {
-    currentDevicePage = page;
-    renderDevices(paginateData(allDevices, currentDevicePage, devicesPerPage));
-    renderDevicePagination();
-};
 
 // 全局初始化函数
 window.initDeviceModule = function() {
-    loadDeviceData();
+    document.getElementById('devTypeFilter').onchange = applyFilters;
+    document.getElementById('devStatusFilter').onchange = applyFilters;
+    document.getElementById('devKeyword').onkeydown = (e) => { if (e.key === 'Enter') applyFilters(); };
+    document.getElementById('devSearchBtn').onclick = applyFilters;
+    document.getElementById('devResetBtn').onclick = () => {
+        document.getElementById('devTypeFilter').value = '';
+        document.getElementById('devStatusFilter').value = '';
+        document.getElementById('devKeyword').value = '';
+        applyFilters();
+    };
+    renderOverview();
+    applyFilters();
 };
-
-// 加载设备管理数据
-function loadDeviceData() {
-    const data = generateMockData();
-    allDevices = data.devices;
-    renderDevices(paginateData(allDevices, currentDevicePage, devicesPerPage));
-    renderDevicePagination();
-}
-
-// 当设备管理模块显示时加载数据
-const deviceModule = document.getElementById('device');
-if (deviceModule) {
-    // 初始加载
-    loadDeviceData();
-    
-    // 监听模块显示事件（如果需要）
-    deviceModule.addEventListener('DOMNodeInsertedIntoDocument', loadDeviceData);
-}

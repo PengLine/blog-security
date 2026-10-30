@@ -1,314 +1,274 @@
-import { generateMockData } from './utils.js';
+import { getStore, toggleChannel, bindPassengerPackage as dbBind, unbindPackage } from './db.js';
+import { toast, openModal, kvTableHTML, exportCSV, paginateData, timeAgo } from './utils.js';
 
-let mockData = {};
-
-// 分页变量
+let mockData = { bindingRecords: [], passageRecords: [], channels: [], stats: {} };
 let currentBindingPage = 1;
 let currentPassagePage = 1;
-const recordsPerPage = 20;
+const recordsPerPage = 15;
 
 function initPage() {
-    mockData = generatePassageMockData();
+    buildViewData();
     renderStats();
     renderChannelControls();
-    renderBindingRecords(getBindingPageData(1));
+    renderBindingRecords(paginateData(mockData.bindingRecords, currentBindingPage, recordsPerPage));
     renderBindingPagination();
-    renderPassageRecords(getPassagePageData(1));
+    renderPassageRecords(paginateData(mockData.passageRecords, currentPassagePage, recordsPerPage));
     renderPassagePagination();
 }
 
-// 获取绑定记录分页数据
-function getBindingPageData(page) {
-    const start = (page - 1) * recordsPerPage;
-    const end = start + recordsPerPage;
-    return mockData.bindingRecords.slice(start, end);
-}
+// 从统一业务中枢构建视图数据（人-包-通道全部关联）
+function buildViewData() {
+    const store = getStore();
+    const passengerMap = {};
+    store.passengers.forEach(p => { passengerMap[p.id] = p; });
 
-// 获取通行记录分页数据
-function getPassagePageData(page) {
-    const start = (page - 1) * recordsPerPage;
-    const end = start + recordsPerPage;
-    return mockData.passageRecords.slice(start, end);
-}
+    mockData.channels = store.channels;
 
-function generatePassageMockData() {
-    const channels = [
-        { id: 'channel1', name: '1号通道', status: 'open', deviceId: 'DEV-101' },
-        { id: 'channel2', name: '2号通道', status: 'open', deviceId: 'DEV-102' },
-        { id: 'channel3', name: '3号通道', status: 'closed', deviceId: 'DEV-103' },
-        { id: 'channel4', name: '4号通道', status: 'open', deviceId: 'DEV-104' },
-        { id: 'channel5', name: '5号通道', status: 'open', deviceId: 'DEV-105' }
-    ];
-
-    const bindingRecords = [];
-    for (let i = 0; i < 10; i++) {
-        const time = new Date(Date.now() - Math.random() * 3600000);
-        const status = Math.random() > 0.7 ? '已完成' : (Math.random() > 0.5 ? '通行中' : '待通行');
-        bindingRecords.push({
-            id: `BIND-${Date.now()}-${i}`,
-            passengerId: `PASS-${Math.floor(Math.random() * 10000)}`,
-            packageId: `PKG-${Date.now()}-${i}`,
-            channel: `channel${Math.floor(Math.random() * 5) + 1}`,
-            bindTime: time.toLocaleString(),
-            status: status
+    // 绑定记录：已绑定的人包关系
+    mockData.bindingRecords = store.bags
+        .filter(b => b.bindingStatus === '已绑定' && passengerMap[b.owner])
+        .slice(0, 120)
+        .map(b => {
+            const p = passengerMap[b.owner];
+            return {
+                id: `BIND-${b.id}`,
+                passengerId: p.id, passengerName: p.name,
+                packageId: b.id, channel: b.channel,
+                bindTime: p.checkInTime,
+                status: b.status === 'pending' ? '待检' : b.disposition === '放行' || b.disposition === '复检放行' ? '已完成' : b.disposition ? '处置中' : '通行中',
+                temperature: p.temperature
+            };
         });
-    }
 
-    const passageRecords = [];
-    for (let i = 0; i < 15; i++) {
-        const time = new Date(Date.now() - Math.random() * 86400000);
-        const temp = (Math.random() * 2 + 36).toFixed(1);
-        const isContraband = Math.random() > 0.9;
-        const status = isContraband || parseFloat(temp) > 37.3 ? '拒绝通行' : '允许通行';
-        passageRecords.push({
-            id: `PASS-${Date.now()}-${i}`,
-            time: time.toLocaleString(),
-            passengerId: `PASS-${Math.floor(Math.random() * 10000)}`,
-            packageId: `PKG-${Date.now()}-${i}`,
-            temperature: temp,
-            contraband: isContraband ? ['刀具', '液体', '电池', '其他'][Math.floor(Math.random() * 4)] : '无',
-            channel: `channel${Math.floor(Math.random() * 5) + 1}`,
-            status: status
-        });
-    }
+    // 通行记录：过检包裹 + 旅客体温/黑名单校验结果
+    const blackIds = new Set(store.blacklist.map(x => x.personId));
+    mockData.passageRecords = store.bags.slice(0, 150).map(b => {
+        const p = passengerMap[b.owner] || {};
+        const tempAbnormal = (p.temperature || 36.5) > 37.3;
+        const blacklisted = blackIds.has(b.owner);
+        let status = '允许通行';
+        if (blacklisted) status = '拒绝通行';
+        else if (tempAbnormal) status = '体温复测';
+        else if (b.judgeResult === '违禁' || b.disposition === '开包查扣') status = '物品查扣';
+        else if (b.status === 'pending') status = '待判图';
+        return {
+            id: `PSG-${b.id}`,
+            time: b.scanTime, ts: b.scanTs,
+            passengerId: b.owner, passengerName: b.ownerName,
+            packageId: b.id,
+            temperature: p.temperature || '-',
+            contraband: b.seized ? b.seized.itemName : (b.ai && b.judgeResult !== '正常' ? b.ai.label : '无'),
+            channel: b.channel, channelName: b.channelName,
+            status, blacklisted
+        };
+    });
 
-    const stats = {
-        totalPassage: Math.floor(Math.random() * 5000) + 1000,
-        tempAbnormal: Math.floor(Math.random() * 50) + 5,
-        contrabandFound: Math.floor(Math.random() * 100) + 10,
-        faceUnidentified: Math.floor(Math.random() * 200) + 20
+    mockData.stats = {
+        totalPassage: store.bags.length,
+        tempAbnormal: store.passengers.filter(p => p.temperature > 37.3).length,
+        contrabandFound: store.bags.filter(b => b.disposition === '开包查扣').length,
+        faceUnidentified: store.recognitionRecords.filter(r => r.status === '未识别').length
     };
-
-    return { channels, bindingRecords, passageRecords, stats };
 }
 
 function renderStats() {
-    document.getElementById('totalPassage').textContent = mockData.stats.totalPassage;
-    document.getElementById('tempAbnormal').textContent = mockData.stats.tempAbnormal;
-    document.getElementById('contrabandFound').textContent = mockData.stats.contrabandFound;
-    document.getElementById('faceUnidentified').textContent = mockData.stats.faceUnidentified;
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    set('totalPassage', mockData.stats.totalPassage);
+    set('tempAbnormal', mockData.stats.tempAbnormal);
+    set('contrabandFound', mockData.stats.contrabandFound);
+    set('faceUnidentified', mockData.stats.faceUnidentified);
 }
 
 function renderChannelControls() {
     const container = document.getElementById('channelControls');
+    if (!container) return;
     container.innerHTML = '';
 
     mockData.channels.forEach(channel => {
-        const channelCard = document.createElement('div');
-        channelCard.className = 'stat-card';
-        channelCard.style.cursor = 'pointer';
-        channelCard.style.textAlign = 'center';
+        const card = document.createElement('div');
+        card.className = 'stat-card';
+        card.style.cursor = 'pointer';
+        card.style.textAlign = 'center';
 
-        const statusText = channel.status === 'open' ? '开启' : '关闭';
-        const statusClass = channel.status === 'open' ? 'status-normal' : 'status-danger';
-        const btnText = channel.status === 'open' ? '关闭' : '开启';
-        const btnClass = channel.status === 'open' ? 'btn-danger' : 'btn-success';
+        const statusText = channel.status === 'open' ? '开放' : channel.status === 'busy' ? '繁忙' : '关闭';
+        const statusClass = channel.status === 'open' ? 'status-normal' : channel.status === 'busy' ? 'status-warning' : 'status-danger';
 
-        channelCard.innerHTML = `
-            <div style="font-size: 14px; color: #909399; margin-bottom: 8px;">${channel.name}</div>
-            <div style="font-size: 20px; font-weight: bold; margin-bottom: 10px;" class="${statusClass}">${statusText}</div>
-            <button class="btn ${btnClass}" onclick="toggleChannel('${channel.id}')">${btnText}</button>
+        card.innerHTML = `
+            <div style="font-size:14px;color:#909399;margin-bottom:8px;">${channel.name}</div>
+            <div style="font-size:20px;font-weight:bold;margin-bottom:6px;" class="${statusClass}">${statusText}</div>
+            <div style="font-size:12px;color:#909399;margin-bottom:8px;">今日过检 ${channel.throughputToday} 件 · 排队 ${channel.queue} 人</div>
+            <button class="btn ${channel.status === 'closed' ? 'btn-success' : 'btn-danger'}" data-ch="${channel.id}">${channel.status === 'closed' ? '开启通道' : '关闭通道'}</button>
         `;
-
-        container.appendChild(channelCard);
+        card.querySelector('[data-ch]').onclick = (e) => {
+            e.stopPropagation();
+            toggleChannel(channel.id);
+            toast(`${channel.name} 已${channel.status === 'open' ? '关闭' : '开启'}`, 'info');
+            initPage();
+        };
+        container.appendChild(card);
     });
 }
 
 function renderBindingRecords(records) {
     const tbody = document.getElementById('bindingTableBody');
+    if (!tbody) return;
     tbody.innerHTML = '';
 
     records.forEach(record => {
         const channel = mockData.channels.find(c => c.id === record.channel);
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td>${record.passengerId}</td>
+            <td>${record.passengerId}<div style="font-size:11px;color:#909399">${record.passengerName}</div></td>
             <td>${record.packageId}</td>
             <td>${channel ? channel.name : '未知通道'}</td>
             <td>${record.bindTime}</td>
-            <td><span class="status-tag ${record.status === '已完成' ? 'status-normal' : record.status === '通行中' ? 'status-processing' : 'status-warning'}">${record.status}</span></td>
+            <td><span class="status-tag ${record.status === '已完成' ? 'status-normal' : record.status === '处置中' ? 'status-danger' : record.status === '通行中' ? 'status-processing' : 'status-warning'}">${record.status}</span></td>
             <td>
-                <button class="btn btn-secondary" onclick="viewBindingDetail('${record.id}')">查看</button>
-                <button class="btn btn-danger" onclick="unbindPassengerPackage('${record.id}')">解除绑定</button>
+                <button class="btn btn-secondary" data-view="${record.id}">查看</button>
+                <button class="btn btn-danger" data-unbind="${record.packageId}">解除绑定</button>
             </td>
         `;
         tbody.appendChild(row);
+    });
+
+    tbody.querySelectorAll('[data-view]').forEach(btn => btn.onclick = () => {
+        const r = mockData.bindingRecords.find(x => x.id === btn.dataset.view);
+        if (r) openModal({
+            title: `绑定详情 - ${r.id}`, width: 520,
+            bodyHTML: kvTableHTML([
+                ['人员ID', r.passengerId], ['姓名', r.passengerName], ['包裹ID', r.packageId],
+                ['通道', (mockData.channels.find(c => c.id === r.channel) || {}).name],
+                ['绑定时间', r.bindTime], ['体温', `${r.temperature}℃`], ['当前状态', r.status]
+            ])
+        });
+    });
+    tbody.querySelectorAll('[data-unbind]').forEach(btn => btn.onclick = () => {
+        unbindPackage(btn.dataset.unbind);
+        toast(`包裹 ${btn.dataset.unbind} 已解除人包绑定`, 'info');
+        initPage();
     });
 }
 
 function renderPassageRecords(records) {
     const tbody = document.getElementById('passageRecordsTableBody');
+    if (!tbody) return;
     tbody.innerHTML = '';
 
     records.forEach(record => {
-        const channel = mockData.channels.find(c => c.id === record.channel);
-        const statusClass = record.status === '允许通行' ? 'status-normal' : 'status-danger';
+        const statusClass = record.status === '允许通行' ? 'status-normal'
+            : record.status === '拒绝通行' ? 'status-danger'
+            : record.status === '物品查扣' ? 'status-danger'
+            : record.status === '待判图' ? 'status-processing' : 'status-warning';
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td>${record.time}</td>
-            <td>${record.passengerId}</td>
+            <td>${record.time}<div style="font-size:11px;color:#909399">${timeAgo(record.ts)}</div></td>
+            <td>${record.passengerId}<div style="font-size:11px;color:#909399">${record.passengerName}${record.blacklisted ? ' ⚠黑名单' : ''}</div></td>
             <td>${record.packageId}</td>
-            <td>${record.temperature}°C</td>
+            <td>${record.temperature}℃</td>
             <td>${record.contraband}</td>
-            <td>${channel ? channel.name : '未知通道'}</td>
+            <td>${record.channelName}</td>
             <td><span class="status-tag ${statusClass}">${record.status}</span></td>
-            <td><button class="btn btn-secondary" onclick="viewPassageDetail('${record.id}')">查看</button></td>
+            <td><button class="btn btn-secondary" data-pdetail="${record.id}">查看</button></td>
         `;
         tbody.appendChild(row);
+    });
+
+    tbody.querySelectorAll('[data-pdetail]').forEach(btn => btn.onclick = () => {
+        const r = mockData.passageRecords.find(x => x.id === btn.dataset.pdetail);
+        if (r) openModal({
+            title: `通行详情 - ${r.packageId}`, width: 560,
+            bodyHTML: kvTableHTML([
+                ['通行时间', r.time], ['旅客', `${r.passengerName}（${r.passengerId}）`],
+                ['体温', `${r.temperature}℃`], ['检出物品', r.contraband],
+                ['通道', r.channelName], ['通行结论', r.status],
+                ['黑名单命中', r.blacklisted ? '是，已拦截并通知值班队长' : '否']
+            ])
+        });
     });
 }
 
 // 渲染绑定记录分页
 function renderBindingPagination() {
-    const tableSection = document.querySelector('.module:nth-child(2) .table-section');
+    const sections = document.querySelectorAll('#passage .table-section');
+    const tableSection = sections[0];
     if (!tableSection) return;
-    
-    let paginationDiv = tableSection.querySelector('.pagination-page');
-    if (!paginationDiv) {
-        paginationDiv = document.createElement('div');
-        paginationDiv.className = 'pagination-page';
-        tableSection.appendChild(paginationDiv);
+    let pag = tableSection.querySelector('.pagination-page');
+    if (!pag) {
+        pag = document.createElement('div');
+        pag.className = 'pagination-page';
+        tableSection.appendChild(pag);
     }
-    
     const totalPages = Math.ceil(mockData.bindingRecords.length / recordsPerPage);
-    if (totalPages <= 1) {
-        paginationDiv.innerHTML = '';
-        return;
-    }
-    
-    paginationDiv.innerHTML = `
-        <button class="btn btn-secondary" ${currentBindingPage <= 1 ? 'disabled' : ''} onclick="window.changeBindingPage(${currentBindingPage - 1})">上一页</button>
+    pag.innerHTML = totalPages <= 1 ? '' : `
+        <button class="btn btn-secondary" ${currentBindingPage <= 1 ? 'disabled' : ''} id="bindPrev">上一页</button>
         <span class="page-info">第 ${currentBindingPage} 页，共 ${totalPages} 页</span>
-        <button class="btn btn-secondary" ${currentBindingPage >= totalPages ? 'disabled' : ''} onclick="window.changeBindingPage(${currentBindingPage + 1})">下一页</button>
+        <button class="btn btn-secondary" ${currentBindingPage >= totalPages ? 'disabled' : ''} id="bindNext">下一页</button>
     `;
+    if (totalPages > 1) {
+        document.getElementById('bindPrev').onclick = () => { currentBindingPage--; renderBindingRecords(paginateData(mockData.bindingRecords, currentBindingPage, recordsPerPage)); renderBindingPagination(); };
+        document.getElementById('bindNext').onclick = () => { currentBindingPage++; renderBindingRecords(paginateData(mockData.bindingRecords, currentBindingPage, recordsPerPage)); renderBindingPagination(); };
+    }
 }
-
-// 切换绑定记录页码
-window.changeBindingPage = function(page) {
-    currentBindingPage = page;
-    renderBindingRecords(getBindingPageData(currentBindingPage));
-    renderBindingPagination();
-};
 
 // 渲染通行记录分页
 function renderPassagePagination() {
-    const tableSection = document.querySelector('.module:nth-child(3) .table-section');
+    const sections = document.querySelectorAll('#passage .table-section');
+    const tableSection = sections[1];
     if (!tableSection) return;
-    
-    let paginationDiv = tableSection.querySelector('.pagination-page');
-    if (!paginationDiv) {
-        paginationDiv = document.createElement('div');
-        paginationDiv.className = 'pagination-page';
-        tableSection.appendChild(paginationDiv);
+    let pag = tableSection.querySelector('.pagination-page');
+    if (!pag) {
+        pag = document.createElement('div');
+        pag.className = 'pagination-page';
+        tableSection.appendChild(pag);
     }
-    
     const totalPages = Math.ceil(mockData.passageRecords.length / recordsPerPage);
-    if (totalPages <= 1) {
-        paginationDiv.innerHTML = '';
-        return;
-    }
-    
-    paginationDiv.innerHTML = `
-        <button class="btn btn-secondary" ${currentPassagePage <= 1 ? 'disabled' : ''} onclick="window.changePassagePage(${currentPassagePage - 1})">上一页</button>
+    pag.innerHTML = totalPages <= 1 ? '' : `
+        <button class="btn btn-secondary" ${currentPassagePage <= 1 ? 'disabled' : ''} id="psgPrev">上一页</button>
         <span class="page-info">第 ${currentPassagePage} 页，共 ${totalPages} 页</span>
-        <button class="btn btn-secondary" ${currentPassagePage >= totalPages ? 'disabled' : ''} onclick="window.changePassagePage(${currentPassagePage + 1})">下一页</button>
+        <button class="btn btn-secondary" ${currentPassagePage >= totalPages ? 'disabled' : ''} id="psgNext">下一页</button>
     `;
-}
-
-// 切换通行记录页码
-window.changePassagePage = function(page) {
-    currentPassagePage = page;
-    renderPassageRecords(getPassagePageData(currentPassagePage));
-    renderPassagePagination();
-};
-
-function toggleChannel(channelId) {
-    const channel = mockData.channels.find(c => c.id === channelId);
-    if (channel) {
-        channel.status = channel.status === 'open' ? 'closed' : 'open';
-        renderChannelControls();
+    if (totalPages > 1) {
+        document.getElementById('psgPrev').onclick = () => { currentPassagePage--; renderPassageRecords(paginateData(mockData.passageRecords, currentPassagePage, recordsPerPage)); renderPassagePagination(); };
+        document.getElementById('psgNext').onclick = () => { currentPassagePage++; renderPassageRecords(paginateData(mockData.passageRecords, currentPassagePage, recordsPerPage)); renderPassagePagination(); };
     }
 }
 
-function bindPassengerPackage() {
-    const passengerId = document.getElementById('passengerId').value;
-    const packageId = document.getElementById('packageId').value;
+// 绑定操作（校验人员库/包裹库，真实写入）
+window.bindPassengerPackage = function() {
+    const passengerId = document.getElementById('passengerId').value.trim();
+    const packageId = document.getElementById('packageId').value.trim();
     const channelId = document.getElementById('channelSelect').value;
 
-    if (!passengerId || !packageId) {
-        alert('请填写人员ID和包裹ID');
-        return;
-    }
-
-    const newBinding = {
-        id: `BIND-${Date.now()}`,
-        passengerId: passengerId,
-        packageId: packageId,
-        channel: channelId,
-        bindTime: new Date().toLocaleString(),
-        status: '待通行'
-    };
-
-    mockData.bindingRecords.unshift(newBinding);
-    renderBindingRecords(mockData.bindingRecords);
-
+    if (!passengerId || !packageId) { toast('请填写人员ID和包裹ID', 'warning'); return; }
+    const result = dbBind(passengerId, packageId, channelId);
+    if (!result.ok) { toast(result.msg, 'error'); return; }
+    toast(`绑定成功：${result.passenger.name} ↔ ${result.bag.id}（${result.bag.channelName}）`, 'success');
     document.getElementById('passengerId').value = '';
     document.getElementById('packageId').value = '';
-}
+    initPage();
+};
 
-function unbindPassengerPackage(recordId) {
-    if (recordId) {
-        mockData.bindingRecords = mockData.bindingRecords.filter(r => r.id !== recordId);
-    } else {
-        const passengerId = document.getElementById('passengerId').value;
-        const packageId = document.getElementById('packageId').value;
-        if (passengerId) {
-            mockData.bindingRecords = mockData.bindingRecords.filter(r => r.passengerId !== passengerId);
-        }
-        if (packageId) {
-            mockData.bindingRecords = mockData.bindingRecords.filter(r => r.packageId !== packageId);
-        }
-    }
-    renderBindingRecords(mockData.bindingRecords);
-}
+window.unbindPassengerPackage = function(recordId) {
+    const packageId = recordId || document.getElementById('packageId').value.trim();
+    if (!packageId) { toast('请填写要解绑的包裹ID', 'warning'); return; }
+    const b = unbindPackage(packageId);
+    if (!b) { toast(`未找到包裹 ${packageId}`, 'error'); return; }
+    toast(`包裹 ${packageId} 已解除绑定`, 'info');
+    initPage();
+};
 
-function viewBindingDetail(recordId) {
-    const record = mockData.bindingRecords.find(r => r.id === recordId);
-    if (record) {
-        alert(`绑定详情：\nID: ${record.id}\n人员ID: ${record.passengerId}\n包裹ID: ${record.packageId}\n通道: ${record.channel}\n绑定时间: ${record.bindTime}\n状态: ${record.status}`);
-    }
-}
-
-function viewPassageDetail(recordId) {
-    const record = mockData.passageRecords.find(r => r.id === recordId);
-    if (record) {
-        alert(`通行详情：\nID: ${record.id}\n时间: ${record.time}\n人员ID: ${record.passengerId}\n包裹ID: ${record.packageId}\n体温: ${record.temperature}°C\n违禁品: ${record.contraband}\n通道: ${record.channel}\n状态: ${record.status}`);
-    }
-}
-
-function addNewBinding() {
-    alert('新增绑定功能开发中...');
-}
-
-function addNewPassageRecord() {
-    alert('新增通行记录功能开发中...');
-}
+window.addNewBinding = function() {
+    document.getElementById('passengerId').focus();
+    toast('请在下方表单输入人员ID与包裹ID后点击「绑定」', 'info');
+};
 
 // 全局初始化函数
 window.initPassageModule = function() {
     initPage();
+    const exportBtn = document.getElementById('passageExportBtn');
+    if (exportBtn) exportBtn.onclick = () => {
+        exportCSV(`通行台账_${new Date().toISOString().slice(0, 10)}.csv`,
+            ['时间', '人员ID', '姓名', '包裹ID', '体温', '检出物品', '通道', '结论'],
+            mockData.passageRecords.map(r => [r.time, r.passengerId, r.passengerName, r.packageId, r.temperature, r.contraband, r.channelName, r.status]));
+    };
 };
-
-const passageModule = document.getElementById('passage');
-if (passageModule) {
-    initPage();
-    passageModule.addEventListener('DOMNodeInsertedIntoDocument', initPage);
-}
-
-window.toggleChannel = toggleChannel;
-window.bindPassengerPackage = bindPassengerPackage;
-window.unbindPassengerPackage = unbindPassengerPackage;
-window.viewBindingDetail = viewBindingDetail;
-window.viewPassageDetail = viewPassageDetail;
-window.addNewBinding = addNewBinding;
-window.addNewPassageRecord = addNewPassageRecord;

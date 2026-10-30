@@ -1,20 +1,27 @@
+<div class="flow-bar" id="bizFlowBar">
+    <!-- 业务链路流程条（点击可跳转对应模块） -->
+</div>
+
 <div class="stats-grid" id="statsGrid">
     <!-- 统计卡片将通过JavaScript动态生成 -->
 </div>
 
 <div class="charts-section">
     <div class="chart-container">
-        <div class="chart-title">今日客流统计</div>
+        <div class="chart-title">今日过检趋势（点击柱体查看）</div>
         <div class="situation-chart" id="passengerFlowChart"></div>
     </div>
     <div class="chart-container">
-        <div class="chart-title">违禁品检测统计</div>
+        <div class="chart-title">违禁品查获分类</div>
         <div class="situation-chart" id="contrabandChart"></div>
     </div>
 </div>
 
 <div class="table-section">
-    <div class="table-title">最新事件</div>
+    <div class="table-title" style="display: flex; justify-content: space-between; align-items: center;">
+        <span>最新事件（实时联动判图/处置业务）</span>
+        <span style="font-size: 12px; color: #909399;" id="dashRefreshTip">每 30 秒自动刷新</span>
+    </div>
     <table class="data-table" id="eventsTable">
         <thead>
             <tr>

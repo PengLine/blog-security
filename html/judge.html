@@ -1,39 +1,42 @@
 <div class="module" id="judge">
     <div class="filter-bar">
         <div class="filter-group">
-            <span class="filter-label">判图类型：</span>
-            <select class="form-control">
-                <option value="">全部</option>
-                <option value="normal">正常判图</option>
-                <option value="advanced">高级判图</option>
+            <span class="filter-label">判图队列：</span>
+            <select class="form-control" id="judgeQueueFilter">
+                <option value="pending">待判图（AI标记）</option>
+                <option value="all">今日全部过检</option>
             </select>
         </div>
         <div class="filter-group">
-            <span class="filter-label">状态：</span>
-            <select class="form-control">
-                <option value="">全部</option>
-                <option value="pending">待处理</option>
-                <option value="processing">处理中</option>
-                <option value="completed">已完成</option>
+            <span class="filter-label">当班判图员：</span>
+            <select class="form-control" id="judgeOperatorSelect">
+                <!-- 判图员列表由JS填充 -->
             </select>
         </div>
         <div class="filter-group">
-            <button class="btn btn-primary">刷新</button>
-            <button class="btn btn-secondary">批量处理</button>
+            <span class="filter-label" id="judgeQueueStat"></span>
+        </div>
+        <div class="filter-group">
+            <button class="btn btn-primary" id="judgeRefreshBtn">刷新队列</button>
         </div>
     </div>
-    
+
     <div class="judge-interface">
         <div class="image-panel">
-            <div class="chart-title">包裹图像</div>
+            <div class="chart-title">包裹X光图像（双视角）</div>
+            <div class="judge-meta-bar" id="judgeMetaBar" style="display:none;"></div>
             <div class="image-container">
-                <span style="color: #909399;">点击左侧列表选择图像</span>
+                <span style="color: #909399;">点击右侧列表选择图像</span>
             </div>
             <div class="judge-controls">
-                <button class="btn btn-primary">正常</button>
-                <button class="btn btn-warning">可疑</button>
-                <button class="btn btn-danger">违禁品</button>
-                <button class="btn btn-secondary">下一图像</button>
+                <button class="btn btn-primary" id="btnJudgeNormal">正常</button>
+                <button class="btn btn-warning" id="btnJudgeSuspicious"
+                    style="background-color:#e6a23c;color:#fff;">可疑</button>
+                <button class="btn btn-danger" id="btnJudgeContraband">违禁品</button>
+                <button class="btn btn-secondary" id="btnJudgeNext">下一图像</button>
+            </div>
+            <div class="hotkey-tip">
+                快捷键：<kbd>1</kbd> 正常 <kbd>2</kbd> 可疑 <kbd>3</kbd> 违禁品 <kbd>→</kbd> 下一张
             </div>
         </div>
         <div class="judge-list">

@@ -1,0 +1,77 @@
+<div class="module" id="handoff">
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>今日查扣</h3>
+                <div class="stat-value" id="hoStatTotal">0</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>待移交</h3>
+                <div class="stat-value alarm-warning" id="hoStatPending">0</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>移交中</h3>
+                <div class="stat-value" id="hoStatMoving">0</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>交接完成</h3>
+                <div class="stat-value alarm-info" id="hoStatDone" style="color:#67c23a;">0</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="filter-bar">
+        <div class="filter-group">
+            <span class="filter-label">交接状态：</span>
+            <select class="form-control" id="hoStatusFilter">
+                <option value="">全部</option>
+                <option value="待移交">待移交</option>
+                <option value="移交中">移交中</option>
+                <option value="已完成">已完成</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <span class="filter-label">物品类别：</span>
+            <select class="form-control" id="hoCategoryFilter">
+                <option value="">全部</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <span class="filter-label">关键字：</span>
+            <input type="text" class="form-control" id="hoKeyword" placeholder="交接单号 / 包裹号 / 旅客姓名">
+        </div>
+        <div class="filter-group">
+            <button class="btn btn-primary" id="hoSearchBtn">查询</button>
+            <button class="btn btn-secondary" id="hoExportBtn">导出台账</button>
+        </div>
+    </div>
+
+    <div class="table-section">
+        <div class="table-title">查扣物品移交登记台账</div>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>交接单号</th>
+                    <th>查获时间</th>
+                    <th>旅客</th>
+                    <th>物品</th>
+                    <th>数量</th>
+                    <th>查获人</th>
+                    <th>接收岗位</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="hoTableBody">
+                <!-- 交接台账将通过JavaScript动态生成 -->
+            </tbody>
+        </table>
+        <div class="pagination-page" id="hoPagination"></div>
+    </div>
+</div>

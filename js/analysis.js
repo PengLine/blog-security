@@ -1,195 +1,79 @@
-import { generateMockData, drawChart } from './utils.js';
+import { getStore, aggregate } from './db.js';
+import { drawChart, exportCSV, toast } from './utils.js';
+
+// 当前时间范围
+function timeRangeMs() {
+    const sel = document.getElementById('timeRangeFilter');
+    const v = sel ? sel.value : 'day';
+    const now = Date.now();
+    const ranges = { day: 86400000, week: 7 * 86400000, month: 30 * 86400000, year: 365 * 86400000 };
+    return now - (ranges[v] || 86400000);
+}
 
 // 全局初始化函数
 window.initAnalysisModule = function() {
     loadAnalysisData();
+    setupAnalysisActions();
 };
 
-// 加载统计数据
+// 加载统计数据（全部来自统一业务中枢的真实聚合）
 function loadAnalysisData() {
-    const data = generateMockData();
+    const data = getStore();
     updateStats(data);
     renderAnalysisCharts(data);
     renderAnalysisTable(data);
 }
 
-// 当统计分析模块显示时加载数据
-const analysisModule = document.getElementById('analysis');
-if (analysisModule) {
-    // 初始加载
-    loadAnalysisData();
-    
-    // 设置筛选和操作事件
-    setupAnalysisActions();
-}
-
 // 更新统计卡片
-export function updateStats(data) {
-    // 更新总客流
-    const totalPassenger = document.getElementById('totalPassenger');
-    if (totalPassenger) {
-        totalPassenger.textContent = data.stats[0].value;
-    }
-    
-    // 更新违禁品数量
-    const totalContraband = document.getElementById('totalContraband');
-    if (totalContraband) {
-        totalContraband.textContent = data.stats[1].value;
-    }
-    
-    // 更新设备在线率
-    const deviceOnlineRate = document.getElementById('deviceOnlineRate');
-    if (deviceOnlineRate) {
-        deviceOnlineRate.textContent = `${data.stats[3].value}%`;
-    }
-    
-    // 计算事件处理率
-    const processedEvents = data.events.filter(event => event.processStatus === '已处理').length;
-    const eventProcessRate = document.getElementById('eventProcessRate');
-    if (eventProcessRate) {
-        eventProcessRate.textContent = `${((processedEvents / data.events.length) * 100).toFixed(1)}%`;
-    }
+function updateStats(store) {
+    const agg = aggregate(store);
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    set('totalPassenger', store.passengers.length);
+    set('totalContraband', agg.seized);
+    set('deviceOnlineRate', `${(agg.deviceStatus.online / store.devices.length * 100).toFixed(1)}%`);
+    set('eventProcessRate', `${agg.eventProcessRate}%`);
 }
 
 // 渲染分析图表
-export function renderAnalysisCharts(data) {
+function renderAnalysisCharts(store) {
+    const agg = aggregate(store);
     const colors = ['#409eff', '#67c23a', '#e6a23c', '#f56c6c', '#909399', '#722ed1'];
-    
-    // 客流趋势图
-    const hours = Array.from({ length: 12 }, (_, i) => i + 8);
-    const passengerFlowData = hours.map(() => Math.floor(Math.random() * 200) + 50);
-    drawChart('passengerChart', '客流趋势', passengerFlowData, hours.map(h => `${h}时`), colors);
-    
-    // 违禁品分类图
-    const contrabandData = [35, 25, 15, 25];
-    drawChart('contrabandChart', '违禁品分类', contrabandData, ['刀具', '液体', '电池', '其他'], colors);
-    
-    // 设备状态分布图
-    const onlineCount = data.devices.filter(device => device.status.name === '在线').length;
-    const warningCount = data.devices.filter(device => device.status.name === '告警').length;
-    const offlineCount = data.devices.filter(device => device.status.name === '离线').length;
-    drawChart('deviceStatusChart', '设备状态分布', [onlineCount, warningCount, offlineCount], ['在线', '告警', '离线'], ['#2ecc71', '#f39c12', '#e74c3c']);
-    
-    // 事件类型统计图
-    const eventTypeStats = {};
-    data.events.forEach(event => {
-        if (!eventTypeStats[event.typeCode]) {
-            eventTypeStats[event.typeCode] = 0;
-        }
-        eventTypeStats[event.typeCode]++;
-    });
-    const typeMap = { passenger: '乘客', metal: '金属', contraband: '违禁品', face: '人脸' };
-    const eventTypeLabels = Object.keys(eventTypeStats).map(type => typeMap[type] || type);
-    const eventTypeValues = Object.values(eventTypeStats);
-    drawChart('eventTypeChart', '事件类型统计', eventTypeValues, eventTypeLabels, colors);
+    const hourLabels = agg.hours.map(h => `${h}时`);
+
+    // 客流趋势（每小时过检包裹真实序列）
+    drawChart('passengerChart', '客流趋势（件/小时）', agg.flowSeries, hourLabels, colors);
+
+    // 违禁品分类（来自交接台账）
+    const cb = agg.contrabandByType;
+    drawChart('contrabandChart', '违禁品分类', cb.map(c => c.value), cb.map(c => c.name), cb.map(c => c.color));
+
+    // 设备状态分布
+    const ds = agg.deviceStatus;
+    drawChart('deviceStatusChart', '设备状态分布', [ds.online, ds.warning, ds.offline], ['在线', '告警', '离线'], ['#2ecc71', '#f39c12', '#e74c3c']);
+
+    // 事件类型统计
+    drawChart('eventTypeChart', '事件类型统计',
+        agg.eventTypeStats.map(x => x[1]), agg.eventTypeStats.map(x => x[0]), colors);
 }
 
-// 生成客流趋势图数据
-function generatePassengerChartData() {
-    const hours = [];
-    const values = [];
-    const now = new Date();
-    
-    // 生成过去24小时的数据
-    for (let i = 23; i >= 0; i--) {
-        const hour = new Date(now.getTime() - i * 3600000);
-        hours.push(`${hour.getHours()}:00`);
-        values.push(Math.floor(Math.random() * 500) + 100);
-    }
-    
-    return {
-        labels: hours,
-        datasets: [{
-            label: '客流',
-            data: values,
-            borderColor: '#3498db',
-            backgroundColor: 'rgba(52, 152, 219, 0.1)',
-            fill: true
-        }]
-    };
-}
-
-// 生成违禁品分类图数据
-function generateContrabandChartData() {
-    return {
-        labels: ['刀具', '液体', '电池', '其他'],
-        datasets: [{
-            data: [35, 25, 15, 25],
-            backgroundColor: ['#e74c3c', '#f39c12', '#3498db', '#2ecc71']
-        }]
-    };
-}
-
-// 生成设备状态分布图数据
-function generateDeviceStatusChartData(data) {
-    const onlineCount = data.devices.filter(device => device.status.name === '在线').length;
-    const warningCount = data.devices.filter(device => device.status.name === '告警').length;
-    const offlineCount = data.devices.filter(device => device.status.name === '离线').length;
-    
-    return {
-        labels: ['在线', '告警', '离线'],
-        datasets: [{
-            data: [onlineCount, warningCount, offlineCount],
-            backgroundColor: ['#2ecc71', '#f39c12', '#e74c3c']
-        }]
-    };
-}
-
-// 生成事件类型统计图数据
-function generateEventTypeChartData(data) {
-    // 统计不同类型的事件数量
-    const eventTypeStats = {};
-    data.events.forEach(event => {
-        if (!eventTypeStats[event.typeCode]) {
-            eventTypeStats[event.typeCode] = 0;
-        }
-        eventTypeStats[event.typeCode]++;
-    });
-    
-    // 类型映射
-    const typeMap = {
-        passenger: '乘客',
-        metal: '金属',
-        contraband: '违禁品',
-        face: '人脸'
-    };
-    
-    return {
-        labels: Object.keys(eventTypeStats).map(type => typeMap[type] || type),
-        datasets: [{
-            label: '事件数量',
-            data: Object.values(eventTypeStats),
-            backgroundColor: '#3498db'
-        }]
-    };
-}
-
-// 渲染分析表格
-function renderAnalysisTable(data) {
+// 渲染分析表格（小时明细，真实聚合）
+function renderAnalysisTable(store) {
     const tbody = document.getElementById('analysisTableBody');
     if (!tbody) return;
-    
+    const agg = aggregate(store);
     tbody.innerHTML = '';
-    
-    // 生成过去24小时的详细数据
-    for (let i = 23; i >= 0; i -= 2) {
-        const hour = new Date(Date.now() - i * 3600000);
-        const timeStr = `${hour.getHours()}:00 - ${(hour.getHours() + 2) % 24}:00`;
-        const passengerCount = Math.floor(Math.random() * 1000) + 500;
-        const contrabandCount = Math.floor(Math.random() * 20) + 1;
-        const alarmCount = Math.floor(Math.random() * 50) + 5;
-        const onlineDeviceCount = Math.floor(Math.random() * 5) + 8;
-        
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${timeStr}</td>
-            <td>${passengerCount}</td>
-            <td>${contrabandCount}</td>
-            <td>${alarmCount}</td>
-            <td>${onlineDeviceCount}/11</td>
+
+    agg.hourlyTable.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${row.time}</td>
+            <td>${row.flow}</td>
+            <td>${row.contraband}</td>
+            <td>${row.alarms}</td>
+            <td>${row.onlineDevices}/${store.devices.length}</td>
         `;
-        tbody.appendChild(row);
-    }
+        tbody.appendChild(tr);
+    });
 }
 
 // 设置分析模块操作事件
@@ -197,20 +81,16 @@ function setupAnalysisActions() {
     const refreshBtn = document.getElementById('refreshBtn');
     const exportBtn = document.getElementById('exportBtn');
     const timeRangeFilter = document.getElementById('timeRangeFilter');
-    
-    // 刷新按钮
-    refreshBtn.addEventListener('click', () => {
+
+    if (refreshBtn) refreshBtn.onclick = () => { loadAnalysisData(); toast('统计数据已刷新', 'success'); };
+    if (timeRangeFilter) timeRangeFilter.onchange = () => {
         loadAnalysisData();
-    });
-    
-    // 导出按钮
-    exportBtn.addEventListener('click', () => {
-        alert('导出报表功能开发中...');
-    });
-    
-    // 时间范围筛选
-    timeRangeFilter.addEventListener('change', () => {
-        // 根据时间范围重新加载数据
-        loadAnalysisData();
-    });
+        toast(`统计口径已切换为「${timeRangeFilter.selectedOptions[0].text}」`, 'info');
+    };
+    if (exportBtn) exportBtn.onclick = () => {
+        const agg = aggregate(getStore());
+        exportCSV(`运营报表_${new Date().toISOString().slice(0, 10)}.csv`,
+            ['时段', '过检包裹', '违禁品查获', '告警数量', '设备在线'],
+            agg.hourlyTable.map(r => [r.time, r.flow, r.contraband, r.alarms, `${r.onlineDevices}`]));
+    };
 }

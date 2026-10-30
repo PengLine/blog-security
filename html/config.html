@@ -2,12 +2,11 @@
     <div class="module-header">
         <h2>配置管理</h2>
         <div class="module-actions">
-            <button class="btn btn-primary">新增配置</button>
-            <button class="btn btn-secondary">批量导入</button>
-            <button class="btn btn-secondary">批量导出</button>
+            <button class="btn btn-primary" onclick="addConfig()">新增配置</button>
+            <button class="btn btn-secondary" onclick="showContrabandCatalog()">违禁品名录</button>
         </div>
     </div>
-    
+
     <div class="filter-bar">
         <div class="filter-group">
             <label class="filter-label">配置类型：</label>
@@ -27,7 +26,7 @@
             <button class="btn btn-secondary" id="resetBtn">重置</button>
         </div>
     </div>
-    
+
     <div class="table-section">
         <table class="data-table">
             <thead>
@@ -35,7 +34,7 @@
                     <th>配置ID</th>
                     <th>配置名称</th>
                     <th>配置类型</th>
-                    <th>创建时间</th>
+                    <th>生效范围</th>
                     <th>更新时间</th>
                     <th>操作</th>
                 </tr>
@@ -43,6 +42,21 @@
             <tbody id="configsTableBody">
                 <!-- 配置列表将通过JavaScript动态加载 -->
             </tbody>
+        </table>
+    </div>
+
+    <div class="table-section" style="margin-top:20px;">
+        <div class="table-title">配置变更审计（与业务操作留痕联动）</div>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>时间</th>
+                    <th>操作人</th>
+                    <th>操作内容</th>
+                    <th>目标配置</th>
+                </tr>
+            </thead>
+            <tbody id="auditTableBody"></tbody>
         </table>
     </div>
 </div>

@@ -886,3 +886,222 @@ body .container{
         height: 250px;
     }
 }
+
+/* ============ 业务增强组件 ============ */
+/* toast 通知 */
+.toast-wrap {
+    position: fixed;
+    top: 70px;
+    right: 20px;
+    z-index: 3000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.toast-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 220px;
+    max-width: 380px;
+    padding: 10px 14px;
+    background-color: #10253b;
+    border: 1px solid #1e3a5f;
+    border-left: 4px solid #409eff;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+    animation: toastIn 0.3s ease;
+}
+
+.toast-item.hide { opacity: 0; transform: translateX(20px); transition: all 0.4s ease; }
+.toast-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+@keyframes toastIn {
+    from { opacity: 0; transform: translateX(30px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+/* 模态弹窗 */
+.modal-mask {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.modal {
+    width: 92%;
+    background-color: #10253b;
+    border: 1px solid #1e3a5f;
+    border-radius: 8px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+    max-height: 84vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 20px;
+    border-bottom: 1px solid #1e3a5f;
+    font-size: 15px;
+    font-weight: bold;
+    color: #409eff;
+}
+
+.modal-x { cursor: pointer; font-size: 20px; color: #909399; padding: 0 4px; }
+.modal-x:hover { color: #ffffff; }
+
+.modal-body { padding: 18px 20px; overflow-y: auto; font-size: 13px; }
+.modal-footer { padding: 12px 20px; border-top: 1px solid #1e3a5f; display: flex; justify-content: flex-end; gap: 6px; }
+
+/* 键值对详情表 */
+.kv-table { width: 100%; border-collapse: collapse; }
+.kv-table tr { border-bottom: 1px solid #1e3a5f; }
+.kv-table tr:last-child { border-bottom: none; }
+.kv-k { width: 130px; color: #909399; padding: 8px 6px; font-size: 13px; vertical-align: top; }
+.kv-v { color: #ffffff; padding: 8px 6px; font-size: 13px; }
+
+/* 导航徽标 */
+.nav-badge {
+    display: none;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    margin-left: 5px;
+    border-radius: 8px;
+    background-color: #f56c6c;
+    color: #ffffff;
+    font-size: 11px;
+    line-height: 16px;
+    text-align: center;
+    vertical-align: middle;
+}
+
+/* 业务流水标签 */
+.chip {
+    display: inline-block;
+    padding: 2px 8px;
+    margin: 2px 4px 2px 0;
+    border-radius: 10px;
+    font-size: 12px;
+    color: #ffffff;
+    white-space: nowrap;
+}
+
+.chip-pass { background-color: rgba(103, 194, 58, 0.2); color: #67c23a; border: 1px solid #67c23a; }
+.chip-warn { background-color: rgba(230, 162, 60, 0.2); color: #e6a23c; border: 1px solid #e6a23c; }
+.chip-danger { background-color: rgba(245, 108, 108, 0.2); color: #f56c6c; border: 1px solid #f56c6c; }
+.chip-info { background-color: rgba(64, 158, 255, 0.2); color: #409eff; border: 1px solid #409eff; }
+
+/* 包裹生命周期流程条 */
+.flow-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    margin-bottom: 16px;
+    padding: 12px 15px;
+    background-color: #10253b;
+    border-radius: 8px;
+}
+
+.flow-step {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 14px;
+    background-color: #18304a;
+    color: #909399;
+    font-size: 12px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.flow-step:hover { color: #ffffff; }
+.flow-step.done { background-color: rgba(103, 194, 58, 0.15); color: #67c23a; }
+.flow-step.current { background-color: #409eff; color: #ffffff; box-shadow: 0 0 10px rgba(64, 158, 255, 0.5); }
+.flow-arrow { color: #2a4666; font-size: 12px; }
+
+/* 判图辅助信息栏 */
+.judge-meta-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    background-color: #18304a;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #909399;
+    text-align: left;
+}
+
+.judge-meta-bar b { color: #ffffff; font-weight: 500; }
+
+/* 图像工具按钮组 */
+.img-tools {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    display: flex;
+    gap: 5px;
+    z-index: 10;
+}
+
+.img-tools .btn { font-size: 10px; padding: 4px 8px; margin-right: 0; }
+
+/* 判图快捷键提示 */
+.hotkey-tip {
+    margin-top: 10px;
+    font-size: 12px;
+    color: #909399;
+    text-align: center;
+}
+
+.hotkey-tip kbd {
+    padding: 1px 6px;
+    margin: 0 2px;
+    background-color: #18304a;
+    border: 1px solid #2a4666;
+    border-radius: 3px;
+    font-size: 11px;
+    color: #409eff;
+}
+
+/* 交接单卡片 */
+.ho-card { background-color: #18304a; border: 1px solid #1e3a5f; border-radius: 8px; padding: 20px; }
+.ho-card .ho-title { font-size: 16px; color: #409eff; text-align: center; margin-bottom: 14px; letter-spacing: 2px; }
+.ho-sign { display: flex; justify-content: space-between; margin-top: 20px; padding-top: 14px; border-top: 1px dashed #2a4666; color: #909399; font-size: 12px; }
+
+/* 表单网格 */
+.form-grid { display: grid; grid-template-columns: 110px 1fr; gap: 10px 12px; align-items: center; }
+.form-grid label { color: #909399; font-size: 13px; text-align: right; }
+.form-grid .form-control { width: 100%; }
+
+/* 禁用按钮 */
+.btn[disabled] { opacity: 0.45; cursor: not-allowed; }
+.btn[disabled]:hover { background-color: inherit; }
+
+/* 统计卡片点击 */
+.stat-card.clickable { cursor: pointer; transition: all 0.3s ease; }
+.stat-card.clickable:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(64, 158, 255, 0.25); }
+
+/* 紧凑徽章（级别） */
+.level-severe { color: #f56c6c; }
+.level-restricted { color: #e6a23c; }
+
+/* 模块内子标题 */
+.sub-title { font-size: 14px; color: #409eff; margin: 16px 0 8px; padding-left: 8px; border-left: 3px solid #409eff; }

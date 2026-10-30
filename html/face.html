@@ -2,7 +2,7 @@
     <div class="module-header">
         <h2>人脸识别管理</h2>
     </div>
-    
+
     <!-- 标签页导航 -->
     <div class="tab-nav">
         <div class="tab-nav-item active" data-tab="personnel">人员管理</div>
@@ -10,7 +10,7 @@
         <div class="tab-nav-item" data-tab="records">识别记录</div>
         <div class="tab-nav-item" data-tab="blacklist">黑名单管理</div>
     </div>
-    
+
     <!-- 人员管理标签页 -->
     <div class="tab-content active" id="personnel">
         <div class="filter-bar">
@@ -57,7 +57,7 @@
                 <button class="btn btn-secondary" onclick="clearPersonnelForm()">清空</button>
             </div>
         </div>
-        
+
         <div class="table-section">
             <table class="data-table" id="personnelTable">
                 <thead>
@@ -79,7 +79,7 @@
             </table>
         </div>
     </div>
-    
+
     <!-- 人脸录入标签页 -->
     <div class="tab-content" id="enroll">
         <div class="judge-interface">
@@ -88,12 +88,14 @@
                 <div class="image-container" id="faceCanvasContainer">
                     <span style="color: #909399;">请点击开始录入或上传图片</span>
                 </div>
-                <input type="file" id="faceImageUpload" accept="image/*" style="display: none;" onchange="handleFaceImageUpload()">
+                <input type="file" id="faceImageUpload" accept="image/*" style="display: none;"
+                    onchange="handleFaceImageUpload()">
                 <div class="judge-controls">
                     <button class="btn btn-primary" onclick="startEnroll()">开始录入</button>
                     <button class="btn btn-success" onclick="saveEnroll()">保存人脸</button>
                     <button class="btn btn-danger" onclick="cancelEnroll()">取消</button>
-                    <button class="btn btn-secondary" onclick="document.getElementById('faceImageUpload').click()">上传图片</button>
+                    <button class="btn btn-secondary"
+                        onclick="document.getElementById('faceImageUpload').click()">上传图片</button>
                 </div>
             </div>
             <div class="judge-list" style="max-height: 300px;">
@@ -110,7 +112,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="table-section" style="margin-top: 20px;">
             <table class="data-table" id="enrollHistoryTable">
                 <thead>
@@ -121,7 +123,7 @@
                         <th>录入方式</th>
                         <th>状态</th>
                         <th>相似度</th>
-                        <th>操作</th>
+                        <th>操作人</th>
                     </tr>
                 </thead>
                 <tbody id="enrollHistoryTableBody">
@@ -130,7 +132,7 @@
             </table>
         </div>
     </div>
-    
+
     <!-- 识别记录标签页 -->
     <div class="tab-content" id="records">
         <div class="stats-grid" style="margin-bottom: 20px;">
@@ -159,7 +161,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="table-section">
             <table class="data-table" id="recognitionRecordsTable">
                 <thead>
@@ -180,7 +182,7 @@
             </table>
         </div>
     </div>
-    
+
     <!-- 黑名单管理标签页 -->
     <div class="tab-content" id="blacklist">
         <div class="filter-bar">
@@ -201,15 +203,17 @@
                 <button class="btn btn-danger" onclick="removeBlacklist()">从黑名单移除</button>
             </div>
         </div>
-        
+
         <div class="table-section">
             <table class="data-table" id="blacklistTable">
                 <thead>
                     <tr>
                         <th>人员ID</th>
                         <th>姓名</th>
+                        <th>证件号</th>
                         <th>加入时间</th>
                         <th>原因</th>
+                        <th>操作人</th>
                         <th>操作</th>
                     </tr>
                 </thead>

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="robots" content="noindex, nofollow">
@@ -7,6 +8,7 @@
     <title>智慧安检系统 - 运营管理平台</title>
     <link rel="stylesheet" href="css/styles.css">
 </head>
+
 <body>
     <div class="container">
         <!-- 顶部导航栏 -->
@@ -17,11 +19,12 @@
                 <div class="nav-item active" data-nav="dashboard">首页</div>
                 <div class="nav-item" data-nav="device">设备管理</div>
                 <div class="nav-item" data-nav="events">事件中心</div>
-                <div class="nav-item" data-nav="judge">集中判图</div>
-                <div class="nav-item" data-nav="alarm">告警中心</div>
+                <div class="nav-item" data-nav="judge">集中判图<span class="nav-badge" id="badgeJudge"></span></div>
+                <div class="nav-item" data-nav="alarm">告警中心<span class="nav-badge" id="badgeAlarm"></span></div>
                 <div class="nav-item" data-nav="analysis">统计分析</div>
                 <div class="nav-item" data-nav="passage">通行管理</div>
                 <div class="nav-item" data-nav="face">人脸识别</div>
+                <div class="nav-item" data-nav="handoff">处置交接<span class="nav-badge" id="badgeHandoff"></span></div>
                 <div class="nav-item" data-nav="config">配置管理</div>
             </div>
             <div class="system-info">
@@ -32,7 +35,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- 移动端遮罩层 -->
         <div class="overlay" id="overlay"></div>
 
@@ -53,7 +56,7 @@
                     <div class="device-item active" data-device="securityCheckMachine">安检机</div>
                     <div class="device-item" data-device="recheckTable">复检台</div>
                 </div>
-                
+
                 <div class="device-category">
                     <div class="category-title">安检门</div>
                     <div class="device-item" data-device="metalDoor">金属门</div>
@@ -61,14 +64,14 @@
                     <div class="device-item" data-device="antiTheftDoor">防损门</div>
                     <div class="device-item" data-device="classificationDoor">分类门</div>
                 </div>
-                
+
                 <div class="device-category">
                     <div class="category-title">明眸设备</div>
                     <div class="device-item" data-device="accessControl">门禁设备</div>
                     <div class="device-item" data-device="accessVideo">门禁视频一体机</div>
                     <div class="device-item" data-device="personCertCompare">人证对比</div>
                 </div>
-                
+
                 <div class="device-category">
                     <div class="category-title">探测设备</div>
                     <div class="device-item" data-device="explosiveDetector">炸探</div>
@@ -81,8 +84,9 @@
                 <!-- 内容将通过JavaScript动态加载 -->
             </div>
         </div>
-        
-        <script type="module" src="js/utils.js"></script>
+
+        <script type="module" src="js/utils.js?v=2"></script>
     </div>
 </body>
+
 </html>
