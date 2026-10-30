@@ -50,6 +50,7 @@
 
     <div class="tab-nav">
         <div class="tab-nav-item active" data-tab="cfgItems">配置项</div>
+        <div class="tab-nav-item" data-tab="cfgItemLevels">物品等级</div>
         <div class="tab-nav-item" data-tab="cfgVersions">版本与发布</div>
         <div class="tab-nav-item" data-tab="cfgDelivery">缓存下发</div>
         <div class="tab-nav-item" data-tab="cfgAudit">变更审计</div>
@@ -105,6 +106,81 @@
                 </thead>
                 <tbody id="configsTableBody"></tbody>
             </table>
+        </div>
+    </div>
+
+    <!-- 物品等级（判图识别库） -->
+    <div class="tab-content" id="cfgItemLevels">
+        <div class="pipe-flow">
+            包内每件物品都带 <b>低 / 中 / 高</b> 等级：扫描到高级物品即判定为<b>高级违禁事件</b>，中等级判定为中风险事件，低等级只做日常提示。
+            此处调整等级会<b>立即生效</b>到告警中心（级别按当前等级实时重算）、物品排行与研判口径，无需重新发布。
+        </div>
+
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label class="filter-label">物品类别：</label>
+                <select class="form-control" id="cfgItemCatFilter">
+                    <option value="">全部类别</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">物品等级：</label>
+                <select class="form-control" id="cfgItemLevelFilter">
+                    <option value="">全部等级</option>
+                    <option value="high">高（严禁携带）</option>
+                    <option value="mid">中（限制携带）</option>
+                    <option value="low">低（日常提示）</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">物品名称：</label>
+                <input type="text" class="form-control" id="cfgItemKeyword" placeholder="物品名称 / 物品ID">
+            </div>
+            <div class="filter-group">
+                <button class="btn btn-primary" id="cfgItemFilterBtn">筛选</button>
+                <button class="btn btn-secondary" id="cfgItemResetFilterBtn">重置</button>
+            </div>
+        </div>
+
+        <div class="item-level-cards" id="cfgItemLevelCards"></div>
+
+        <div class="table-section">
+            <div class="table-title item-rank-title">
+                <span>识别物品清单（共 <b id="cfgItemTotal">0</b> 项，逐项调整等级）</span>
+                <span class="item-level-batch">
+                    <label class="filter-label">按类别批量设级：</label>
+                    <select class="form-control" id="cfgBatchCategory" style="width:150px;"></select>
+                    <select class="form-control" id="cfgBatchLevel" style="width:130px;">
+                        <option value="high">高</option>
+                        <option value="mid">中</option>
+                        <option value="low">低</option>
+                    </select>
+                    <button class="btn btn-primary btn-small" id="cfgBatchApplyBtn">应用</button>
+                </span>
+            </div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th style="width:90px;">物品ID</th>
+                        <th>物品名称</th>
+                        <th style="width:120px;">类别</th>
+                        <th style="width:110px;">单位</th>
+                        <th style="width:150px;">当前等级</th>
+                        <th style="width:150px;">更新时间</th>
+                        <th style="width:230px;">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="cfgItemLevelBody"></tbody>
+            </table>
+            <div class="item-level-tip">
+                等级口径：高级＝严禁携带（一律查扣并移交民警）；中级＝限制携带（超量查扣或劝导自弃）；低级＝日常物品（登记提示后可放行）。
+                调整记录会写入变更审计，可在「变更审计」页签追溯。
+            </div>
+            <div class="ho-actions">
+                <button class="btn btn-primary" id="cfgItemAddBtn">新增识别物品</button>
+                <button class="btn btn-secondary" id="cfgItemResetBtn">恢复默认等级</button>
+                <span class="ho-actions-tip" id="cfgItemLevelStat"></span>
+            </div>
         </div>
     </div>
 

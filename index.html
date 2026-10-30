@@ -91,33 +91,46 @@
 
         <!-- 主容器 -->
         <div class="main-container">
-            <!-- 左侧设备导航 -->
+            <!-- 左侧导航：按页面切换面板（设备管理=设备类型 / 告警中心=按设备筛选） -->
             <div class="sidebar">
-                <div class="device-category">
-                    <div class="category-title">核心设备</div>
-                    <div class="device-item active" data-device="securityCheckMachine">安检机</div>
-                    <div class="device-item" data-device="recheckTable">复检台</div>
+                <div class="sidebar-panel is-active" data-panel="device">
+                    <div class="device-category">
+                        <div class="category-title">核心设备</div>
+                        <div class="device-item active" data-device="securityCheckMachine">安检机</div>
+                        <div class="device-item" data-device="recheckTable">复检台</div>
+                    </div>
+
+                    <div class="device-category">
+                        <div class="category-title">安检门</div>
+                        <div class="device-item" data-device="metalDoor">金属门</div>
+                        <div class="device-item" data-device="millimeterWaveDoor">毫米波门</div>
+                        <div class="device-item" data-device="antiTheftDoor">防损门</div>
+                        <div class="device-item" data-device="classificationDoor">分类门</div>
+                    </div>
+
+                    <div class="device-category">
+                        <div class="category-title">明眸设备</div>
+                        <div class="device-item" data-device="accessControl">门禁设备</div>
+                        <div class="device-item" data-device="accessVideo">门禁视频一体机</div>
+                        <div class="device-item" data-device="personCertCompare">人证对比</div>
+                    </div>
+
+                    <div class="device-category">
+                        <div class="category-title">探测设备</div>
+                        <div class="device-item" data-device="explosiveDetector">炸探</div>
+                        <div class="device-item" data-device="liquidDetector">液探</div>
+                    </div>
                 </div>
 
-                <div class="device-category">
-                    <div class="category-title">安检门</div>
-                    <div class="device-item" data-device="metalDoor">金属门</div>
-                    <div class="device-item" data-device="millimeterWaveDoor">毫米波门</div>
-                    <div class="device-item" data-device="antiTheftDoor">防损门</div>
-                    <div class="device-item" data-device="classificationDoor">分类门</div>
-                </div>
-
-                <div class="device-category">
-                    <div class="category-title">明眸设备</div>
-                    <div class="device-item" data-device="accessControl">门禁设备</div>
-                    <div class="device-item" data-device="accessVideo">门禁视频一体机</div>
-                    <div class="device-item" data-device="personCertCompare">人证对比</div>
-                </div>
-
-                <div class="device-category">
-                    <div class="category-title">探测设备</div>
-                    <div class="device-item" data-device="explosiveDetector">炸探</div>
-                    <div class="device-item" data-device="liquidDetector">液探</div>
+                <div class="sidebar-panel" data-panel="alarm">
+                    <div class="device-category">
+                        <div class="category-title">按设备筛选</div>
+                        <div class="side-item active" data-alarm-device="">
+                            <span>全部设备</span><b class="side-count" id="alarmSideAllCount">0</b>
+                        </div>
+                    </div>
+                    <div id="alarmSideDevices"></div>
+                    <div class="side-tip">按设备类型过滤告警，右侧数字为当前告警数；未处理数标红。</div>
                 </div>
             </div>
 

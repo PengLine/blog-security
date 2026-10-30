@@ -1,6 +1,8 @@
 import {
-    getStore, CONTRABAND_TYPES, configImpact, publishConfig,
-    rollbackConfigVersion, toggleConfigStatus, validateConfigDetails
+    getStore, configImpact, publishConfig,
+    rollbackConfigVersion, toggleConfigStatus, validateConfigDetails,
+    ITEM_LEVELS, getItemCatalog, itemLevelInfo, setItemLevel, setCategoryItemLevel,
+    resetItemCatalog, addCatalogItem
 } from './db.js';
 import { toast, openModal, kvTableHTML, paginateData, fmtDateTime, exportCSV } from './utils.js';
 
@@ -17,6 +19,9 @@ let currentPage = 1;
 const perPage = 20;
 let filteredConfigs = [];
 let versionConfigId = 'ALL';
+
+// 物品等级页签的筛选条件
+const itemLevelState = { category: '', level: '', keyword: '' };
 
 const operator = () => `系统管理员·${getStore().currentUser.name}`;
 
@@ -35,6 +40,7 @@ function initTabs() {
             item.classList.add('active');
             const target = document.getElementById(item.dataset.tab);
             if (target) target.classList.add('active');
+            if (item.dataset.tab === 'cfgItemLevels') renderItemLevels();
             if (item.dataset.tab === 'cfgVersions') renderVersions();
             if (item.dataset.tab === 'cfgDelivery') renderDelivery();
         };
@@ -308,24 +314,26 @@ function deleteConfig(configId) {
     });
 }
 
-// 违禁品名录（判图/交接/分类门共用字典）
+// 违禁品名录（判图/交接/分类门共用字典，等级取当前物品目录）
 function showContrabandCatalog() {
     const store = getStore();
-    const rows = CONTRABAND_TYPES.flatMap(c => c.items.map(item => {
-        const hits = store.handoffs.filter(h => h.category === c.name).length;
+    const catalog = getItemCatalog(store);
+    const rows = catalog.map(item => {
+        const hits = store.handoffs.filter(h => h.itemKey === item.key).length;
+        const meta = itemLevelInfo(item.level);
         return `
         <tr>
-            <td>${item}</td>
-            <td>${c.name}</td>
-            <td><span class="chip ${c.level === 'severe' ? 'chip-danger' : 'chip-warn'}">${c.level === 'severe' ? '禁止携带' : '限制携带'}</span></td>
-            <td>${c.level === 'severe' ? '一律查扣并移交民警' : '超限查扣 / 旅客自弃或寄存'}</td>
+            <td>${item.name}</td>
+            <td>${item.category}</td>
+            <td><span class="item-chip is-${item.level}">${meta.tag}</span></td>
+            <td>${meta.desc}</td>
             <td>${hits}</td>
         </tr>`;
-    }));
+    });
     openModal({
-        title: '违禁品名录（判图辅助库 v3.5.2）',
-        width: 680,
-        bodyHTML: `<table class="data-table"><thead><tr><th>物品</th><th>类别</th><th>级别</th><th>处置标准</th><th>累计查获</th></tr></thead><tbody>${rows.join('')}</tbody></table>`
+        title: `违禁品名录（判图辅助库，共 ${catalog.length} 项 · 等级可在「物品等级」页签调整）`,
+        width: 720,
+        bodyHTML: `<table class="data-table"><thead><tr><th>物品</th><th>类别</th><th>等级</th><th>处置标准</th><th>累计查获</th></tr></thead><tbody>${rows.join('')}</tbody></table>`
     });
 }
 
@@ -380,6 +388,192 @@ function addConfig() {
             }
         }]
     });
+}
+
+// ---------- 物品等级（识别库）----------
+function renderItemLevelCards(catalog) {
+    const box = document.getElementById('cfgItemLevelCards');
+    if (!box) return;
+    box.innerHTML = ITEM_LEVELS.map(meta => {
+        const count = catalog.filter(i => i.level === meta.key).length;
+        const alarmText = meta.alarmLevel === 'danger' ? '高级违禁事件' : (meta.alarmLevel === 'warning' ? '中风险事件' : '提示事件');
+        return `<div class="item-level-card is-${meta.key}">
+            <div class="ilc-head"><b>${meta.tag}物品</b><span class="item-chip is-${meta.key}">${meta.name}级</span></div>
+            <div class="ilc-value">${count}<small>项</small></div>
+            <div class="ilc-desc">${meta.desc}</div>
+            <div class="ilc-alarm">命中后：${alarmText}</div>
+        </div>`;
+    }).join('');
+}
+
+// 类别下拉：选项随目录刷新，同时保留当前选中值
+function fillCategoryOptions(catalog) {
+    const cats = [...new Set(catalog.map(i => i.category))];
+    const fill = (id, allLabel) => {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        const prev = sel.value;
+        sel.innerHTML = (allLabel ? `<option value="">${allLabel}</option>` : '') +
+            cats.map(c => `<option value="${c}">${c}</option>`).join('');
+        if ([...sel.options].some(o => o.value === prev)) sel.value = prev;
+    };
+    fill('cfgItemCatFilter', '全部类别');
+    fill('cfgBatchCategory', '');
+}
+
+// 物品等级清单：逐项改级 + 按类别批量设级
+function renderItemLevels() {
+    const catalog = getItemCatalog(getStore());
+    fillCategoryOptions(catalog);
+    renderItemLevelCards(catalog);
+
+    const totalEl = document.getElementById('cfgItemTotal');
+    if (totalEl) totalEl.textContent = catalog.length;
+    const stat = document.getElementById('cfgItemLevelStat');
+    if (stat) {
+        const n = k => catalog.filter(i => i.level === k).length;
+        stat.textContent = `当前：高 ${n('high')} 项 / 中 ${n('mid')} 项 / 低 ${n('low')} 项`;
+    }
+
+    const body = document.getElementById('cfgItemLevelBody');
+    if (!body) return;
+    const kw = itemLevelState.keyword;
+    const rows = catalog.filter(i => {
+        if (itemLevelState.category && i.category !== itemLevelState.category) return false;
+        if (itemLevelState.level && i.level !== itemLevelState.level) return false;
+        if (kw && !(i.name + i.key).includes(kw)) return false;
+        return true;
+    });
+
+    body.innerHTML = rows.length ? rows.map(item => {
+        const quick = ITEM_LEVELS.filter(l => l.key !== item.level).map(l =>
+            `<button class="btn btn-small ${l.key === 'high' ? 'btn-danger' : (l.key === 'mid' ? 'btn-warning' : 'btn-secondary')}"
+                data-set-level="${item.key}" data-level="${l.key}">设为${l.name}</button>`).join('');
+        return `<tr>
+            <td>${item.key}</td>
+            <td><b>${item.name}</b>${item.custom ? '<span class="chip chip-info" style="margin-left:6px;">自定义</span>' : ''}</td>
+            <td>${item.category}</td>
+            <td>${item.unit || '件'}</td>
+            <td>
+                <select class="form-control item-level-select is-${item.level}" data-level-select="${item.key}">
+                    ${ITEM_LEVELS.map(l => `<option value="${l.key}" ${l.key === item.level ? 'selected' : ''}>${l.tag}（${l.name}）</option>`).join('')}
+                </select>
+            </td>
+            <td>${item.updateTime || '<span style="color:#909399;">默认配置</span>'}</td>
+            <td>${quick}</td>
+        </tr>`;
+    }).join('') : '<tr><td colspan="7" style="text-align:center;color:#909399;">没有符合条件的物品</td></tr>';
+
+    const applyLevel = (key, level) => {
+        const res = setItemLevel(key, level, operator());
+        if (!res.ok) { toast(res.msg, 'warning'); renderItemLevels(); return; }
+        toast(`物品「${res.item.name}」已设为${itemLevelInfo(res.item.level).tag}，告警级别同步更新`, 'success');
+        renderItemLevels();
+        renderAuditLogs();
+    };
+    body.querySelectorAll('[data-set-level]').forEach(btn => btn.onclick = () => applyLevel(btn.dataset.setLevel, btn.dataset.level));
+    body.querySelectorAll('[data-level-select]').forEach(sel => sel.onchange = () => applyLevel(sel.dataset.levelSelect, sel.value));
+}
+
+function applyItemLevelFilters() {
+    itemLevelState.category = (document.getElementById('cfgItemCatFilter') || {}).value || '';
+    itemLevelState.level = (document.getElementById('cfgItemLevelFilter') || {}).value || '';
+    itemLevelState.keyword = ((document.getElementById('cfgItemKeyword') || {}).value || '').trim();
+    renderItemLevels();
+}
+
+function confirmResetItemCatalog() {
+    const total = getItemCatalog(getStore()).length;
+    openModal({
+        title: '恢复默认物品等级',
+        width: 460,
+        bodyHTML: `<p>将把 <b>${total}</b> 项识别物品的等级恢复为出厂默认（高 / 中 / 低）。</p>
+            <p style="margin-top:8px;font-size:12px;color:#e6a23c;line-height:1.8;">自定义新增的物品会保留，仅等级被重置；操作会写入变更审计。</p>`,
+        actions: [{
+            label: '确认恢复', className: 'btn-danger',
+            onClick: (close) => {
+                const res = resetItemCatalog(operator());
+                toast(`已恢复默认等级（${res.total} 项）`, 'success');
+                close();
+                renderItemLevels();
+                renderAuditLogs();
+            }
+        }]
+    });
+}
+
+function addCatalogItemDialog() {
+    const catalog = getItemCatalog(getStore());
+    const cats = [...new Set(catalog.map(i => i.category))];
+    openModal({
+        title: '新增识别物品',
+        width: 520,
+        bodyHTML: `<div class="form-grid">
+                <label>物品名称</label><input class="form-control" id="cfgNewItemName" placeholder="如：折叠工兵铲">
+                <label>所属类别</label>
+                <select class="form-control" id="cfgNewItemCat">${cats.map(c => `<option value="${c}">${c}</option>`).join('')}</select>
+                <label>物品等级</label>
+                <select class="form-control" id="cfgNewItemLevel">${ITEM_LEVELS.map(l => `<option value="${l.key}" ${l.key === 'mid' ? 'selected' : ''}>${l.tag}（${l.name}级）</option>`).join('')}</select>
+                <label>计量单位</label><input class="form-control" id="cfgNewItemUnit" value="件">
+            </div>
+            <p style="margin-top:10px;font-size:12px;color:#909399;">新增物品会立即进入判图识别库与物品排行，其等级决定能触发的告警级别。</p>`,
+        actions: [{
+            label: '新增', className: 'btn-primary',
+            onClick: (close, mask) => {
+                const res = addCatalogItem({
+                    name: mask.querySelector('#cfgNewItemName').value,
+                    category: mask.querySelector('#cfgNewItemCat').value,
+                    level: mask.querySelector('#cfgNewItemLevel').value,
+                    unit: mask.querySelector('#cfgNewItemUnit').value
+                }, operator());
+                if (!res.ok) { toast(res.msg, 'warning'); return; }
+                toast(`物品「${res.item.name}」已加入识别库（${itemLevelInfo(res.item.level).tag}）`, 'success');
+                close();
+                renderItemLevels();
+                renderAuditLogs();
+            }
+        }]
+    });
+}
+
+function bindItemLevelEvents() {
+    ['cfgItemCatFilter', 'cfgItemLevelFilter'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.onchange = applyItemLevelFilters;
+    });
+    const kw = document.getElementById('cfgItemKeyword');
+    if (kw) {
+        kw.oninput = applyItemLevelFilters;
+        kw.onkeydown = (e) => { if (e.key === 'Enter') applyItemLevelFilters(); };
+    }
+    const filterBtn = document.getElementById('cfgItemFilterBtn');
+    if (filterBtn) filterBtn.onclick = applyItemLevelFilters;
+    const resetBtn = document.getElementById('cfgItemResetFilterBtn');
+    if (resetBtn) resetBtn.onclick = () => {
+        itemLevelState.category = '';
+        itemLevelState.level = '';
+        itemLevelState.keyword = '';
+        const c = document.getElementById('cfgItemCatFilter'); if (c) c.value = '';
+        const l = document.getElementById('cfgItemLevelFilter'); if (l) l.value = '';
+        const k = document.getElementById('cfgItemKeyword'); if (k) k.value = '';
+        renderItemLevels();
+    };
+
+    const batchBtn = document.getElementById('cfgBatchApplyBtn');
+    if (batchBtn) batchBtn.onclick = () => {
+        const cat = document.getElementById('cfgBatchCategory').value;
+        const lv = document.getElementById('cfgBatchLevel').value;
+        const res = setCategoryItemLevel(cat, lv, operator());
+        if (!res.ok) { toast(res.msg, 'warning'); return; }
+        toast(`「${cat}」${res.changed}/${res.total} 项物品已设为${itemLevelInfo(lv).tag}`, 'success');
+        renderItemLevels();
+        renderAuditLogs();
+    };
+
+    const addBtn = document.getElementById('cfgItemAddBtn');
+    if (addBtn) addBtn.onclick = addCatalogItemDialog;
+    const resetCatalogBtn = document.getElementById('cfgItemResetBtn');
+    if (resetCatalogBtn) resetCatalogBtn.onclick = confirmResetItemCatalog;
 }
 
 function renderVersionSelect() {
@@ -581,6 +775,7 @@ function exportConfigs() {
 function refreshAll() {
     renderStats();
     applyFilters();
+    renderItemLevels();
     renderVersionSelect();
     renderVersions();
     renderDelivery();
@@ -612,6 +807,7 @@ window.initConfigModule = function () {
     document.getElementById('cfgCatalogBtn').onclick = showContrabandCatalog;
     document.getElementById('cfgExportBtn').onclick = exportConfigs;
     document.getElementById('cfgPublishAllBtn').onclick = publishAllPending;
+    bindItemLevelEvents();
 
     refreshAll();
 };

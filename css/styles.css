@@ -41,8 +41,8 @@ body .container{
 .nav-group { position: relative; }
 
 .nav-group-title {
-    padding: 6px 10px;
-    font-size: 13px;
+    padding: 7px 12px;
+    font-size: 16px;
     color: #909399;
     border-radius: 4px;
     cursor: pointer;
@@ -50,7 +50,7 @@ body .container{
     transition: all 0.3s ease;
 }
 
-.nav-group-title::after { content: '▾'; font-size: 10px; margin-left: 5px; opacity: 0.8; }
+.nav-group-title::after { content: '▾'; font-size: 14px; margin-left: 5px; opacity: 0.8; }
 .nav-group-title:hover { color: #fff; background-color: rgba(64, 158, 255, 0.15); }
 .nav-group.has-active .nav-group-title,
 .nav-group.open .nav-group-title { color: #409eff; background-color: rgba(64, 158, 255, 0.12); }
@@ -83,8 +83,8 @@ body .container{
 .nav-group-menu .nav-item.active { background-color: rgba(64, 158, 255, 0.18); color: #409eff; }
 
 .nav-item {
-    padding: 6px 8px;
-    font-size: 13px;
+    padding: 7px 10px;
+    font-size: 16px;
     cursor: pointer;
     border-radius: 4px;
     transition: all 0.3s ease;
@@ -145,6 +145,7 @@ body .container{
 
 .tab-item {
     padding: 8px 16px;
+    font-size: 14px;
     cursor: pointer;
     border-radius: 4px 4px 0 0;
     transition: all 0.3s ease;
@@ -425,11 +426,11 @@ body .container{
 
 /* 操作按钮 */
 .btn {
-    padding: 6px 12px;
+    padding: 7px 15px;
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 12px;
+    font-size: 13px;
     transition: all 0.3s ease;
     margin-right: 5px;
 }
@@ -1442,3 +1443,190 @@ body.sidebar-hidden .sidebar { display: none; }
 .dash-card.tone-warn .stat-value { color: #e6a23c; }
 .dash-card.tone-danger .stat-value { color: #f56c6c; }
 .dash-card.tone-ok .stat-value { color: #67c23a; }
+
+/* ---------- 通用：中级警示按钮 ---------- */
+.btn-warning { background-color: #e6a23c; color: #ffffff; }
+.btn-warning:hover { background-color: #ebb563; }
+
+/* ---------- 侧栏双面板：设备导航 / 告警设备筛选 ---------- */
+.sidebar-panel { display: none; }
+.sidebar-panel.is-active { display: block; }
+.side-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 9px 20px;
+    font-size: 13px;
+    color: #c0c4cc;
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    transition: all 0.2s ease;
+}
+.side-item:hover { background-color: #18304a; color: #ffffff; }
+.side-item.active { background-color: #18304a; border-left-color: #409eff; color: #409eff; }
+.side-item .side-count {
+    min-width: 24px;
+    padding: 1px 7px;
+    border-radius: 10px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: normal;
+    color: #c0c4cc;
+    background-color: rgba(64, 158, 255, 0.14);
+    border: 1px solid #1e3a5f;
+}
+.side-item .side-count.is-warn { color: #f56c6c; background-color: rgba(245, 108, 108, 0.14); border-color: #f56c6c; }
+.side-tip {
+    margin: 10px 16px 0;
+    padding: 8px 10px;
+    font-size: 11px;
+    line-height: 1.7;
+    color: #909399;
+    border: 1px dashed #1e3a5f;
+    border-radius: 6px;
+}
+
+/* ---------- 告警中心：设备范围提示 ---------- */
+.alarm-scope-tip {
+    margin-bottom: 16px;
+    padding: 10px 16px;
+    font-size: 13px;
+    color: #c0c4cc;
+    background-color: #0f2438;
+    border: 1px solid #1e3a5f;
+    border-left: 3px solid #409eff;
+    border-radius: 8px;
+}
+.alarm-scope-tip b { color: #409eff; }
+.alarm-scope-hint { font-size: 12px; color: #909399; }
+
+/* 告警级别标签 / 统计卡数值配色 */
+.alarm-level {
+    display: inline-block;
+    padding: 1px 9px;
+    border-radius: 10px;
+    font-size: 12px;
+    white-space: nowrap;
+    border: 1px solid transparent;
+}
+.alarm-level.alarm-danger { color: #f56c6c; background-color: rgba(245, 108, 108, 0.16); border-color: rgba(245, 108, 108, 0.7); }
+.alarm-level.alarm-warning { color: #e6a23c; background-color: rgba(230, 162, 60, 0.16); border-color: rgba(230, 162, 60, 0.7); }
+.alarm-level.alarm-info { color: #409eff; background-color: rgba(64, 158, 255, 0.16); border-color: rgba(64, 158, 255, 0.7); }
+.stat-value.alarm-danger { color: #f56c6c; }
+.stat-value.alarm-warning { color: #e6a23c; }
+.stat-value.alarm-info { color: #409eff; }
+
+/* ---------- 物品标签：高 / 中 / 低三色 ---------- */
+.item-chip {
+    display: inline-block;
+    padding: 1px 8px;
+    margin: 2px 4px 2px 0;
+    border-radius: 10px;
+    font-size: 12px;
+    white-space: nowrap;
+    border: 1px solid transparent;
+}
+.item-chip.is-high { color: #f56c6c; background-color: rgba(245, 108, 108, 0.16); border-color: rgba(245, 108, 108, 0.75); }
+.item-chip.is-mid { color: #e6a23c; background-color: rgba(230, 162, 60, 0.16); border-color: rgba(230, 162, 60, 0.75); }
+.item-chip.is-low { color: #409eff; background-color: rgba(64, 158, 255, 0.16); border-color: rgba(64, 158, 255, 0.75); }
+.item-none { font-size: 12px; color: #909399; }
+.alarm-item-cell { line-height: 1.9; }
+.disp-item-list { margin-top: 8px; line-height: 1.9; }
+.alarm-detail-tip { margin-top: 10px; font-size: 12px; color: #909399; line-height: 1.8; }
+
+/* ---------- 告警中心：物品识别排行 ---------- */
+.item-rank-title { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+.rank-level-tabs { display: inline-flex; gap: 4px; }
+.rank-tab {
+    padding: 2px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    color: #909399;
+    background-color: #0f2438;
+    border: 1px solid #1e3a5f;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.rank-tab:hover { color: #e6f2ff; border-color: #409eff; }
+.rank-tab.active { color: #409eff; border-color: #409eff; background-color: rgba(64, 158, 255, 0.14); }
+.item-rank-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 12px 0 16px; }
+.item-rank-card {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px 14px;
+    background-color: #0f2438;
+    border: 1px solid #1e3a5f;
+    border-left-width: 3px;
+    border-radius: 8px;
+}
+.item-rank-card b { font-size: 13px; color: #e6f2ff; }
+.item-rank-card small { font-size: 11px; color: #909399; line-height: 1.7; }
+.item-rank-card .item-rank-value { font-size: 24px; font-weight: bold; color: #e6f2ff; line-height: 1.2; }
+.item-rank-card .item-rank-value small { margin-left: 4px; font-size: 11px; color: #909399; }
+.item-rank-card.is-high { border-left-color: #f56c6c; }
+.item-rank-card.is-high .item-rank-value { color: #f56c6c; }
+.item-rank-card.is-mid { border-left-color: #e6a23c; }
+.item-rank-card.is-mid .item-rank-value { color: #e6a23c; }
+.item-rank-card.is-low { border-left-color: #409eff; }
+.item-rank-card.is-low .item-rank-value { color: #409eff; }
+.rank-no {
+    display: inline-block;
+    width: 22px;
+    height: 22px;
+    line-height: 22px;
+    text-align: center;
+    border-radius: 50%;
+    font-size: 12px;
+    color: #909399;
+    background-color: #12315a;
+}
+.rank-no.is-top { color: #0a1929; font-weight: bold; background-color: #e6a23c; }
+.rank-seized {
+    margin-left: 6px;
+    padding: 1px 7px;
+    border-radius: 10px;
+    font-size: 11px;
+    color: #f56c6c;
+    background-color: rgba(245, 108, 108, 0.14);
+    border: 1px solid rgba(245, 108, 108, 0.5);
+}
+.rank-cell { font-size: 12px; color: #e6f2ff; }
+.rank-bar { margin-top: 4px; height: 6px; border-radius: 3px; background-color: #12315a; overflow: hidden; }
+.rank-bar i { display: block; height: 100%; border-radius: 3px; }
+.rank-bar i.is-high { background: linear-gradient(90deg, #f56c6c, #ff9a9a); }
+.rank-bar i.is-mid { background: linear-gradient(90deg, #e6a23c, #f6cf8b); }
+.rank-bar i.is-low { background: linear-gradient(90deg, #409eff, #79bbff); }
+
+/* ---------- 配置中心：物品等级 ---------- */
+.item-level-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 12px 0 16px; }
+.item-level-card {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px 14px;
+    background-color: #0f2438;
+    border: 1px solid #1e3a5f;
+    border-left-width: 3px;
+    border-radius: 8px;
+}
+.item-level-card.is-high { border-left-color: #f56c6c; }
+.item-level-card.is-mid { border-left-color: #e6a23c; }
+.item-level-card.is-low { border-left-color: #409eff; }
+.ilc-head { display: flex; justify-content: space-between; align-items: center; }
+.ilc-head b { font-size: 13px; color: #e6f2ff; }
+.ilc-value { font-size: 24px; font-weight: bold; color: #e6f2ff; line-height: 1.2; }
+.ilc-value small { margin-left: 4px; font-size: 11px; color: #909399; }
+.item-level-card.is-high .ilc-value { color: #f56c6c; }
+.item-level-card.is-mid .ilc-value { color: #e6a23c; }
+.item-level-card.is-low .ilc-value { color: #409eff; }
+.ilc-desc { font-size: 11px; color: #909399; line-height: 1.7; }
+.ilc-alarm { font-size: 11px; color: #c0c4cc; line-height: 1.7; }
+.item-level-batch { display: inline-flex; align-items: center; gap: 6px; }
+.item-level-batch .filter-label { margin: 0; }
+.item-level-select { width: 130px; padding: 3px 8px; font-size: 12px; }
+.item-level-select.is-high { color: #f56c6c; border-color: rgba(245, 108, 108, 0.7); }
+.item-level-select.is-mid { color: #e6a23c; border-color: rgba(230, 162, 60, 0.7); }
+.item-level-select.is-low { color: #409eff; border-color: rgba(64, 158, 255, 0.7); }
+.item-level-tip { margin-top: 10px; font-size: 12px; color: #909399; line-height: 1.9; }

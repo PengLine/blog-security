@@ -133,10 +133,13 @@ export function updateTime() {
     }
 }
 
-// 左侧设备导航仅在设备相关页面显示（其余页面内容区全宽）
+// 左侧导航仅在设备相关页面显示，且按页面切换面板（device=设备类型 / alarm=按设备筛选告警）
 const SIDEBAR_NAV = ['device', 'alarm'];
 export function updateSidebarVisibility(navId) {
     document.body.classList.toggle('sidebar-hidden', !SIDEBAR_NAV.includes(navId));
+    document.querySelectorAll('.sidebar-panel').forEach(panel => {
+        panel.classList.toggle('is-active', panel.dataset.panel === navId);
+    });
 }
 
 // 导航切换功能
@@ -259,9 +262,9 @@ function loadModuleScript(navId) {
     };
 }
 
-// 设备切换事件
+// 设备切换事件（仅设备管理页的设备类型导航，告警中心侧栏使用 data-alarm-device 自行绑定）
 export function setupDeviceSwitch() {
-    const deviceItems = document.querySelectorAll('.device-item');
+    const deviceItems = document.querySelectorAll('.device-item[data-device]');
     deviceItems.forEach(item => {
         item.addEventListener('click', () => {
             // 移除所有活动状态

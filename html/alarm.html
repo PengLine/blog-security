@@ -3,12 +3,21 @@
         <h2>告警中心</h2>
         <div class="module-actions">
             <div class="filter-group">
+                <label class="filter-label">物品等级：</label>
+                <select id="alarmItemLevelFilter" class="form-control">
+                    <option value="">全部等级</option>
+                    <option value="high">高（严禁携带）</option>
+                    <option value="mid">中（限制携带）</option>
+                    <option value="low">低（日常提示）</option>
+                </select>
+            </div>
+            <div class="filter-group">
                 <label class="filter-label">告警级别：</label>
                 <select id="alarmLevelFilter" class="form-control">
                     <option value="">全部</option>
-                    <option value="danger">危险</option>
-                    <option value="warning">警告</option>
-                    <option value="info">信息</option>
+                    <option value="danger">高危（高级违禁事件）</option>
+                    <option value="warning">中风险事件</option>
+                    <option value="info">提示事件</option>
                 </select>
             </div>
             <div class="filter-group">
@@ -20,63 +29,106 @@
                     <option value="已忽略">已忽略</option>
                 </select>
             </div>
+            <div class="filter-group">
+                <label class="filter-label">物品筛选：</label>
+                <select id="alarmItemFilter" class="form-control">
+                    <option value="">全部物品</option>
+                </select>
+            </div>
             <button class="btn btn-primary" id="filterBtn">筛选</button>
             <button class="btn btn-secondary" id="resetBtn">重置</button>
             <button class="btn btn-danger" id="batchHandleBtn">批量处理</button>
         </div>
     </div>
 
+    <div class="alarm-scope-tip" id="alarmScopeTip">当前设备：全部设备 · 共 0 条告警</div>
+
     <div class="stats-grid">
         <div class="stat-card">
             <div class="stat-content">
                 <h3>总告警数</h3>
                 <div class="stat-value" id="totalAlarms">0</div>
+                <div class="stat-trend">当前筛选范围内 0 条</div>
             </div>
         </div>
         <div class="stat-card">
             <div class="stat-content">
-                <h3>危险告警</h3>
+                <h3>高级违禁事件</h3>
                 <div class="stat-value alarm-danger" id="dangerAlarms">0</div>
+                <div class="stat-trend">识别到高级别物品</div>
             </div>
         </div>
         <div class="stat-card">
             <div class="stat-content">
-                <h3>警告告警</h3>
+                <h3>中风险事件</h3>
                 <div class="stat-value alarm-warning" id="warningAlarms">0</div>
+                <div class="stat-trend">识别到中级别物品</div>
             </div>
         </div>
         <div class="stat-card">
             <div class="stat-content">
-                <h3>信息告警</h3>
+                <h3>日常物品提示</h3>
                 <div class="stat-value alarm-info" id="infoAlarms">0</div>
+                <div class="stat-trend">识别到低级别物品</div>
             </div>
         </div>
         <div class="stat-card">
             <div class="stat-content">
                 <h3>未处理告警</h3>
                 <div class="stat-value" id="unhandledAlarms">0</div>
+                <div class="stat-trend">需值班队长处置</div>
             </div>
         </div>
         <div class="stat-card">
             <div class="stat-content">
                 <h3>误报忽略</h3>
                 <div class="stat-value" id="ignoredAlarms">0</div>
+                <div class="stat-trend">计入误报统计</div>
             </div>
         </div>
     </div>
 
     <div class="table-section">
+        <div class="table-title item-rank-title">
+            <span>物品识别排行（按识别次数，同一包裹可识别多件物品）</span>
+            <span class="rank-level-tabs" id="itemRankTabs">
+                <span class="rank-tab active" data-rank-level="">全部</span>
+                <span class="rank-tab" data-rank-level="high">高</span>
+                <span class="rank-tab" data-rank-level="mid">中</span>
+                <span class="rank-tab" data-rank-level="low">低</span>
+            </span>
+        </div>
+        <div class="item-rank-cards" id="itemRankCards"></div>
         <table class="data-table">
             <thead>
                 <tr>
-                    <th><input type="checkbox" id="selectAllAlarms"></th>
-                    <th>告警ID</th>
-                    <th>告警时间</th>
-                    <th>告警设备</th>
-                    <th>告警级别</th>
+                    <th style="width:60px;">排名</th>
+                    <th>物品</th>
+                    <th style="width:120px;">类别</th>
+                    <th style="width:100px;">等级</th>
+                    <th style="width:190px;">识别次数</th>
+                    <th style="width:90px;">查获</th>
+                    <th style="width:90px;">占比</th>
+                </tr>
+            </thead>
+            <tbody id="itemRankBody"></tbody>
+        </table>
+    </div>
+
+    <div class="table-section">
+        <div class="table-title">告警明细（包裹告警按包内最高物品等级判定；等级在「配置管理 → 物品等级」中可调）</div>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th style="width:44px;"><input type="checkbox" id="selectAllAlarms"></th>
+                    <th style="width:170px;">告警ID</th>
+                    <th style="width:150px;">告警时间</th>
+                    <th style="width:150px;">告警设备</th>
+                    <th style="width:100px;">告警级别</th>
+                    <th style="width:220px;">识别物品</th>
                     <th>告警内容</th>
-                    <th>处理状态</th>
-                    <th>操作</th>
+                    <th style="width:130px;">处理状态</th>
+                    <th style="width:210px;">操作</th>
                 </tr>
             </thead>
             <tbody id="alarmsTableBody">

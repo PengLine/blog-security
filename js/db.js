@@ -36,13 +36,126 @@ export const SHIFT_DEFS = [
 ];
 
 // ---------- 静态字典 ----------
+// 违禁品类别：颜色 + 类别级处置口径（物品级等级见 DEFAULT_ITEM_CATALOG，可在配置中心调整）
 export const CONTRABAND_TYPES = [
-    { name: '刀具', level: 'severe', color: '#f56c6c', items: ['水果刀', '匕首', '裁纸刀', '修眉刀'] },
-    { name: '液体', level: 'restricted', color: '#409eff', items: ['发胶', '指甲油', '白酒(超量)', '汽油样品'] },
-    { name: '易燃易爆', level: 'severe', color: '#e6a23c', items: ['打火机(超量)', '烟花爆竹', '酒精(超量)', '压缩气罐'] },
-    { name: '电池/充电宝', level: 'restricted', color: '#722ed1', items: ['超规充电宝', '锂电池(散装)', '焊锡电池'] },
-    { name: '钝器/工具', level: 'restricted', color: '#909399', items: ['锤子', '棍棒', '扳手'] }
+    { name: '刀具', level: 'severe', color: '#f56c6c', items: ['管制刀具', '匕首', '弹簧刀', '水果刀', '美工刀', '剪刀(超长)', '修眉刀', '指甲刀'] },
+    { name: '武器', level: 'severe', color: '#c45656', items: ['仿真枪', '枪支零件', '弹药', '弹壳', '电击器', '警棍'] },
+    { name: '易燃易爆', level: 'severe', color: '#e6a23c', items: ['烟花爆竹', '压缩气罐', '汽油', '酒精(超量)', '打火机(超量)', '火柴(超量)', '自喷压力罐', '指甲油', '发胶'] },
+    { name: '危险化学品', level: 'severe', color: '#d46b08', items: ['强酸', '强碱', '有毒物质', '放射性物品', '水银', '强磁物品'] },
+    { name: '管制物品', level: 'severe', color: '#9254de', items: ['毒品', '管制药品', '野生动物制品', '无人机', '现金(超限)'] },
+    { name: '液体', level: 'restricted', color: '#409eff', items: ['白酒(超量)', '香水(超量)', '日化液体(合规)', '饮料', '矿泉水'] },
+    { name: '电池/充电宝', level: 'restricted', color: '#722ed1', items: ['超规充电宝', '散装锂电池', '焊锡电池', '手机', '笔记本电脑'] },
+    { name: '钝器/工具', level: 'restricted', color: '#909399', items: ['锤子', '棍棒', '扳手', '螺丝刀', '电钻'] },
+    { name: '烟草', level: 'restricted', color: '#fa8c16', items: ['电子烟', '烟油', '香烟(超量)'] },
+    { name: '金属杂物', level: 'restricted', color: '#8c8c8c', items: ['钥匙串', '雨伞', '金属饰品', '易拉罐', '硬币', '皮带扣'] },
+    { name: '电子设备', level: 'restricted', color: '#13c2c2', items: ['平板电脑', '相机', '游戏机', '充电器', '移动硬盘'] },
+    { name: '其他', level: 'restricted', color: '#6b7280', items: ['文具', '书本', '衣物', '食品', '常规药品'] }
 ];
+
+// 物品等级：低 / 中 / 高 → 分别对应告警级别 info / warning / danger
+export const ITEM_LEVELS = [
+    { key: 'high', name: '高', tag: '高危', alarmLevel: 'danger', chip: 'chip-danger', color: '#f56c6c', desc: '严禁携带：一律查扣并移交民警' },
+    { key: 'mid', name: '中', tag: '中风险', alarmLevel: 'warning', chip: 'chip-warn', color: '#e6a23c', desc: '限制携带：超量查扣或劝导自弃' },
+    { key: 'low', name: '低', tag: '提示', alarmLevel: 'info', chip: 'chip-info', color: '#409eff', desc: '日常物品：登记提示后可放行' }
+];
+
+// 物品等级推导：类别默认等级 + 物品级覆盖（配置中心可逐项改写）
+const CATEGORY_LEVEL = {
+    '刀具': 'high', '武器': 'high', '易燃易爆': 'high', '危险化学品': 'high', '管制物品': 'high',
+    '液体': 'mid', '电池/充电宝': 'mid', '钝器/工具': 'mid', '烟草': 'mid',
+    '金属杂物': 'low', '电子设备': 'low', '其他': 'low'
+};
+const ITEM_LEVEL_OVERRIDE = {
+    '水果刀': 'mid', '美工刀': 'mid', '剪刀(超长)': 'mid', '修眉刀': 'low', '指甲刀': 'low',
+    '酒精(超量)': 'mid', '打火机(超量)': 'mid', '火柴(超量)': 'mid', '自喷压力罐': 'mid', '指甲油': 'mid', '发胶': 'mid',
+    '强磁物品': 'mid', '无人机': 'mid', '现金(超限)': 'mid',
+    '日化液体(合规)': 'low', '饮料': 'low', '矿泉水': 'low',
+    '手机': 'low', '笔记本电脑': 'low', '香烟(超量)': 'low'
+};
+const UNIT_BY_CATEGORY = {
+    '刀具': '把', '武器': '件', '易燃易爆': '件', '危险化学品': '瓶', '管制物品': '件',
+    '液体': '瓶', '电池/充电宝': '个', '钝器/工具': '把', '烟草': '支',
+    '金属杂物': '件', '电子设备': '台', '其他': '件'
+};
+
+// 物品目录（识别库）：扫出的每件物品都带低/中/高等级
+const LEVEL_RANK = { high: 3, mid: 2, low: 1 };
+
+export const DEFAULT_ITEM_CATALOG = (() => {
+    const list = [];
+    let n = 0;
+    CONTRABAND_TYPES.forEach(ct => ct.items.forEach(name => {
+        list.push({
+            key: `IT-${String(100 + n++)}`,
+            name,
+            category: ct.name,
+            color: ct.color,
+            unit: UNIT_BY_CATEGORY[ct.name] || '件',
+            level: ITEM_LEVEL_OVERRIDE[name] || CATEGORY_LEVEL[ct.name] || 'mid'
+        });
+    }));
+    return list;
+})();
+
+function itemLevelMeta(levelKey) { return ITEM_LEVELS.find(l => l.key === levelKey) || ITEM_LEVELS[2]; }
+
+// 目录内查找（支持 key / 名称），catalog 省略时取默认目录
+function findCatalogItem(keyOrName, catalog) {
+    const list = Array.isArray(catalog) ? catalog : DEFAULT_ITEM_CATALOG;
+    return list.find(i => i.key === keyOrName) || list.find(i => i.name === keyOrName) || null;
+}
+
+// 一组物品中的最高等级
+function topLevelOf(items, catalog) {
+    let top = '';
+    (items || []).forEach(it => {
+        const hit = findCatalogItem(it.key || it.name, catalog);
+        const level = hit ? hit.level : (it.level || 'low');
+        if (!top || LEVEL_RANK[level] > LEVEL_RANK[top]) top = level;
+    });
+    return top;
+}
+
+// 按权重从目录抽取物品（等级越高出现频次越低）
+function makeBagItems(catalog, count, mode = 'mixed') {
+    const list = Array.isArray(catalog) ? catalog : DEFAULT_ITEM_CATALOG;
+    const pool = list.filter(it => mode === 'normal' ? it.level === 'low' : true);
+    const picked = [];
+    const used = new Set();
+    for (let i = 0; i < count && pool.length; i++) {
+        const rest = pool.filter(it => !used.has(it.key));
+        if (!rest.length) break;
+        const weighted = [];
+        rest.forEach(it => { const w = it.level === 'high' ? 1 : it.level === 'mid' ? 4 : 10; for (let k = 0; k < w; k++) weighted.push(it); });
+        const it = weighted[Math.floor(Math.random() * weighted.length)];
+        used.add(it.key);
+        picked.push({
+            key: it.key, name: it.name, category: it.category,
+            level: it.level, unit: it.unit,
+            confidence: +(86 + Math.random() * 13).toFixed(1),
+            qty: it.level === 'mid' ? 1 + Math.floor(Math.random() * 2) : 1
+        });
+    }
+    return picked;
+}
+
+// 风险包裹：至少一件中/高等级物品，可能同时识别出多件
+function makeFlaggedItems(catalog) {
+    const list = Array.isArray(catalog) ? catalog : DEFAULT_ITEM_CATALOG;
+    const hot = list.filter(it => it.level !== 'low');
+    const top = hot[Math.floor(Math.random() * hot.length)];
+    const items = [{
+        key: top.key, name: top.name, category: top.category, level: top.level, unit: top.unit,
+        confidence: +(90 + Math.random() * 9).toFixed(1),
+        qty: top.level === 'mid' ? 1 + Math.floor(Math.random() * 2) : 1
+    }];
+    if (Math.random() > 0.45) {
+        makeBagItems(catalog, 1 + (Math.random() > 0.7 ? 1 : 0), 'mixed').forEach(it => {
+            if (it.key !== top.key) items.push(it);
+        });
+    }
+    return items;
+}
 
 export const ROLES = ['判图员', '值机安检员', '复检员', '值班队长', '维修工程师'];
 
@@ -159,7 +272,7 @@ function makePassengers(todayStart) {
 
 // ---------- 包裹与判图闭环 ----------
 // 生命周期：scanned(AI预判) → pending(待人工判图) → judged(已处置)
-function makeBags(passengers, devices, employees, todayStart) {
+function makeBags(passengers, devices, employees, todayStart, catalog) {
     const bags = [];
     const machines = devices.filter(d => d.key === 'securityCheckMachine');
     const judges = employees.filter(e => e.role === '判图员');
@@ -181,13 +294,27 @@ function makeBags(passengers, devices, employees, todayStart) {
         const machine = machines[Math.floor(Math.random() * machines.length)];
         const weight = +(0.4 + Math.random() * 13).toFixed(1);
 
-        // AI 预判：约 82% 直接正常放行，其余进入人工判图队列
+        // 物品识别：先扫出包内所有物品，再由最高等级决定告警级别
         const roll = Math.random();
+        let items = [];
         let ai = null;
         if (roll > 0.82) {
-            const ct = CONTRABAND_TYPES[Math.floor(Math.random() * CONTRABAND_TYPES.length)];
+            items = makeFlaggedItems(catalog);
+            const top = items[0];
             const kind = roll > 0.965 ? '违禁' : (roll > 0.90 ? '可疑' : '正常');
-            ai = { label: kind === '违禁' ? ct.name : (kind === '可疑' ? ct.name : '疑似' + ct.name), type: ct.name, level: ct.level, confidence: +(kind === '违禁' ? 90 + Math.random() * 9 : kind === '可疑' ? 76 + Math.random() * 14 : 60 + Math.random() * 18).toFixed(1) };
+            const ct = CONTRABAND_TYPES.find(c => c.name === top.category) || { level: 'restricted' };
+            ai = {
+                label: kind === '正常' ? `疑似${top.category}` : top.category,
+                type: top.category,
+                level: ct.level,
+                itemLevel: top.level,
+                itemKey: top.key,
+                items,
+                confidence: +(kind === '违禁' ? 90 + Math.random() * 9 : kind === '可疑' ? 76 + Math.random() * 14 : 60 + Math.random() * 18).toFixed(1)
+            };
+        } else if (Math.random() > 0.25) {
+            // 常规包裹同样会识别出日常物品（低等级，计入物品排行与提示）
+            items = makeBagItems(catalog, 1 + (Math.random() > 0.65 ? 1 : 0) + (Math.random() > 0.9 ? 1 : 0), 'normal');
         }
 
         const bag = {
@@ -203,6 +330,8 @@ function makeBags(passengers, devices, employees, todayStart) {
             weightKg: weight,
             imageSeed: Math.floor(Math.random() * 100000),
             bindingStatus: '已绑定',
+            items,
+            itemLevel: topLevelOf(items, catalog),
             ai
         };
 
@@ -266,10 +395,12 @@ function finalizeBag(bag, judges, now, generated) {
         } else {
             bag.disposition = '开包查扣';
             const ct2 = CONTRABAND_TYPES.find(c => c.name === bag.ai.type) || CONTRABAND_TYPES[0];
+            const top = (bag.items || []).slice().sort((a, b) => LEVEL_RANK[b.level] - LEVEL_RANK[a.level])[0];
             bag.seized = {
                 typeName: ct2.name, level: ct2.level,
-                itemName: ct2.items[Math.floor(Math.random() * ct2.items.length)],
-                qty: 1, unit: '件'
+                itemKey: top ? top.key : '', itemName: top ? top.name : ct2.items[0],
+                itemLevel: top ? top.level : '',
+                qty: top ? top.qty : 1, unit: top ? top.unit : '件'
             };
             bag.recheck = {
                 status: '已完成', startTs: judgeTs + 5 * 60000, finishTs: judgeTs + 20 * 60000,
@@ -278,13 +409,16 @@ function finalizeBag(bag, judges, now, generated) {
         }
     } else {
         bag.disposition = '开包查扣';
-        const ct = CONTRABAND_TYPES.find(c => c.name === bag.ai.type);
+        const ct = CONTRABAND_TYPES.find(c => c.name === bag.ai.type) || CONTRABAND_TYPES[CONTRABAND_TYPES.length - 1];
+        const top = (bag.items || []).slice().sort((a, b) => LEVEL_RANK[b.level] - LEVEL_RANK[a.level])[0];
         bag.seized = {
             typeName: bag.ai.type,
             level: ct.level,
-            itemName: ct.items[Math.floor(Math.random() * ct.items.length)],
-            qty: ct.level === 'restricted' ? 1 + Math.floor(Math.random() * 3) : 1,
-            unit: bag.ai.type === '液体' ? '瓶' : (bag.ai.type === '刀具' ? '把' : bag.ai.type === '电池/充电宝' ? '个' : '件')
+            itemKey: top ? top.key : '',
+            itemName: top ? top.name : ct.items[0],
+            itemLevel: top ? top.level : '',
+            qty: top ? top.qty : (ct.level === 'restricted' ? 1 + Math.floor(Math.random() * 3) : 1),
+            unit: top ? top.unit : '件'
         };
     }
 
@@ -325,6 +459,9 @@ function makeHandoffs(bags, employees) {
             typeName: seized.itemName ? `${seized.typeName}·${seized.itemName}` : seized.typeName,
             category: seized.typeName,
             level: seized.level,
+            itemKey: seized.itemKey || '',
+            itemLevel: seized.itemLevel || '',
+            itemName: seized.itemName || '',
             qty: seized.qty,
             unit: seized.unit,
             foundWay: 'X光判图',
@@ -398,47 +535,55 @@ function makeEvents(bags, passengers, devices, todayStart) {
 }
 
 // ---------- 告警中心 ----------
-function makeAlarms(bags, devices, employees) {
+// 包裹告警以「包内识别到的全部物品」为口径：最高等级决定告警级别（高→高位违禁事件 / 中→中风险 / 低→日常提示）
+function makeAlarms(bags, devices, employees, catalog) {
     const list = [];
     const now = Date.now();
 
-    // 高危：违禁品查扣告警
-    bags.filter(b => b.judgeResult === '违禁').slice(0, 18).forEach(bag => {
-        const handled = (now - bag.judgeTs) / 60000 > 45;
-        list.push({
-            id: `ALM-${fmtDate(bag.judgeTs).replace(/-/g, '')}-${String(3000 + seq.alm++)}`,
-            ts: bag.judgeTs, time: fmtDateTime(bag.judgeTs),
-            device: bag.machineName, level: 'danger', type: '违禁品检出',
-            content: `${bag.ownerName} 的包裹 ${bag.id} 检出${bag.seized.itemName}（${bag.seized.typeName}）`,
+    const levelOfItem = it => (findCatalogItem(it.key, catalog) || it).level;
+    const topItem = items => (items || []).slice().sort((a, b) => LEVEL_RANK[levelOfItem(b)] - LEVEL_RANK[levelOfItem(a)])[0] || {};
+
+    const buildAlarm = (bag, levelKey) => {
+        const ts = bag.judgeTs || bag.scanTs;
+        const ageMin = (now - ts) / 60000;
+        const handled = levelKey === 'high' ? ageMin > 45 && Math.random() > 0.12
+            : levelKey === 'mid' ? ageMin > 30 && Math.random() > 0.3
+                : ageMin > 15 && Math.random() > 0.25;
+        const items = bag.items || [];
+        const top = topItem(items);
+        const meta = itemLevelMeta(levelKey);
+        const typeName = levelKey === 'high' ? '高级违禁事件' : (levelKey === 'mid' ? '中风险事件' : '日常物品提示');
+        return {
+            id: `ALM-${fmtDate(ts).replace(/-/g, '')}-${String(3000 + seq.alm++)}`,
+            ts, time: fmtDateTime(ts), device: bag.machineName,
+            level: meta.alarmLevel, type: typeName,
+            content: `${bag.ownerName} 的包裹 ${bag.id} 识别 ${items.length} 项物品：${items.map(it => it.name).join('、')}`,
+            items: items.map(it => ({ key: it.key, name: it.name, category: it.category, unit: it.unit, qty: it.qty, confidence: it.confidence })),
+            itemKey: top.key || '', maxItemLevel: levelKey, bagLevel: bag.itemLevel || levelKey,
             status: handled ? '已处理' : '未处理',
-            operator: handled ? '值班队长·王振宇' : '',
-            handleTime: handled ? fmtDateTime(bag.judgeTs + 60000 * (5 + Math.random() * 20)) : '',
+            operator: handled ? `值班队长·${['王振宇', '李慧芝'][Math.floor(Math.random() * 2)]}` : '',
+            handleTime: handled ? fmtDateTime(ts + 60000 * (5 + Math.random() * 30)) : '',
             disposition: handled ? 'pass' : '',
             dispositionName: handled ? '通过放行' : '',
-            handleResult: handled ? '已按违禁流程查扣并完成民警交接' : '',
+            handleResult: handled
+                ? (levelKey === 'high' ? '已按违禁流程开包查扣并完成民警交接'
+                    : levelKey === 'mid' ? '超量部分已劝导自弃，其余予以放行'
+                        : '日常物品登记提示后放行')
+                : '',
             refId: bag.id,
-            details: `判图依据：X光双视角图像，AI 置信度 ${bag.ai.confidence}%；处置：开包查扣`
-        });
-    });
+            details: `AI 置信度 ${bag.ai ? bag.ai.confidence : '-'}%；判图结果 ${bag.judgeResult || '待判图'}；处置 ${bag.disposition || '-'}`
+        };
+    };
 
-    // 可疑品检出告警（关联包裹未查扣，可继续走复检 / 开包 / 通过分支）
-    bags.filter(b => b.judgeResult === '可疑').slice(0, 12).forEach(bag => {
-        const done = bag.recheck && bag.recheck.status === '已完成';
-        list.push({
-            id: `ALM-${fmtDate(bag.judgeTs).replace(/-/g, '')}-${String(3000 + seq.alm++)}`,
-            ts: bag.judgeTs, time: fmtDateTime(bag.judgeTs),
-            device: bag.machineName, level: 'warning', type: '可疑品检出',
-            content: `${bag.ownerName} 的包裹 ${bag.id} 判图可疑（疑似${bag.ai ? bag.ai.type : '违禁品'}），待复检确认`,
-            status: done ? '已处理' : '未处理',
-            operator: done ? '值班队长·李慧芝' : '',
-            handleTime: done ? fmtDateTime(bag.recheck.finishTs) : '',
-            disposition: done ? 'pass' : '',
-            dispositionName: done ? '通过放行' : '',
-            handleResult: done ? `复检结论：${bag.recheck.result}（${bag.recheck.note}）` : '',
-            refId: bag.id,
-            details: `AI 置信度 ${bag.ai ? bag.ai.confidence : '-'}%，判图员 ${bag.judgeOperator || '-'}`
-        });
+    // 按包内最高物品等级分组，再从高到低生成告警（高位全量，中/低风险采样展示）
+    const buckets = { high: [], mid: [], low: [] };
+    bags.forEach(bag => {
+        const lv = topLevelOf(bag.items, catalog);
+        if (lv && buckets[lv]) buckets[lv].push(bag);
     });
+    buckets.high.slice(0, 24).forEach(bag => list.push(buildAlarm(bag, 'high')));
+    buckets.mid.slice(0, 16).forEach(bag => list.push(buildAlarm(bag, 'mid')));
+    buckets.low.slice(0, 10).forEach(bag => list.push(buildAlarm(bag, 'low')));
 
     // 设备类告警
     devices.filter(d => d.status !== 'online').forEach(d => {
@@ -536,11 +681,12 @@ function makeChannels(devices) {
 
 // ---------- 配置管理（含违禁品名录） ----------
 function makeConfigs() {
+    const lvCount = lv => DEFAULT_ITEM_CATALOG.filter(i => i.level === lv).length;
     return [
         { id: 'CFG-001', name: '安检机灵敏度配置', type: 'device', scope: '全部安检机', createTime: '2026-09-10 14:30:00', updateTime: '2026-10-12 09:15:00', description: 'X光机射线剂量与图像增强等级', configDetails: { 灵敏度: 85, 分辨率: 1024, 对比度: 70, 穿透阈值_mm: 38 } },
         { id: 'CFG-002', name: '安检门告警阈值', type: 'device', scope: '金属门/毫米波门', createTime: '2026-09-08 10:20:00', updateTime: '2026-10-15 16:45:00', description: '门区金属/毫米波信号告警触发条件', configDetails: { 金属阈值: 50, 分区数: 18, 灵敏度曲线: '均匀区高灵敏度', 语音播报: true } },
         { id: 'CFG-003', name: '人脸比对参数', type: 'event', scope: '明眸设备', createTime: '2026-09-05 08:45:00', updateTime: '2026-10-14 11:30:00', description: '1:1 人证比对与 1:N 检索阈值', configDetails: { 通过阈值: 90, 复审阈值: 75, 超时_ms: 5000, 重搜次数: 3 } },
-        { id: 'CFG-004', name: '违禁品数据库', type: 'event', scope: '集中判图', createTime: '2026-09-01 09:00:00', updateTime: fmtDateTime(Date.now() - 2 * 86400000), description: '判图辅助识别库（与处置交接页联动）', configDetails: { 版本: 'v3.5.2', 条目数: CONTRABAND_TYPES.reduce((s, c) => s + c.items.length, 0) + 280, 禁止类: CONTRABAND_TYPES.filter(c => c.level === 'severe').map(c => c.name).join('/'), 限制类: CONTRABAND_TYPES.filter(c => c.level === 'restricted').map(c => c.name).join('/') } },
+        { id: 'CFG-004', name: '违禁品数据库', type: 'event', scope: '集中判图', createTime: '2026-09-01 09:00:00', updateTime: fmtDateTime(Date.now() - 2 * 86400000), description: '判图辅助识别库（物品等级与告警级别联动）', configDetails: { 版本: 'v3.5.2', 条目数: DEFAULT_ITEM_CATALOG.length, 高等物品: lvCount('high'), 中等物品: lvCount('mid'), 低等物品: lvCount('low'), 禁止类: CONTRABAND_TYPES.filter(c => c.level === 'severe').map(c => c.name).join('/'), 限制类: CONTRABAND_TYPES.filter(c => c.level === 'restricted').map(c => c.name).join('/') } },
         { id: 'CFG-005', name: '系统告警配置', type: 'system', scope: '全局', createTime: '2026-09-03 14:15:00', updateTime: '2026-10-11 10:00:00', description: '告警推送渠道与升级策略', configDetails: { 弹窗: true, 短信: true, 语音: true, 升级策略: '危险级15分钟未处理升级值班队长' } },
         { id: 'CFG-006', name: '体温检测配置', type: 'face', scope: '通道测温', createTime: '2026-09-06 15:40:00', updateTime: '2026-10-13 09:30:00', description: '红外测温报警阈值', configDetails: { 正常上限: 37.3, 报警上限: 38.0, 复测次数: 2, 单位: '℃' } },
         { id: 'CFG-007', name: '网络配置', type: 'system', scope: '平台侧', createTime: '2026-09-02 11:20:00', updateTime: '2026-10-10 14:15:00', description: '安检专网地址规划', configDetails: { ip: '192.168.1.1', subnet: '255.255.255.0', gateway: '192.168.1.254', dns: '192.168.1.53' } },
@@ -881,23 +1027,35 @@ export function judgeBag(bagId, result, operatorName) {
     } else {
         // 违禁：默认按 AI 识别品类生成查扣明细，交接页可修改
         const ct = CONTRABAND_TYPES.find(c => c.name === (bag.ai ? bag.ai.type : '')) || CONTRABAND_TYPES[CONTRABAND_TYPES.length - 1];
-        bag.seized = { typeName: ct.name, level: ct.level, itemName: ct.items[0], qty: 1, unit: '件' };
+        const top = (bag.items || []).slice().sort((a, b) => LEVEL_RANK[b.level] - LEVEL_RANK[a.level])[0];
+        bag.seized = {
+            typeName: ct.name, level: ct.level,
+            itemKey: top ? top.key : '', itemName: top ? top.name : ct.items[0],
+            itemLevel: top ? top.level : 'high',
+            qty: top ? top.qty : 1, unit: top ? top.unit : '件'
+        };
         bag.disposition = '开包查扣';
         const ho = {
             id: `HO-${fmtDate(now).replace(/-/g, '')}-${String(500 + seq.ho++)}`,
             bagId: bag.id, passengerName: bag.ownerName, passengerId: bag.owner,
             channel: bag.channelName, machineName: bag.machineName,
-            typeName: `${ct.name}·${ct.items[0]}`, category: ct.name, level: ct.level,
-            qty: 1, unit: '件', foundWay: 'X光判图', foundBy: operatorName, foundByRole: judge.role,
+            typeName: `${ct.name}·${bag.seized.itemName}`, category: ct.name, level: ct.level,
+            itemKey: bag.seized.itemKey, itemLevel: bag.seized.itemLevel, itemName: bag.seized.itemName,
+            qty: bag.seized.qty, unit: bag.seized.unit, foundWay: 'X光判图', foundBy: operatorName, foundByRole: judge.role,
             ts: now, time: fmtDateTime(now), status: '待移交',
             toPost: '集中判图室', police: '', storageNo: `CC${fmtDate(now).replace(/-/g, '').slice(2)}${String(1000 + Math.floor(Math.random() * 8999))}`,
             note: '判图员确认为违禁品，待开包登记'
         };
         store.handoffs.unshift(ho);
+        const topLevel = bag.seized.itemLevel || 'high';
         store.alarms.unshift({
             id: `ALM-${fmtDate(now).replace(/-/g, '')}-${String(3000 + seq.alm++)}`,
-            ts: now, time: fmtDateTime(now), device: bag.machineName, level: 'danger', type: '违禁品检出',
-            content: `${bag.ownerName} 的包裹 ${bag.id} 经人工判图确认违禁：${ho.typeName}`,
+            ts: now, time: fmtDateTime(now), device: bag.machineName,
+            level: itemLevelMeta(topLevel).alarmLevel,
+            type: topLevel === 'high' ? '高级违禁事件' : '中风险事件',
+            content: `${bag.ownerName} 的包裹 ${bag.id} 经人工判图确认违禁，识别物品：${(bag.items || []).map(i => i.name).join('、') || bag.seized.itemName}`,
+            items: (bag.items || []).map(i => ({ key: i.key, name: i.name, category: i.category, unit: i.unit, qty: i.qty, confidence: i.confidence })),
+            itemKey: bag.seized.itemKey, maxItemLevel: topLevel,
             status: '未处理', operator: '', handleTime: '', refId: bag.id,
             details: `判图员：${operatorName}，已自动生成查扣登记 ${ho.id}`
         });
@@ -1151,8 +1309,14 @@ export function completeRecheck(bagId, pass, note, operator) {
     } else {
         bag.disposition = '开包查扣';
         const ct = CONTRABAND_TYPES.find(c => c.name === (bag.ai ? bag.ai.type : '')) || CONTRABAND_TYPES[CONTRABAND_TYPES.length - 1];
+        const top = (bag.items || []).slice().sort((a, b) => LEVEL_RANK[b.level] - LEVEL_RANK[a.level])[0];
         if (!bag.seized) {
-            bag.seized = { typeName: ct.name, level: ct.level, itemName: ct.items[0], qty: 1, unit: '件' };
+            bag.seized = {
+                typeName: ct.name, level: ct.level,
+                itemKey: top ? top.key : '', itemName: top ? top.name : ct.items[0],
+                itemLevel: top ? top.level : 'high',
+                qty: top ? top.qty : 1, unit: top ? top.unit : '件'
+            };
         }
         const ho = {
             id: `HO-${fmtDate(now).replace(/-/g, '')}-${String(500 + seq.ho++)}`,
@@ -1160,6 +1324,7 @@ export function completeRecheck(bagId, pass, note, operator) {
             channel: bag.channelName, machineName: bag.machineName,
             typeName: `${bag.seized.typeName}·${bag.seized.itemName}`, category: bag.seized.typeName,
             level: bag.seized.level, qty: bag.seized.qty, unit: bag.seized.unit,
+            itemKey: bag.seized.itemKey || '', itemLevel: bag.seized.itemLevel || '', itemName: bag.seized.itemName || '',
             foundWay: '开包检查', foundBy: operator, foundByRole: '复检员',
             ts: now, time: fmtDateTime(now), status: '待移交',
             toPost: '复检台', police: '',
@@ -1167,10 +1332,15 @@ export function completeRecheck(bagId, pass, note, operator) {
             note: '复检开包检出违禁品，待民警交接'
         };
         store.handoffs.unshift(ho);
+        const topLevel = bag.seized.itemLevel || 'high';
         store.alarms.unshift({
             id: `ALM-${fmtDate(now).replace(/-/g, '')}-${String(3000 + seq.alm++)}`,
-            ts: now, time: fmtDateTime(now), device: bag.machineName, level: 'danger', type: '违禁品检出',
-            content: `${bag.ownerName} 的包裹 ${bag.id} 开包检查检出违禁：${ho.typeName}`,
+            ts: now, time: fmtDateTime(now), device: bag.machineName,
+            level: itemLevelMeta(topLevel).alarmLevel,
+            type: topLevel === 'high' ? '高级违禁事件' : '中风险事件',
+            content: `${bag.ownerName} 的包裹 ${bag.id} 开包检查检出违禁，识别物品：${(bag.items || []).map(i => i.name).join('、') || ho.itemName}`,
+            items: (bag.items || []).map(i => ({ key: i.key, name: i.name, category: i.category, unit: i.unit, qty: i.qty, confidence: i.confidence })),
+            itemKey: bag.seized.itemKey, maxItemLevel: topLevel,
             status: '未处理', operator: '', handleTime: '', refId: bag.id,
             details: `复检员：${operator}，已自动生成查扣登记 ${ho.id}`
         });
@@ -2990,10 +3160,12 @@ export function dashboardBoard(viewKey = 'captain') {
 function simulateArrival(store) {
     const machines = store.devices.filter(d => d.key === 'securityCheckMachine' && d.status === 'online');
     const machine = machines[Math.floor(Math.random() * machines.length)];
-    const ct = CONTRABAND_TYPES[Math.floor(Math.random() * CONTRABAND_TYPES.length)];
+    const catalog = store.itemCatalog || DEFAULT_ITEM_CATALOG;
     const now = Date.now();
     const passenger = store.passengers[Math.floor(Math.random() * store.passengers.length)];
     const kind = Math.random() > 0.5 ? '可疑' : '违禁';
+    const items = makeFlaggedItems(catalog);
+    const top = items[0];
     const bag = {
         id: `PKG-${fmtDate(now).replace(/-/g, '')}-${String(20000 + seq.bag++)}`,
         owner: passenger.id, ownerName: passenger.name,
@@ -3004,7 +3176,14 @@ function simulateArrival(store) {
         imageSeed: Math.floor(Math.random() * 100000),
         bindingStatus: '已绑定',
         status: 'pending',
-        ai: { label: kind === '违禁' ? ct.name : '疑似' + ct.name, type: ct.name, level: ct.level, confidence: (kind === '违禁' ? 90 + Math.random() * 9 : 76 + Math.random() * 14).toFixed(1) }
+        items, itemLevel: topLevelOf(items, catalog),
+        ai: {
+            label: kind === '违禁' ? top.category : `疑似${top.category}`,
+            type: top.category,
+            level: (CONTRABAND_TYPES.find(c => c.name === top.category) || { level: 'restricted' }).level,
+            itemLevel: top.level, itemKey: top.key, items,
+            confidence: +(kind === '违禁' ? 90 + Math.random() * 9 : 76 + Math.random() * 14).toFixed(1)
+        }
     };
     store.bags.unshift(bag);
     store.events.unshift({
@@ -3015,6 +3194,186 @@ function simulateArrival(store) {
         details: `AI 标记「${bag.ai.label}」(${bag.ai.confidence}%)，等待人工判图`
     });
     return bag;
+}
+
+// ---------- 物品等级 / 物品排行 / 告警设备分组 ----------
+export function getItemCatalog(store = getStore()) { return store.itemCatalog || DEFAULT_ITEM_CATALOG; }
+
+// 等级元信息（高/中/低 → 告警级别、颜色、处置口径）
+export function itemLevelInfo(levelKey) { return itemLevelMeta(levelKey); }
+
+export function itemLevelOf(keyOrName, store = getStore()) {
+    const hit = findCatalogItem(keyOrName, getItemCatalog(store));
+    return hit ? hit.level : 'low';
+}
+
+// 告警对应的物品等级：按当前物品目录重算，配置里改等级后告警级别立即跟着变
+export function alarmItemLevels(alarm, store = getStore()) {
+    return (alarm.items || []).map(it => {
+        const hit = findCatalogItem(it.key || it.name, getItemCatalog(store));
+        return { ...it, level: hit ? hit.level : (it.level || 'low') };
+    });
+}
+
+export function alarmLevelOf(alarm, store = getStore()) {
+    const items = alarmItemLevels(alarm, store);
+    if (!items.length) return alarm.level || 'info';
+    const top = items.reduce((m, it) => LEVEL_RANK[it.level] > LEVEL_RANK[m] ? it.level : m, 'low');
+    return itemLevelMeta(top).alarmLevel;
+}
+
+export function alarmLevelText(alarm, store = getStore()) {
+    const key = alarmLevelOf(alarm, store);
+    return key === 'danger' ? '高危' : (key === 'warning' ? '中风险' : '提示');
+}
+
+// 物品排行：识别次数（全部过检包裹）+ 查获次数（交接单）
+export function itemRanking(store = getStore(), limit = 0) {
+    const catalog = getItemCatalog(store);
+    const map = new Map();
+    const ensure = (key, name, category) => {
+        const hit = findCatalogItem(key || name, catalog);
+        const id = hit ? hit.key : (key || name);
+        if (!map.has(id)) {
+            map.set(id, {
+                key: id, name: hit ? hit.name : name,
+                category: hit ? hit.category : (category || '其他'),
+                unit: hit ? hit.unit : '件', level: hit ? hit.level : 'low',
+                seen: 0, seized: 0, bags: new Set()
+            });
+        }
+        return map.get(id);
+    };
+    (store.bags || []).forEach(bag => (bag.items || []).forEach(it => {
+        const row = ensure(it.key, it.name, it.category);
+        row.seen++;
+        row.bags.add(bag.id);
+    }));
+    (store.handoffs || []).forEach(ho => {
+        const row = ho.itemKey ? map.get(ho.itemKey)
+            : (ho.itemName ? [...map.values()].find(r => r.name === ho.itemName) : null);
+        if (row) row.seized++;
+    });
+    const totalSeen = [...map.values()].reduce((s, r) => s + r.seen, 0) || 1;
+    const rows = [...map.values()].map(r => ({
+        key: r.key, name: r.name, category: r.category, unit: r.unit, level: r.level,
+        seen: r.seen, seized: r.seized, bagCount: r.bags.size,
+        share: +(r.seen / totalSeen * 100).toFixed(1)
+    })).sort((a, b) => b.seen - a.seen || b.seized - a.seized);
+    return limit > 0 ? rows.slice(0, limit) : rows;
+}
+
+// 等级分布：按包（最高等级）/ 按物品件数 / 按告警
+export function itemLevelStats(store = getStore()) {
+    const catalog = getItemCatalog(store);
+    const bagCount = { high: 0, mid: 0, low: 0 };
+    const itemCount = { high: 0, mid: 0, low: 0 };
+    (store.bags || []).forEach(bag => {
+        const top = topLevelOf(bag.items, catalog);
+        if (top && bagCount[top] !== undefined) bagCount[top]++;
+        (bag.items || []).forEach(it => { const lv = itemLevelOf(it.key, store); if (itemCount[lv] !== undefined) itemCount[lv]++; });
+    });
+    const alarmCount = { danger: 0, warning: 0, info: 0 };
+    (store.alarms || []).forEach(a => { const lv = alarmLevelOf(a, store); if (alarmCount[lv] !== undefined) alarmCount[lv]++; });
+    return { bagCount, itemCount, alarmCount, total: itemCount.high + itemCount.mid + itemCount.low };
+}
+
+// 调整单个物品等级（配置中心写入，带审计）
+export function setItemLevel(itemKey, level, operator = '系统管理员') {
+    const store = getStore();
+    const item = getItemCatalog(store).find(i => i.key === itemKey || i.name === itemKey);
+    if (!item) return { ok: false, msg: '物品不存在' };
+    const meta = ITEM_LEVELS.find(l => l.key === level);
+    if (!meta) return { ok: false, msg: '等级不合法' };
+    if (item.level === level) return { ok: false, msg: `${item.name} 已是「${meta.tag}」，无需重复设置` };
+    const prev = itemLevelMeta(item.level);
+    item.level = level;
+    item.updateTime = fmtDateTime(Date.now());
+    store.auditLogs.unshift({ time: item.updateTime, user: operator, action: `调整物品等级 ${item.name}：${prev.tag} → ${meta.tag}`, target: 'CFG-004' });
+    return { ok: true, item, prev: prev.key };
+}
+
+// 按类别批量设等级
+export function setCategoryItemLevel(category, level, operator = '系统管理员') {
+    const store = getStore();
+    const meta = ITEM_LEVELS.find(l => l.key === level);
+    if (!meta) return { ok: false, msg: '等级不合法' };
+    const targets = getItemCatalog(store).filter(i => i.category === category);
+    if (!targets.length) return { ok: false, msg: '该类别下暂无可配置物品' };
+    let changed = 0;
+    targets.forEach(it => {
+        if (it.level === level) return;
+        it.level = level;
+        it.updateTime = fmtDateTime(Date.now());
+        changed++;
+    });
+    if (!changed) return { ok: false, msg: `「${category}」已全部为「${meta.tag}」` };
+    store.auditLogs.unshift({ time: fmtDateTime(Date.now()), user: operator, action: `批量调整「${category}」${changed} 项物品等级为「${meta.tag}」`, target: 'CFG-004' });
+    return { ok: true, changed, total: targets.length };
+}
+
+// 恢复默认等级配置
+export function resetItemCatalog(operator = '系统管理员') {
+    const store = getStore();
+    store.itemCatalog = DEFAULT_ITEM_CATALOG.map(i => ({ ...i }));
+    store.auditLogs.unshift({ time: fmtDateTime(Date.now()), user: operator, action: '恢复违禁品物品等级默认配置', target: 'CFG-004' });
+    return { ok: true, total: store.itemCatalog.length };
+}
+
+// 新增识别物品
+export function addCatalogItem({ name, category, level, unit }, operator = '系统管理员') {
+    const store = getStore();
+    const trimmed = String(name || '').trim();
+    if (!trimmed) return { ok: false, msg: '请填写物品名称' };
+    const catalog = getItemCatalog(store);
+    if (catalog.some(i => i.name === trimmed)) return { ok: false, msg: `物品「${trimmed}」已存在` };
+    if (!ITEM_LEVELS.some(l => l.key === level)) return { ok: false, msg: '请选择物品等级' };
+    const maxNo = catalog.reduce((m, i) => Math.max(m, Number(String(i.key).replace('IT-', '')) || 0), 0);
+    const cat = category || '其他';
+    const item = {
+        key: `IT-${maxNo + 1}`, name: trimmed, category: cat, level,
+        unit: unit || '件',
+        color: (CONTRABAND_TYPES.find(c => c.name === cat) || { color: '#6b7280' }).color,
+        custom: true, updateTime: fmtDateTime(Date.now())
+    };
+    catalog.push(item);
+    store.auditLogs.unshift({ time: item.updateTime, user: operator, action: `新增识别物品 ${trimmed}（${itemLevelMeta(level).tag}）`, target: 'CFG-004' });
+    return { ok: true, item };
+}
+
+// 告警设备分组（左侧导航按设备筛选）
+const DEVICE_TYPE_LABEL = DEVICE_TEMPLATES.reduce((m, t) => { m[t.key] = t.name; return m; }, {});
+const PSEUDO_DEVICES = [
+    { key: 'judgeServer', label: '判图服务器', category: '系统与平台', test: /服务器/ },
+    { key: 'network', label: '网络设备', category: '系统与平台', test: /交换机|网络|专网/ },
+    { key: 'platform', label: '系统平台', category: '系统与平台', test: /系统平台|平台/ },
+    { key: 'channel', label: '安检通道', category: '系统与平台', test: /安检通道/ }
+];
+
+export function alarmDeviceKeyOf(alarm, store = getStore()) {
+    const name = alarm.device || '';
+    const devices = store.devices || [];
+    const dev = devices.find(d => d.displayName === name) || devices.find(d => d.name === name);
+    if (dev) return { key: dev.key, label: DEVICE_TYPE_LABEL[dev.key] || dev.name, category: dev.category };
+    const tpl = DEVICE_TEMPLATES.find(t => name.includes(t.name));
+    if (tpl) return { key: tpl.key, label: tpl.name, category: tpl.category };
+    const pseudo = PSEUDO_DEVICES.find(p => p.test.test(name));
+    if (pseudo) return { key: pseudo.key, label: pseudo.label, category: pseudo.category };
+    return { key: 'other', label: '其他设备', category: '系统与平台' };
+}
+
+export function alarmDeviceGroups(store = getStore()) {
+    const groups = new Map();
+    (store.alarms || []).forEach(a => {
+        const g = alarmDeviceKeyOf(a, store);
+        if (!groups.has(g.key)) groups.set(g.key, { key: g.key, label: g.label, category: g.category, count: 0, unhandled: 0, high: 0 });
+        const row = groups.get(g.key);
+        row.count++;
+        if (a.status === '未处理') row.unhandled++;
+        if (alarmLevelOf(a, store) === 'danger') row.high++;
+    });
+    const order = ['核心设备', '安检门', '明眸设备', '探测设备', '系统与平台'];
+    return [...groups.values()].sort((a, b) => (order.indexOf(a.category) - order.indexOf(b.category)) || b.count - a.count);
 }
 
 // ---------- Store 单例 ----------
@@ -3033,11 +3392,12 @@ export function getStore() {
 
     const employees = makeEmployees();
     const devices = makeDevices();
+    const itemCatalog = DEFAULT_ITEM_CATALOG.map(i => ({ ...i }));
     const passengers = makePassengers(todayStart.getTime());
-    const bags = makeBags(passengers, devices, employees, todayStart.getTime());
+    const bags = makeBags(passengers, devices, employees, todayStart.getTime(), itemCatalog);
     const handoffs = makeHandoffs(bags, employees);
     const events = makeEvents(bags, passengers, devices, todayStart.getTime());
-    const alarms = makeAlarms(bags, devices, employees);
+    const alarms = makeAlarms(bags, devices, employees, itemCatalog);
     const face = makeFaceData(passengers, devices);
     const channels = makeChannels(devices);
     const shifts = makeShiftPlan(employees);
@@ -3059,6 +3419,7 @@ export function getStore() {
         employees,
         currentUser: employees.find(e => e.role === '判图员'),
         devices,
+        itemCatalog,
         passengers: passengers.map(p => ({ ...p, channel: `CH-${1 + Math.floor(Math.random() * 5)}` })),
         bags, handoffs, events, alarms,
         enrollHistory: face.enrollHistory,
