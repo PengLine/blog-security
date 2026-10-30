@@ -33,11 +33,12 @@ body .container{
 
 .main-nav {
     display: flex;
-    gap: 20px;
+    gap: 6px;
 }
 
 .nav-item {
-    padding: 8px 16px;
+    padding: 6px 10px;
+    font-size: 13px;
     cursor: pointer;
     border-radius: 4px;
     transition: all 0.3s ease;
@@ -1105,3 +1106,61 @@ body .container{
 
 /* 模块内子标题 */
 .sub-title { font-size: 14px; color: #409eff; margin: 16px 0 8px; padding-left: 8px; border-left: 3px solid #409eff; }
+
+/* ---------- 排班管理 ---------- */
+.shift-banner {
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+    background: linear-gradient(135deg, #12315a 0%, #18304a 100%);
+    border: 1px solid #2a4666; border-radius: 8px; padding: 18px 22px; margin-bottom: 20px;
+}
+.shift-banner .sb-label { font-size: 12px; color: #909399; }
+.shift-banner .sb-value { font-size: 20px; color: #e6f2ff; margin-top: 4px; }
+.shift-banner .sb-value b { color: #409eff; }
+
+.shift-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; }
+.shift-card { background-color: #18304a; border: 1px solid #1e3a5f; border-radius: 8px; padding: 16px 18px; }
+.shift-card.active-shift { border-color: #409eff; box-shadow: 0 0 12px rgba(64, 158, 255, 0.25); position: relative; }
+.shift-card.active-shift::before {
+    content: '当班中'; position: absolute; top: -10px; right: 14px;
+    background: #409eff; color: #fff; font-size: 11px; padding: 2px 10px; border-radius: 10px;
+}
+.shift-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+.shift-head .s-name { font-size: 16px; color: #e6f2ff; font-weight: bold; }
+.shift-head .s-range { font-size: 12px; color: #909399; }
+.member-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    background-color: #12315a; border: 1px solid #1e3a5f; border-radius: 14px;
+    padding: 4px 12px; margin: 4px 6px 4px 0; font-size: 12px; color: #cfe3f8;
+}
+.member-chip .m-role { color: #909399; font-size: 11px; }
+.member-chip .m-swap { cursor: pointer; color: #409eff; font-size: 11px; }
+.member-chip .m-swap:hover { text-decoration: underline; }
+
+/* ---------- 工单流转时间线 ---------- */
+.timeline { margin: 14px 0 4px; padding-left: 6px; }
+.tl-item { position: relative; padding: 0 0 18px 22px; border-left: 2px solid #1e3a5f; }
+.tl-item:last-child { border-left-color: transparent; padding-bottom: 0; }
+.tl-item::before {
+    content: ''; position: absolute; left: -6px; top: 2px; width: 10px; height: 10px;
+    border-radius: 50%; background: #2a4666; border: 2px solid #12315a;
+}
+.tl-item.tl-done::before { background: #67c23a; }
+.tl-item.tl-current::before { background: #409eff; box-shadow: 0 0 6px #409eff; }
+.tl-item.tl-bad::before { background: #f56c6c; }
+.tl-item .t-title { font-size: 13px; color: #e6f2ff; }
+.tl-item .t-time { font-size: 11px; color: #909399; margin-top: 2px; }
+
+/* ---------- 绩效排名 ---------- */
+.rank-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 20px; }
+.rank-card { background-color: #18304a; border: 1px solid #1e3a5f; border-radius: 8px; padding: 16px 18px; text-align: center; }
+.rank-card .r-medal { font-size: 26px; }
+.rank-card .r-name { font-size: 16px; color: #e6f2ff; margin: 6px 0 2px; }
+.rank-card .r-sub { font-size: 12px; color: #909399; }
+.rank-card .r-score { font-size: 30px; font-weight: bold; color: #409eff; margin-top: 8px; }
+.rank-card.r-1 { border-color: #e6a23c; } .rank-card.r-1 .r-score { color: #e6a23c; }
+.rank-card.r-2 { border-color: #c0c4cc; } .rank-card.r-3 { border-color: #b87333; }
+
+.score-bar { display: inline-block; width: 90px; height: 8px; background: #12315a; border-radius: 4px; overflow: hidden; vertical-align: middle; margin-right: 8px; }
+.score-bar i { display: block; height: 100%; background: linear-gradient(90deg, #409eff, #67c23a); }
+.perf-row { cursor: pointer; }
+.perf-row:hover td { background-color: rgba(64, 158, 255, 0.08); }

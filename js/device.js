@@ -1,5 +1,5 @@
-import { getStore } from './db.js';
-import { paginateData, toast, openModal } from './utils.js';
+import { getStore, createRepairOrder } from './db.js';
+import { paginateData, toast, openModal, kvTableHTML } from './utils.js';
 
 // 分页变量
 let currentDevicePage = 1;
@@ -65,6 +65,7 @@ function renderDevices(devices) {
             <td>
                 <button class="btn btn-primary" data-detail="${device.id}">详情</button>
                 <button class="btn btn-secondary" data-log="${device.id}">日志</button>
+                ${device.status !== 'online' ? `<button class="btn btn-secondary" style="background-color:#e6a23c;color:#fff;" data-repair="${device.id}">报修</button>` : ''}
             </td>
         `;
         deviceTableBody.appendChild(row);
@@ -88,6 +89,50 @@ function renderDevices(devices) {
                 bodyHTML: `<div style="font-family:Consolas,monospace;font-size:12px;line-height:2;">${logs.map(l => `<div>[${new Date().toLocaleTimeString()}] ${l}</div>`).join('')}</div>`
             });
         };
+    });
+    deviceTableBody.querySelectorAll('[data-repair]').forEach(btn => {
+        btn.onclick = () => openRepairModal(btn.dataset.repair);
+    });
+}
+
+// 一键报修：生成维保工单（与维保工单页实时联动）
+function openRepairModal(deviceId) {
+    const store = getStore();
+    const dev = store.devices.find(d => d.id === deviceId);
+    if (!dev) return;
+    const existing = store.workorders.find(w => w.deviceId === deviceId && w.status !== '已完成');
+    if (existing) {
+        toast(`${dev.displayName} 已有未完成工单 ${existing.id}（${existing.status}），请到维保工单页处理`, 'warning');
+        return;
+    }
+    openModal({
+        title: `设备报修 - ${dev.displayName}`,
+        width: 540,
+        bodyHTML: `
+            ${kvTableHTML([['设备', `${dev.displayName}（${dev.id}）`], ['型号/IP', `${dev.model} / ${dev.ip}`], ['位置', dev.location]])}
+            <div class="form-grid" style="margin-top:10px;">
+                <label>故障类型</label>
+                <select class="form-control" id="devFaultSelect">
+                    <option>${dev.status === 'offline' ? '链路中断/心跳丢失' : '机身温度偏高'}</option>
+                    <option>图像质量异常</option><option>传送带异响</option><option>电源模块故障</option>
+                    <option>自检报错</option><option>其他异常</option>
+                </select>
+                <label>紧急程度</label>
+                <select class="form-control" id="devLevelSelect"><option ${dev.status === 'offline' ? 'selected' : ''}>紧急</option><option ${dev.status !== 'offline' ? 'selected' : ''}>普通</option></select>
+                <label>补充描述</label><textarea class="form-control" id="devRepairDesc" rows="2" placeholder="现场现象（选填）"></textarea>
+            </div>`,
+        actions: [{
+            label: '提交报修', className: 'btn-success',
+            onClick: (close, mask) => {
+                const r = createRepairOrder(dev.id,
+                    mask.querySelector('#devFaultSelect').value,
+                    mask.querySelector('#devLevelSelect').value,
+                    mask.querySelector('#devRepairDesc').value.trim());
+                if (!r.ok) { toast(r.msg, 'error'); return; }
+                toast(`已生成工单 ${r.wo.id}，等待派工`, 'success');
+                close();
+            }
+        }]
     });
 }
 
@@ -142,6 +187,10 @@ function renderDeviceDetail(deviceId) {
         ? store.bags.filter(b => b.machine === device.id).length
         : Math.floor(device.operationCount / 37) % 900 + 100;
     const todayAlarms = store.alarms.filter(a => a.device === device.displayName).length;
+    const myWos = store.workorders.filter(w => w.deviceId === device.id).slice(0, 3);
+    const woHTML = myWos.length ? `
+        <div class="detail-title" style="margin-top:14px;">相关维保工单</div>
+        ${myWos.map(w => `<div class="detail-item"><span class="detail-label">${w.id}</span><span class="detail-value">${w.faultType} · ${w.status}${w.technician ? ' · ' + w.technician : ''}</span></div>`).join('')}` : '';
 
     panel.innerHTML = `
         <div class="detail-panel" style="margin-bottom:20px;">
@@ -184,8 +233,10 @@ function renderDeviceDetail(deviceId) {
                 <div class="filter-group">
                     <span class="filter-label">远程运维：</span>
                     ${runtime.operations.map(op => `<button class="btn btn-primary" data-op="${op}">${op}</button>`).join('')}
+                    <button class="btn btn-secondary" style="background-color:#e6a23c;color:#fff;" id="devDetailRepairBtn">报修</button>
                 </div>
             </div>
+            ${woHTML}
         </div>`;
 
     panel.querySelectorAll('[data-op]').forEach(btn => {
@@ -198,6 +249,9 @@ function renderDeviceDetail(deviceId) {
             setTimeout(() => toast(`${device.displayName}「${btn.dataset.op}」执行完成`, 'success'), 1500);
         };
     });
+
+    const repairBtn = panel.querySelector('#devDetailRepairBtn');
+    if (repairBtn) repairBtn.onclick = () => openRepairModal(device.id);
 
     panel.scrollIntoView({ behavior: 'smooth' });
 }

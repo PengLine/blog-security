@@ -1,0 +1,38 @@
+<div class="module" id="schedule">
+    <div class="shift-banner" id="shiftBanner">
+        <!-- 当班横幅由 JS 渲染 -->
+    </div>
+
+    <div class="module-header">
+        <h2>今日班次安排（两班倒）</h2>
+        <div class="module-actions">
+            <button class="btn btn-secondary" id="schExportBtn">导出值班表</button>
+        </div>
+    </div>
+    <div class="shift-grid" id="shiftCards">
+        <!-- 班次卡片由 JS 渲染 -->
+    </div>
+
+    <div class="module">
+        <div class="module-header">
+            <h2>班次业务量</h2>
+        </div>
+        <div class="table-section">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>班次</th>
+                        <th>值守时段</th>
+                        <th>在岗人数</th>
+                        <th>已判图（件）</th>
+                        <th>查获违禁（件）</th>
+                        <th>开包查扣（起）</th>
+                        <th>告警（条）</th>
+                    </tr>
+                </thead>
+                <tbody id="shiftWorkloadBody"></tbody>
+            </table>
+        </div>
+        <p style="font-size:12px;color:#909399;margin-top:8px;">说明：业务量按判图完成时刻归属班次；换班调整后，人员即时在「集中判图」当班下拉中生效。</p>
+    </div>
+</div>

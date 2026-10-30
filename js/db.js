@@ -27,7 +27,13 @@ export function fmtDateTime(ts) {
 }
 
 // 会话内稳定随机数（首次生成后不再变化）
-let seq = { evt: 0, bag: 0, emp: 0, alm: 0, ho: 0, rec: 0, enr: 0 };
+let seq = { evt: 0, bag: 0, emp: 0, alm: 0, ho: 0, rec: 0, enr: 0, wo: 0 };
+
+// 班次定义：两班倒（白班在岗 / 夜班值守），夜班时段跨天
+export const SHIFT_DEFS = [
+    { key: '早班', team: '甲班', range: '08:00 - 20:00', startH: 8, endH: 20 },
+    { key: '晚班', team: '乙班', range: '20:00 - 次日08:00', startH: 20, endH: 32 }
+];
 
 // ---------- 静态字典 ----------
 export const CONTRABAND_TYPES = [
@@ -38,7 +44,7 @@ export const CONTRABAND_TYPES = [
     { name: '钝器/工具', level: 'restricted', color: '#909399', items: ['锤子', '棍棒', '扳手'] }
 ];
 
-export const ROLES = ['判图员', '值机安检员', '复检员', '值班队长'];
+export const ROLES = ['判图员', '值机安检员', '复检员', '值班队长', '维修工程师'];
 
 const SURNAMES = ['张', '李', '王', '刘', '陈', '杨', '赵', '黄', '周', '吴', '徐', '孙', '马', '胡', '朱', '郭', '何', '林', '高', '罗'];
 const GIVEN = ['伟', '芳', '娜', '敏', '静', '磊', '强', '洋', '勇', '艳', '杰', '涛', '明', '超', '秀英', '霞', '平', '刚', '桂英', '文'];
@@ -56,7 +62,9 @@ function makeEmployees() {
         { name: '何秀兰', role: '复检员', team: '甲班' },
         { name: '徐宗翰', role: '复检员', team: '乙班' },
         { name: '王振宇', role: '值班队长', team: '甲班' },
-        { name: '李慧芝', role: '值班队长', team: '乙班' }
+        { name: '李慧芝', role: '值班队长', team: '乙班' },
+        { name: '韩烁', role: '维修工程师', team: '甲班' },
+        { name: '秦朗', role: '维修工程师', team: '乙班' }
     ];
     return staff.map((s, i) => ({
         id: `EMP-${String(1001 + i)}`,
@@ -250,6 +258,16 @@ function finalizeBag(bag, judges, now, generated) {
             itemName: ct.items[Math.floor(Math.random() * ct.items.length)],
             qty: ct.level === 'restricted' ? 1 + Math.floor(Math.random() * 3) : 1,
             unit: bag.ai.type === '液体' ? '瓶' : (bag.ai.type === '刀具' ? '把' : bag.ai.type === '电池/充电宝' ? '个' : '件')
+        };
+    }
+
+    // 质控抽检：约 12% 已判包裹有复检结论（绩效考核的数据来源）
+    if (Math.random() < 0.12) {
+        const miss = result !== '违禁' && bag.ai && bag.ai.label === bag.ai.type && Math.random() < 0.3;
+        bag.qc = {
+            result: miss ? '漏判' : (Math.random() < 0.08 ? '处置不规范' : '合格'),
+            checkedBy: '质控员·孙瑞',
+            checkTime: fmtDateTime(Math.min(now - 10 * 60000, judgeTs + 30 * 60000))
         };
     }
     return bag;
@@ -541,6 +559,7 @@ export function judgeBag(bagId, result, operatorName) {
     bag.judgeOperatorId = judge.id;
     bag.judgeTs = now;
     bag.judgeTime = fmtDateTime(now);
+    bag.reviewDelayMin = Math.max(1, Math.round((now - bag.scanTs) / 60000));
 
     if (result === '正常') {
         bag.disposition = '放行';
@@ -674,6 +693,254 @@ export function addToBlacklist(personIdOrName, reason) {
     return { ok: true, item };
 }
 
+// ---------- 排班计划（按班组对应班次，全员每日单班） ----------
+function makeShiftPlan(employees) {
+    return SHIFT_DEFS.map(def => ({
+        key: def.key,
+        team: def.team,
+        range: def.range,
+        startH: def.startH,
+        endH: def.endH,
+        members: employees.filter(e => e.team === def.team).map(e => e.id),
+        postNote: def.key === '早班' ? '客流高峰全岗开放，6 条通道运行' : '夜间值守，保留 2 条通道 + 集中判图远程在岗'
+    }));
+}
+
+// 当前时刻所处班次
+export function currentShiftDef() {
+    const h = new Date().getHours();
+    return (h >= 8 && h < 20) ? SHIFT_DEFS[0] : SHIFT_DEFS[1];
+}
+
+// 当班员工（可按岗位过滤）：集中判图/工单派工/验收人下拉均来源于此
+export function onDutyEmployees(role) {
+    const store = getStore();
+    const shift = store.shifts.find(s => s.key === currentShiftDef().key) || store.shifts[0];
+    const list = store.employees.filter(e => shift.members.includes(e.id));
+    return role ? list.filter(e => e.role === role) : list;
+}
+
+// 换班：两名员工互换班次（同步调整班组，留下审计与事件）
+export function swapShiftMember(empId, replacementId) {
+    const store = getStore();
+    const a = store.employees.find(e => e.id === empId);
+    const b = store.employees.find(e => e.id === replacementId);
+    if (!a || !b) return { ok: false, msg: '人员不存在' };
+    const sa = store.shifts.find(s => s.members.includes(a.id));
+    const sb = store.shifts.find(s => s.members.includes(b.id));
+    if (!sa || !sb || sa === sb) return { ok: false, msg: '请选择不同班次的人员对调' };
+    sa.members = sa.members.map(id => id === a.id ? b.id : id);
+    sb.members = sb.members.map(id => id === b.id ? a.id : id);
+    const ta = a.team; a.team = b.team; b.team = ta;
+    const msg = `换班：${a.name}（${a.role}）↔ ${b.name}（${b.role}）`;
+    store.auditLogs.unshift({ time: fmtDateTime(Date.now()), user: store.currentUser.name, action: msg, target: `${sa.key}/${sb.key}` });
+    store.events.unshift({
+        id: `EVT-${fmtDate(Date.now()).replace(/-/g, '')}-${String(10000 + seq.evt++)}`,
+        time: fmtDateTime(Date.now()), _ts: Date.now(), device: '排班管理',
+        type: '勤务调整', status: 'status-normal', statusName: '', processStatus: '已处理',
+        details: `${msg}，由当班队长审核确认`
+    });
+    return { ok: true, msg };
+}
+
+// 班次业务量（按判图时刻归班统计）
+export function shiftWorkload(store) {
+    const bucket = ts => { const h = new Date(ts).getHours(); return (h >= 8 && h < 20) ? '早班' : '晚班'; };
+    const rows = [];
+    store.shifts.forEach(s => {
+        const judged = store.bags.filter(b => b.status === 'judged' && bucket(b.judgeTs || b.scanTs) === s.key);
+        rows.push({
+            shift: s.key, range: s.range, members: s.members.length,
+            judged: judged.length,
+            danger: judged.filter(b => b.judgeResult === '违禁').length,
+            seized: judged.filter(b => b.disposition === '开包查扣').length,
+            alarms: store.alarms.filter(a => bucket(a.ts) === s.key).length
+        });
+    });
+    return rows;
+}
+
+// ---------- 维保工单 ----------
+const FAULT_LIB = {
+    offline: ['链路中断/心跳丢失', '电源模块故障', '网口异常'],
+    warning: ['机身温度偏高', '网络丢包', '自检报错 E-12']
+};
+const PART_LIB = ['以太网模块 ×1', '温度传感器 ×1', '电源适配器 ×1', '传送带皮带 ×1', '（未更换配件）'];
+
+function makeWorkorders(devices, employees) {
+    const techs = employees.filter(e => e.role === '维修工程师');
+    const now = Date.now();
+    const list = [];
+    const mkId = ts => `WO-${fmtDate(ts).replace(/-/g, '')}-${String(700 + seq.wo++)}`;
+
+    // 1) 故障设备 → 在流程中的工单（离线=待派工紧急，告警=维修中）
+    devices.filter(d => d.status !== 'online').forEach((d, i) => {
+        const ts = now - (30 + i * 47 + Math.floor(Math.random() * 60)) * 60000;
+        const isOff = d.status === 'offline';
+        const tech = techs[i % techs.length];
+        list.push({
+            id: mkId(ts), deviceId: d.id, deviceName: d.displayName, channel: d.location,
+            category: d.category, ip: d.ip, model: d.model,
+            faultType: isOff ? FAULT_LIB.offline[i % 3] : FAULT_LIB.warning[i % 3],
+            level: isOff ? '紧急' : '普通',
+            status: isOff ? '待派工' : '维修中',
+            ts, time: fmtDateTime(ts),
+            description: isOff ? `${d.displayName}(${d.ip}) 心跳超时离线，远程指令无法下发` : `${d.displayName} 运行参数异常，触发黄色告警`,
+            technician: isOff ? '' : tech.name,
+            techId: isOff ? '' : tech.id,
+            dispatchTs: isOff ? 0 : ts + 10 * 60000,
+            slaMin: isOff ? 60 : 240,
+            repairNote: '', parts: '', finishTs: 0, acceptor: '', acceptTs: 0, acceptNote: ''
+        });
+    });
+
+    // 2) 历史已完成工单（从在线设备中取有维护痕迹的，构完整改闭环样本）
+    [12, 25, 40].forEach((idx, i) => {
+        const d = devices[idx];
+        const ts = now - (6 + i * 3) * 3600000;
+        const dispatchTs = ts + 12 * 60000;
+        const finishTs = dispatchTs + (35 + i * 18) * 60000;
+        const acceptTs = finishTs + 22 * 60000;
+        const tech = techs[i % techs.length];
+        list.push({
+            id: mkId(ts), deviceId: d.id, deviceName: d.displayName, channel: d.location,
+            category: d.category, ip: d.ip, model: d.model,
+            faultType: ['图像背景噪声大', '传送带异响', '固件升级后自检失败'][i],
+            level: i === 0 ? '紧急' : '普通', status: '已完成',
+            ts, time: fmtDateTime(ts),
+            description: '巡逻岗人工报修，不影响通行但需限期整改',
+            technician: tech.name, techId: tech.id, dispatchTs,
+            slaMin: 120,
+            repairNote: ['清洁闪烁探测器并重新标定', '张紧轮调整 + 润滑', '回滚固件至稳定版本并重测'][i],
+            parts: PART_LIB[i], finishTs,
+            acceptor: '值班队长·' + ['王振宇', '李慧芝'][i % 2], acceptTs,
+            acceptNote: '复检正常，同意归档'
+        });
+    });
+
+    list.sort((a, b) => b.ts - a.ts);
+    return list;
+}
+
+export function createRepairOrder(deviceId, faultType, level, description) {
+    const store = getStore();
+    const dev = store.devices.find(d => d.id === deviceId);
+    if (!dev) return { ok: false, msg: '设备不存在' };
+    if (store.workorders.some(w => w.deviceId === deviceId && w.status !== '已完成')) {
+        return { ok: false, msg: `${dev.displayName} 已有未完成工单，请勿重复报修` };
+    }
+    const now = Date.now();
+    const wo = {
+        id: `WO-${fmtDate(now).replace(/-/g, '')}-${String(700 + seq.wo++)}`,
+        deviceId: dev.id, deviceName: dev.displayName, channel: dev.location,
+        category: dev.category, ip: dev.ip, model: dev.model,
+        faultType: faultType || '其他异常', level: level || '普通', status: '待派工',
+        ts: now, time: fmtDateTime(now), description: description || `${dev.displayName} 人工报修`,
+        technician: '', techId: '', dispatchTs: 0, slaMin: level === '紧急' ? 60 : 240,
+        repairNote: '', parts: '', finishTs: 0, acceptor: '', acceptTs: 0, acceptNote: ''
+    };
+    store.workorders.unshift(wo);
+    store.events.unshift({
+        id: `EVT-${fmtDate(now).replace(/-/g, '')}-${String(10000 + seq.evt++)}`,
+        time: fmtDateTime(now), _ts: now, device: dev.displayName,
+        type: '维保报修', status: wo.level === '紧急' ? 'status-danger' : 'status-warning', statusName: '',
+        processStatus: '未处理', details: `已创建报修工单 ${wo.id}：${wo.faultType}`
+    });
+    store.auditLogs.unshift({ time: fmtDateTime(now), user: store.currentUser.name, action: `创建报修工单 ${wo.id}（${dev.displayName}）`, target: dev.id });
+    return { ok: true, wo };
+}
+
+export function dispatchWorkorder(woId, techName) {
+    const store = getStore();
+    const wo = store.workorders.find(w => w.id === woId);
+    if (!wo || wo.status !== '待派工') return null;
+    const tech = store.employees.find(e => e.name === techName && e.role === '维修工程师');
+    wo.status = '维修中';
+    wo.technician = tech ? tech.name : techName;
+    wo.techId = tech ? tech.id : '';
+    wo.dispatchTs = Date.now();
+    store.auditLogs.unshift({ time: fmtDateTime(Date.now()), user: store.currentUser.name, action: `工单 ${wo.id} 派工给 ${wo.technician}`, target: wo.deviceId });
+    return wo;
+}
+
+export function finishRepair(woId, repairNote, parts) {
+    const store = getStore();
+    const wo = store.workorders.find(w => w.id === woId);
+    if (!wo || wo.status !== '维修中') return null;
+    wo.status = '待验收';
+    wo.repairNote = repairNote || wo.repairNote;
+    wo.parts = parts || '（未更换配件）';
+    wo.finishTs = Date.now();
+    return wo;
+}
+
+// 验收：通过 → 设备恢复在线 + 关联告警闭环；退回 → 回到维修中
+export function acceptWorkorder(woId, acceptor, pass, comment) {
+    const store = getStore();
+    const wo = store.workorders.find(w => w.id === woId);
+    if (!wo || wo.status !== '待验收') return null;
+    const now = Date.now();
+    if (!pass) {
+        wo.status = '维修中';
+        wo.finishTs = 0;
+        wo.acceptNote = comment || '故障未排除，退回重修';
+        return wo;
+    }
+    wo.status = '已完成';
+    wo.acceptor = acceptor;
+    wo.acceptTs = now;
+    wo.acceptNote = comment || '复检正常，同意归档';
+    const dev = store.devices.find(d => d.id === wo.deviceId);
+    if (dev) {
+        dev.status = 'online';
+        dev.lastMaintenance = fmtDate(now);
+    }
+    store.alarms.forEach(a => {
+        if (a.device === wo.deviceName && a.status === '未处理') {
+            a.status = '已处理';
+            a.operator = `维修工程师·${wo.technician}`;
+            a.handleTime = fmtDateTime(now);
+            a.handleNote = `工单 ${wo.id} 验收通过，故障已修复`;
+        }
+    });
+    store.events.forEach(e => {
+        if (e.device === wo.deviceName && e.processStatus !== '已处理' && /设备离线|网络异常|维保报修/.test(e.type)) {
+            e.processStatus = '已处理';
+            e.handler = wo.technician;
+            e.handleTime = fmtDateTime(now);
+        }
+    });
+    store.auditLogs.unshift({ time: fmtDateTime(now), user: acceptor, action: `工单 ${wo.id} 验收通过，${wo.deviceName} 恢复在线`, target: wo.deviceId });
+    return wo;
+}
+
+// ---------- 判图员绩效考核 ----------
+export function perfStats(store) {
+    const judges = store.employees.filter(e => e.role === '判图员');
+    const dutyIds = (store.shifts.find(s => s.key === currentShiftDef().key) || {}).members || [];
+    const rows = judges.map(j => {
+        const mine = store.bags.filter(b => b.status === 'judged' && b.judgeOperatorId === j.id);
+        const danger = mine.filter(b => b.judgeResult === '违禁').length;
+        const suspect = mine.filter(b => b.judgeResult === '可疑').length;
+        const avgDelay = mine.length ? mine.reduce((s, b) => s + (b.reviewDelayMin || 0), 0) / mine.length : 0;
+        const qcList = mine.filter(b => b.qc);
+        const missed = qcList.filter(b => b.qc.result === '漏判').length;
+        const sloppy = qcList.filter(b => b.qc.result === '处置不规范').length;
+        const accuracy = qcList.length ? (qcList.length - missed - sloppy) / qcList.length * 100 : null;
+        const score = Math.max(60, Math.min(100, Math.round(
+            88 + danger * 0.4 - missed * 6 - sloppy * 2 + Math.min(6, mine.length / 12) - Math.min(4, Math.max(0, avgDelay - 30) / 25)
+        )));
+        return {
+            id: j.id, name: j.name, team: j.team, onDuty: dutyIds.includes(j.id),
+            judged: mine.length, danger, suspect,
+            avgDelay: +avgDelay.toFixed(1), qc: qcList.length, missed, sloppy,
+            accuracy: accuracy === null ? null : +accuracy.toFixed(1),
+            score, bags: mine
+        };
+    }).sort((a, b) => b.score - a.score);
+    return rows;
+}
+
 // 模拟现场持续产出：每 15 秒新过检 1~2 件 AI 标记包裹，进入判图队列
 function simulateArrival(store) {
     const machines = store.devices.filter(d => d.key === 'securityCheckMachine' && d.status === 'online');
@@ -728,6 +995,8 @@ export function getStore() {
     const alarms = makeAlarms(bags, devices, employees);
     const face = makeFaceData(passengers, devices);
     const channels = makeChannels(devices);
+    const shifts = makeShiftPlan(employees);
+    const workorders = makeWorkorders(devices, employees);
 
     const store = {
         initAt: Date.now(),
@@ -740,6 +1009,8 @@ export function getStore() {
         recognitionRecords: face.recognitionRecords,
         blacklist: [],
         channels,
+        shifts,
+        workorders,
         configs: makeConfigs(),
         auditLogs: [
             { time: fmtDateTime(Date.now() - 2 * 86400000), user: '系统管理员', action: '更新违禁品数据库至 v3.5.2', target: 'CFG-004' },

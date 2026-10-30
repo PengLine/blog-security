@@ -1,0 +1,84 @@
+<div class="module" id="workorder">
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>待派工</h3>
+                <div class="stat-value" id="woStatPending" style="color:#f56c6c;">0</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>维修中</h3>
+                <div class="stat-value" id="woStatDoing" style="color:#e6a23c;">0</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>待验收</h3>
+                <div class="stat-value" id="woStatAccept" style="color:#409eff;">0</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>已完成</h3>
+                <div class="stat-value" id="woStatDone" style="color:#67c23a;">0</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="filter-bar">
+        <div class="filter-group">
+            <span class="filter-label">工单状态：</span>
+            <select class="form-control" id="woStatusFilter">
+                <option value="">全部</option>
+                <option value="待派工">待派工</option>
+                <option value="维修中">维修中</option>
+                <option value="待验收">待验收</option>
+                <option value="已完成">已完成</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <span class="filter-label">紧急程度：</span>
+            <select class="form-control" id="woLevelFilter">
+                <option value="">全部</option>
+                <option value="紧急">紧急</option>
+                <option value="普通">普通</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <span class="filter-label">关键字：</span>
+            <input type="text" class="form-control" id="woKeyword" placeholder="工单号 / 设备 / 通道">
+        </div>
+        <div class="filter-group">
+            <button class="btn btn-primary" id="woSearchBtn">查询</button>
+            <button class="btn btn-secondary" id="woExportBtn">导出台账</button>
+        </div>
+    </div>
+
+    <div class="module-header">
+        <h2>设备维修工单</h2>
+        <div class="module-actions">
+            <button class="btn btn-success" id="woNewBtn">＋ 新建报修</button>
+        </div>
+    </div>
+
+    <div class="table-section">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>工单号</th>
+                    <th>设备</th>
+                    <th>故障描述</th>
+                    <th>级别</th>
+                    <th>状态</th>
+                    <th>报修时间</th>
+                    <th>维修工程师</th>
+                    <th>耗时/时限</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="woTableBody"></tbody>
+        </table>
+        <div class="pagination-page" id="woPagination"></div>
+    </div>
+</div>

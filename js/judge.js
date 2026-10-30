@@ -1,4 +1,4 @@
-import { getStore, judgeBag } from './db.js';
+import { getStore, judgeBag, onDutyEmployees, currentShiftDef } from './db.js';
 import { toast, openModal, kvTableHTML, timeAgo, refreshNavBadges } from './utils.js';
 
 let currentJudgeBag = null;
@@ -259,11 +259,13 @@ function loadNextJudgeImage() {
 window.initJudgeModule = function() {
     const store = getStore();
 
-    // 判图员下拉
+    // 判图员下拉：仅当班人员可选（与排班管理联动）
     const opSel = document.getElementById('judgeOperatorSelect');
     if (opSel) {
-        const judges = store.employees.filter(e => e.role === '判图员');
-        opSel.innerHTML = judges.map(e => `<option value="${e.name}">${e.name}（${e.team}）</option>`).join('');
+        const curKey = currentShiftDef().key;
+        let judges = onDutyEmployees('判图员');
+        if (!judges.length) judges = getStore().employees.filter(e => e.role === '判图员');
+        opSel.innerHTML = judges.map(e => `<option value="${e.name}">${e.name}（${e.team}·${curKey}当班）</option>`).join('');
         store.currentUser = judges[0];
         opSel.onchange = () => {
             store.currentUser = store.employees.find(e => e.name === opSel.value);

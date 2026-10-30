@@ -181,6 +181,7 @@ function loadModuleScript(navId) {
     const scriptMap = {
         dashboard: 'js/dashboard.js',
         device: 'js/device.js',
+        workorder: 'js/workorder.js',
         events: 'js/events.js',
         judge: 'js/judge.js',
         alarm: 'js/alarm.js',
@@ -188,6 +189,8 @@ function loadModuleScript(navId) {
         passage: 'js/passage.js',
         face: 'js/face.js',
         handoff: 'js/handoff.js',
+        schedule: 'js/schedule.js',
+        performance: 'js/performance.js',
         config: 'js/config.js'
     };
     
@@ -564,7 +567,8 @@ export function refreshNavBadges() {
     const sets = [
         { nav: 'alarm', count: store.alarms.filter(a => a.status === '未处理').length },
         { nav: 'judge', count: store.bags.filter(b => b.status === 'pending').length },
-        { nav: 'handoff', count: store.handoffs.filter(h => h.status !== '已完成').length }
+        { nav: 'handoff', count: store.handoffs.filter(h => h.status !== '已完成').length },
+        { nav: 'workorder', count: store.workorders.filter(w => w.status !== '已完成').length }
     ];
     sets.forEach(s => {
         const el = document.querySelector(`.nav-item[data-nav="${s.nav}"] .nav-badge`);
