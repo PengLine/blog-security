@@ -1,4 +1,4 @@
-import { getStore, handleAlarmById } from './db.js';
+import { getStore, disposeAlarm, ALARM_DISPOSITIONS, onDutyEmployees } from './db.js';
 import { paginateData, toast, openModal, kvTableHTML, timeAgo, refreshNavBadges } from './utils.js';
 
 // 告警级别映射
@@ -49,7 +49,8 @@ function renderAlarms(alarms) {
             <td><span class="alarm-level ${level.class}">${level.name}</span></td>
             <td>${alarm.content}</td>
             <td>
-                <span class="status-tag ${alarm.status === '已处理' ? 'status-normal' : 'status-danger'}">${alarm.status}</span>
+                <span class="status-tag ${alarm.status === '已处理' ? 'status-normal' : (alarm.status === '已忽略' ? 'status-warning' : 'status-danger')}">${alarm.status}</span>
+                ${alarm.dispositionName ? `<div style="font-size:11px;color:#909399">${alarm.dispositionName}</div>` : ''}
                 ${alarm.operator ? `<div style="font-size:11px;color:#909399">${alarm.operator}</div>` : ''}
             </td>
             <td>
@@ -113,33 +114,89 @@ function updateAlarmStats() {
     set('warningAlarms', all.filter(a => a.level === 'warning').length);
     set('infoAlarms', all.filter(a => a.level === 'info').length);
     set('unhandledAlarms', all.filter(a => a.status === '未处理').length);
+    set('ignoredAlarms', all.filter(a => a.status === '已忽略').length);
 }
 
-// 处理告警（表单弹窗，落库）
+// 当前当班队长
+function captainName() {
+    const list = onDutyEmployees('值班队长');
+    return list.length ? list[0].name : '王振宇';
+}
+
+// 告警可联动对象：关联包裹 / 匹配设备
+function alarmTargets(alarm, store) {
+    const bag = alarm.refId ? store.bags.find(b => b.id === alarm.refId) : null;
+    const dev = store.devices.find(d => d.displayName === alarm.device || d.name === alarm.device || d.location === alarm.device) || null;
+    return { bag, dev };
+}
+
+// 处置告警：通过 / 忽略 / 转复检 / 转开包 / 转维保
 function showHandleForm(alarmId) {
     const store = getStore();
     const alarm = store.alarms.find(a => a.id === alarmId);
     if (!alarm) return;
+    if (alarm.status !== '未处理') { toast(`该告警当前为「${alarm.status}」，无需重复处置`, 'info'); return; }
+    const { bag, dev } = alarmTargets(alarm, store);
+    const captain = captainName();
+    const usable = ALARM_DISPOSITIONS.filter(d => (!d.needBag || (bag && !bag.seized)) && (!d.needDevice || dev));
     openModal({
-        title: `处理告警 - ${alarm.id}`,
-        width: 540,
+        title: `处置告警 - ${alarm.id}`,
+        width: 640,
         bodyHTML: `
-            <div class="form-grid">
-                <label>告警内容</label><input class="form-control" value="${alarm.content}" disabled>
-                <label>级别</label><input class="form-control" value="${alarmLevelMap[alarm.level].name}级 · ${alarm.device}" disabled>
-                <label>处理人</label><input class="form-control" value="值班队长·${store.currentUser.name}" disabled>
-                <label>处理措施</label><textarea class="form-control" id="almHandleNote" rows="3" placeholder="如：已现场确认、已通知厂商、误报已恢复"></textarea>
+            <div class="disp-summary">
+                <div class="disp-summary-main">
+                    <span class="alarm-level ${alarmLevelMap[alarm.level].class}">${alarmLevelMap[alarm.level].name}</span>
+                    <b>${alarm.content}</b>
+                </div>
+                <div class="disp-summary-sub">${alarm.device} · ${alarm.type} · ${alarm.time}${bag ? ` · 关联包裹 ${bag.id}` : ''}${dev ? ` · 匹配设备 ${dev.displayName}` : ''}</div>
+            </div>
+            <div class="disp-grid">
+                ${usable.map((d, i) => `
+                    <label class="disp-option">
+                        <input type="radio" name="almDisp" value="${d.key}" ${i === 0 ? 'checked' : ''}>
+                        <span class="disp-label">${d.label}</span>
+                        <small>${d.desc}</small>
+                    </label>`).join('')}
+            </div>
+            <div class="form-grid" style="margin-top:14px">
+                <label>处置人</label><input class="form-control" value="值班队长·${captain}" disabled>
+                <label>处置说明</label><textarea class="form-control" id="almHandleNote" rows="2" placeholder="如：开包检查为化妆品误报；或安抚旅客后放行"></textarea>
             </div>`,
         actions: [{
-            label: '确认处理', className: 'btn-success',
+            label: '确认处置', className: 'btn-success',
             onClick: (close, mask) => {
-                const note = mask.querySelector('#almHandleNote').value;
-                handleAlarmById(alarm.id, store.currentUser.name, note);
-                toast(`告警 ${alarm.id} 已处理闭环`, 'success');
+                const checked = mask.querySelector('input[name="almDisp"]:checked');
+                if (!checked) { toast('请选择处置方式', 'warning'); return; }
+                const note = mask.querySelector('#almHandleNote').value.trim();
+                const r = disposeAlarm(alarm.id, checked.value, captain, note);
+                if (!r.ok) { toast(r.msg, 'warning'); return; }
                 close();
                 applyFilters();
+                showDisposeResult(r);
             }
         }]
+    });
+}
+
+// 处置结果回显：转复检/转维保可直接跳转对应模块
+function showDisposeResult(r) {
+    const actions = [];
+    if (r.target === 'recheck') {
+        actions.push({ label: '前往复检开包', className: 'btn-primary', onClick: (close) => { close(); document.querySelector('.nav-item[data-nav="recheck"]').click(); } });
+    }
+    if (r.order) {
+        actions.push({ label: '查看维修工单', className: 'btn-primary', onClick: (close) => { close(); document.querySelector('.nav-item[data-nav="workorder"]').click(); } });
+    }
+    openModal({
+        title: '处置完成',
+        width: 500,
+        bodyHTML: `
+            <div class="disp-result">
+                <div class="disp-result-icon">✓</div>
+                <div><b>${r.alarm.id}</b> 已按「${r.alarm.dispositionName}」闭环</div>
+                <div class="disp-result-note">${r.result}${r.alarm.handleNote ? `<br>说明：${r.alarm.handleNote}` : ''}</div>
+            </div>`,
+        actions
     });
 }
 
@@ -159,9 +216,10 @@ function viewAlarmDetail(alarmId) {
             ['告警级别', alarmLevelMap[alarm.level].name],
             ['告警内容', alarm.content],
             ['补充说明', alarm.details],
-            ['处理状态', alarm.status],
+            ['处理状态', `${alarm.status}${alarm.dispositionName ? `（${alarm.dispositionName}）` : ''}`],
             ['处理人 / 时间', alarm.operator ? `${alarm.operator} · ${alarm.handleTime}` : ''],
-            ['处理措施', alarm.handleNote || (alarm.status === '已处理' ? '现场处置完毕' : '')],
+            ['处置结果', alarm.handleResult || ''],
+            ['处置说明', alarm.handleNote || ''],
             ['关联包裹', bag ? `${bag.id}（${bag.ownerName}）` : ''],
             ['关联交接单', ho ? `${ho.id}（${ho.status}）` : '']
         ]),
@@ -200,29 +258,42 @@ function setupSelectAll() {
     };
 }
 
-// 设置批量处理功能（真实落库）
+// 设置批量处置：仅支持批量通过 / 批量忽略（复检、开包、维保需逐条确认）
 function setupBatchHandle() {
     const batchHandleBtn = document.getElementById('batchHandleBtn');
     if (!batchHandleBtn) return;
     batchHandleBtn.onclick = () => {
         const ids = Array.from(document.querySelectorAll('.alarm-checkbox:checked')).map(cb => cb.dataset.id);
-        if (ids.length === 0) { toast('请先勾选要处理的告警', 'warning'); return; }
-        const store = getStore();
+        if (ids.length === 0) { toast('请先勾选要处置的告警', 'warning'); return; }
+        const captain = captainName();
         openModal({
-            title: `批量处理 ${ids.length} 条告警`,
-            width: 480,
+            title: `批量处置 ${ids.length} 条告警`,
+            width: 520,
             bodyHTML: `
-                <div class="form-grid">
-                    <label>处理人</label><input class="form-control" value="值班队长·${store.currentUser.name}" disabled>
-                    <label>统一意见</label><textarea class="form-control" id="almBatchNote" rows="2" placeholder="批量处理措施，如：早班巡检问题已集中整改"></textarea>
+                <div class="disp-grid disp-grid-compact">
+                    <label class="disp-option">
+                        <input type="radio" name="almBatchDisp" value="pass" checked>
+                        <span class="disp-label">通过放行</span>
+                        <small>批量核实无风险，直接归档</small>
+                    </label>
+                    <label class="disp-option">
+                        <input type="radio" name="almBatchDisp" value="ignore">
+                        <span class="disp-label">忽略（误报）</span>
+                        <small>批量标记为误报，计入误报统计</small>
+                    </label>
+                </div>
+                <div class="form-grid" style="margin-top:12px">
+                    <label>处置人</label><input class="form-control" value="值班队长·${captain}" disabled>
+                    <label>统一说明</label><textarea class="form-control" id="almBatchNote" rows="2" placeholder="如：早班巡检问题已集中整改"></textarea>
                 </div>`,
             actions: [{
-                label: '确认处理', className: 'btn-success',
+                label: '确认处置', className: 'btn-success',
                 onClick: (close, mask) => {
-                    const note = mask.querySelector('#almBatchNote').value;
-                    let count = 0;
-                    ids.forEach(id => { if (handleAlarmById(id, store.currentUser.name, note)) count++; });
-                    toast(`批量处理完成：${count} 条告警已闭环`, 'success');
+                    const key = mask.querySelector('input[name="almBatchDisp"]:checked').value;
+                    const note = mask.querySelector('#almBatchNote').value.trim();
+                    let ok = 0, skip = 0;
+                    ids.forEach(id => { const r = disposeAlarm(id, key, captain, note); r.ok ? ok++ : skip++; });
+                    toast(`批量处置完成：成功 ${ok} 条${skip ? `，跳过 ${skip} 条` : ''}`, ok ? 'success' : 'warning');
                     close();
                     applyFilters();
                 }

@@ -15,8 +15,9 @@
                 <label class="filter-label">处理状态：</label>
                 <select id="alarmStatusFilter" class="form-control">
                     <option value="">全部</option>
-                    <option value="已处理">已处理</option>
                     <option value="未处理">未处理</option>
+                    <option value="已处理">已处理</option>
+                    <option value="已忽略">已忽略</option>
                 </select>
             </div>
             <button class="btn btn-primary" id="filterBtn">筛选</button>
@@ -24,7 +25,7 @@
             <button class="btn btn-danger" id="batchHandleBtn">批量处理</button>
         </div>
     </div>
-    
+
     <div class="stats-grid">
         <div class="stat-card">
             <div class="stat-content">
@@ -56,8 +57,14 @@
                 <div class="stat-value" id="unhandledAlarms">0</div>
             </div>
         </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>误报忽略</h3>
+                <div class="stat-value" id="ignoredAlarms">0</div>
+            </div>
+        </div>
     </div>
-    
+
     <div class="table-section">
         <table class="data-table">
             <thead>

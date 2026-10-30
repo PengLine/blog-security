@@ -1,0 +1,278 @@
+<div class="module" id="eventflow">
+    <div class="module-header">
+        <h2>事件处理</h2>
+        <div class="module-actions">
+            <button class="btn btn-success" id="evtTickBtn">推进一轮调度</button>
+            <button class="btn btn-primary" id="evtIngestBtn">模拟设备上报</button>
+            <button class="btn btn-secondary" id="evtExportBtn">导出事件明细</button>
+        </div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>原始事件</h3>
+                <div class="stat-value" id="evStatRaw">0</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>缓存富化</h3>
+                <div class="stat-value" id="evStatEnriched" style="color:#67c23a;">0</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>双视角合并</h3>
+                <div class="stat-value" id="evStatMerged">0</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>人脸绑定</h3>
+                <div class="stat-value" id="evStatFace" style="color:#409eff;">0</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>判图分流</h3>
+                <div class="stat-value" id="evStatJudge" style="color:#722ed1;">0</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>待处理 / 丢弃</h3>
+                <div class="stat-value" id="evStatPending" style="color:#e6a23c;">0</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-nav">
+        <div class="tab-nav-item active" data-tab="pipeline">处理流水线</div>
+        <div class="tab-nav-item" data-tab="binding">绑定缓存</div>
+        <div class="tab-nav-item" data-tab="events">事件明细</div>
+        <div class="tab-nav-item" data-tab="rules">告警规则</div>
+        <div class="tab-nav-item" data-tab="situation">态势覆盖</div>
+    </div>
+
+    <!-- 处理流水线 -->
+    <div class="tab-content active" id="pipeline">
+        <div class="pipe-flow">
+            设备上报 → <b>缓存富化</b>（rule:* / dev:*）→ <b>双视角绑定</b>（10s 窗口 + 延迟队列）→ <b>人脸绑定</b>（6s × 20 次）→ <b>判图分流</b>（集中-高级 /
+            集中-正常 / 本地）→ 事件落地
+        </div>
+
+        <div class="stage-grid" id="evtStages"></div>
+
+        <div class="sub-title">调度状态</div>
+        <div class="disp-summary" id="evtTickBox">
+            <div class="disp-summary-main"><span>引擎时钟</span><b id="evtClock">+0s</b>
+                <span style="color:#909399;">｜虚拟时钟每轮 +10s，用于演示延迟队列与人脸轮询推进</span>
+            </div>
+            <div class="disp-summary-sub" id="evtTickResult">尚未调度，点击「推进一轮调度」查看富化、绑定与判图结果。</div>
+        </div>
+
+        <div class="sub-title">处理日志（审计留痕）</div>
+        <div class="table-section">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th style="width:170px;">时间</th>
+                        <th style="width:170px;">操作方</th>
+                        <th>动作</th>
+                        <th style="width:170px;">对象</th>
+                    </tr>
+                </thead>
+                <tbody id="evtLogBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 绑定缓存 -->
+    <div class="tab-content" id="binding">
+        <div class="pipe-flow">
+            双视角：同一通道 10s 内的两次视角事件合并违禁品；缺失第一视角时写入 <b>Redis 视角缓存</b> 并投递 <b>10s 延迟队列</b>，过期后回查数据库。
+        </div>
+
+        <div class="sub-title">Redis 视角缓存（redis:view:*）</div>
+        <div class="table-section">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>缓存键</th>
+                        <th style="width:90px;">通道</th>
+                        <th>视角 ID</th>
+                        <th>关联事件</th>
+                        <th style="width:90px;">TTL</th>
+                        <th style="width:170px;">状态</th>
+                    </tr>
+                </thead>
+                <tbody id="evtViewCacheBody"></tbody>
+            </table>
+        </div>
+
+        <div class="sub-title">延迟队列（10s 过期 → 回查第一视角）</div>
+        <div class="table-section">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>队列 ID</th>
+                        <th>关联事件</th>
+                        <th style="width:90px;">通道</th>
+                        <th>视角 ID</th>
+                        <th style="width:100px;">数据库有第一视角</th>
+                        <th style="width:110px;">剩余</th>
+                        <th style="width:130px;">状态</th>
+                        <th style="width:120px;">结果</th>
+                    </tr>
+                </thead>
+                <tbody id="evtDelayBody"></tbody>
+            </table>
+        </div>
+
+        <div class="sub-title">人脸轮询队列（每 6s 一次，最多 20 次 = 2 分钟）</div>
+        <div class="table-section">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>队列 ID</th>
+                        <th>关联事件</th>
+                        <th>包裹</th>
+                        <th style="width:110px;">旅客</th>
+                        <th style="width:110px;">轮询次数</th>
+                        <th style="width:110px;">下次轮询</th>
+                        <th style="width:130px;">状态</th>
+                        <th>命中人脸 EventId</th>
+                    </tr>
+                </thead>
+                <tbody id="evtFaceBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 事件明细 -->
+    <div class="tab-content" id="events">
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label class="filter-label">来源：</label>
+                <select class="form-control" id="evtSourceFilter">
+                    <option value="">全部</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">告警等级：</label>
+                <select class="form-control" id="evtLevelFilter">
+                    <option value="">全部</option>
+                    <option value="danger">危险</option>
+                    <option value="warning">警告</option>
+                    <option value="info">正常</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">处理状态：</label>
+                <select class="form-control" id="evtStatusFilter">
+                    <option value="">全部</option>
+                    <option value="待处理">待处理</option>
+                    <option value="已处理">已处理</option>
+                    <option value="已丢弃">已丢弃</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">关键字：</label>
+                <input type="text" class="form-control" id="evtKeyword" placeholder="事件ID / 设备 / 通道 / 包裹"
+                    style="width:200px;">
+            </div>
+            <div class="filter-group">
+                <span class="filter-label" id="evtEventStat"></span>
+            </div>
+        </div>
+
+        <div class="table-section">
+            <div class="table-title">事件明细（富化后的告警等级与站点通道）</div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>事件ID</th>
+                        <th style="width:150px;">时间</th>
+                        <th style="width:80px;">来源</th>
+                        <th>设备</th>
+                        <th style="width:150px;">站点 / 通道</th>
+                        <th style="width:130px;">事件类型</th>
+                        <th style="width:70px;">等级</th>
+                        <th style="width:150px;">绑定</th>
+                        <th style="width:120px;">判图</th>
+                        <th style="width:80px;">状态</th>
+                        <th style="width:70px;">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="evtRawBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 告警规则 -->
+    <div class="tab-content" id="rules">
+        <div class="pipe-flow">
+            告警配置与设备信息均以缓存方式下发：<b>rule:{key}</b>（TTL 300s）决定事件类型与告警等级，<b>dev:{id}</b>（TTL 600s）提供站点、通道与设备类别。
+        </div>
+
+        <div class="sub-title">告警配置缓存（rule:*）</div>
+        <div class="table-section">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th style="width:120px;">规则键</th>
+                        <th>缓存键</th>
+                        <th style="width:80px;">TTL</th>
+                        <th style="width:140px;">事件类型</th>
+                        <th style="width:80px;">来源</th>
+                        <th style="width:70px;">等级</th>
+                        <th style="width:110px;">绑定方式</th>
+                        <th style="width:110px;">判图模式</th>
+                        <th>说明</th>
+                    </tr>
+                </thead>
+                <tbody id="evtRulesBody"></tbody>
+            </table>
+        </div>
+
+        <div class="sub-title">设备信息缓存（dev:*）</div>
+        <div class="table-section">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>缓存键</th>
+                        <th>设备</th>
+                        <th style="width:100px;">通道</th>
+                        <th style="width:170px;">站点</th>
+                        <th style="width:140px;">设备类别</th>
+                        <th style="width:130px;">IP</th>
+                        <th style="width:90px;">状态</th>
+                    </tr>
+                </thead>
+                <tbody id="evtDeviceCacheBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 态势覆盖 -->
+    <div class="tab-content" id="situation">
+        <div class="sub-title">态势预警（当日增长 / 连续日增长阈值）</div>
+        <div class="situation-grid" id="evtSituation"></div>
+
+        <div class="sub-title">设备事件覆盖</div>
+        <div class="table-section">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th style="width:170px;">设备类别</th>
+                        <th>上报事件</th>
+                        <th style="width:110px;">事件数</th>
+                        <th style="width:150px;">处理方式</th>
+                    </tr>
+                </thead>
+                <tbody id="evtCoverageBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>

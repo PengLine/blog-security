@@ -2,6 +2,7 @@
     <div class="module-header">
         <h2>数据中台</h2>
         <div class="module-actions">
+            <button class="btn btn-success" id="dcQualityBtn">数据质量巡检</button>
             <button class="btn btn-primary" id="dcIngestBtn">模拟一轮设备上报</button>
             <button class="btn btn-secondary" id="dcExportBtn">导出接入台账</button>
         </div>
@@ -10,14 +11,14 @@
     <div class="stats-grid">
         <div class="stat-card">
             <div class="stat-content">
-                <h3>接入设备</h3>
-                <div class="stat-value" id="dcStatSources">0</div>
+                <h3>主题域</h3>
+                <div class="stat-value" id="dcStatDomains">0</div>
             </div>
         </div>
         <div class="stat-card">
             <div class="stat-content">
-                <h3>接入在线率</h3>
-                <div class="stat-value" id="dcStatOnline" style="color:#67c23a;">0%</div>
+                <h3>接入源</h3>
+                <div class="stat-value" id="dcStatSources">0</div>
             </div>
         </div>
         <div class="stat-card">
@@ -28,33 +29,67 @@
         </div>
         <div class="stat-card">
             <div class="stat-content">
-                <h3>协议种类</h3>
-                <div class="stat-value" id="dcStatProtocols">0</div>
+                <h3>数仓表</h3>
+                <div class="stat-value" id="dcStatTables">0</div>
             </div>
         </div>
         <div class="stat-card">
             <div class="stat-content">
-                <h3>平均链路时延</h3>
-                <div class="stat-value" id="dcStatLatency">0ms</div>
+                <h3>数据服务</h3>
+                <div class="stat-value" id="dcStatServices" style="color:#722ed1;">0</div>
             </div>
         </div>
         <div class="stat-card">
             <div class="stat-content">
-                <h3>启用订阅</h3>
-                <div class="stat-value" id="dcStatSubs" style="color:#e6a23c;">0</div>
+                <h3>质量通过率</h3>
+                <div class="stat-value" id="dcStatQuality" style="color:#67c23a;">0%</div>
             </div>
         </div>
     </div>
 
     <div class="tab-nav">
-        <div class="tab-nav-item active" data-tab="collect">采集接入</div>
-        <div class="tab-nav-item" data-tab="pipeline">数据链路</div>
-        <div class="tab-nav-item" data-tab="storage">分级存储</div>
-        <div class="tab-nav-item" data-tab="subscribe">订阅分发</div>
+        <div class="tab-nav-item active" data-tab="arch">架构总览</div>
+        <div class="tab-nav-item" data-tab="collect">采集接入</div>
+        <div class="tab-nav-item" data-tab="pipeline">链路处理</div>
+        <div class="tab-nav-item" data-tab="asset">数据资产</div>
+        <div class="tab-nav-item" data-tab="service">服务订阅</div>
+        <div class="tab-nav-item" data-tab="govern">治理运维</div>
+    </div>
+
+    <!-- 架构总览 -->
+    <div class="tab-content active" id="arch">
+        <div class="arch-board" id="dcArch"></div>
+        <div class="arch-gov">
+            <b>横向能力</b>
+            <span class="arch-chip">数据治理：质量规则 / 血缘追溯 / 标准规范</span>
+            <span class="arch-chip">安全合规：四级分级 / 字段脱敏 / 全量审计</span>
+            <span class="arch-chip">运维监控：SLA 看板 / 容量水位 / 死信告警</span>
+        </div>
+
+        <div class="sub-title">架构设计原则</div>
+        <div class="principle-grid" id="dcPrinciples"></div>
+
+        <div class="sub-title">主题域建模</div>
+        <div class="domain-grid" id="dcDomains"></div>
+
+        <div class="sub-title">技术选型与高可用</div>
+        <div class="table-section">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>组件</th>
+                        <th>承担角色</th>
+                        <th>部署规格</th>
+                        <th>高可用策略</th>
+                    </tr>
+                </thead>
+                <tbody id="dcTechBody"></tbody>
+            </table>
+        </div>
     </div>
 
     <!-- 采集接入 -->
-    <div class="tab-content active" id="collect">
+    <div class="tab-content" id="collect">
         <div class="filter-bar">
             <div class="filter-group">
                 <label class="filter-label">协议：</label>
@@ -106,7 +141,7 @@
         </div>
     </div>
 
-    <!-- 数据链路 -->
+    <!-- 链路处理 -->
     <div class="tab-content" id="pipeline">
         <div class="pipe-flow">
             <b>设备侧</b> 多协议采集 → <b>采集接入</b> → <b>解析校验</b> → <b>清洗标准化</b> → <b>分级入库</b> → <b>订阅分发</b> → <span
@@ -136,37 +171,77 @@
         </div>
     </div>
 
-    <!-- 分级存储 -->
-    <div class="tab-content" id="storage">
+    <!-- 数据资产 -->
+    <div class="tab-content" id="asset">
+        <div class="layer-stats" id="dcLayerStats"></div>
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label class="filter-label">数仓分层：</label>
+                <select class="form-control" id="dcLayerFilter">
+                    <option value="">全部</option>
+                    <option value="ODS">ODS 原始层</option>
+                    <option value="DWD">DWD 明细层</option>
+                    <option value="DWS">DWS 汇总层</option>
+                    <option value="ADS">ADS 应用层</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">主题域：</label>
+                <select class="form-control" id="dcDomainFilter">
+                    <option value="">全部</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <span class="filter-label" id="dcAssetStat"></span>
+            </div>
+        </div>
         <div class="table-section">
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th>存储编号</th>
-                        <th>存储层级</th>
-                        <th>引擎</th>
-                        <th>承载数据</th>
-                        <th>容量</th>
-                        <th>使用率</th>
-                        <th>保留期</th>
-                        <th>写入速率</th>
+                        <th>表编号</th>
+                        <th>表名 / 中文名</th>
+                        <th>分层</th>
+                        <th>主题域</th>
+                        <th>行数</th>
+                        <th>日增量</th>
+                        <th>更新频率</th>
+                        <th>分区键</th>
+                        <th>负责人</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="dcTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 服务订阅 -->
+    <div class="tab-content" id="service">
+        <div class="sub-title">数据服务目录（统一出口）</div>
+        <div class="table-section">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>服务编号</th>
+                        <th>服务名称</th>
+                        <th>接口</th>
+                        <th>方式</th>
+                        <th>主题域</th>
+                        <th>源表</th>
+                        <th>消费方</th>
+                        <th>QPS</th>
+                        <th>P99</th>
+                        <th>SLA</th>
+                        <th>鉴权方式</th>
                         <th>状态</th>
                     </tr>
                 </thead>
-                <tbody id="storageTableBody"></tbody>
+                <tbody id="dcServiceBody"></tbody>
             </table>
         </div>
-        <div class="sub-title">分层说明</div>
-        <p style="font-size:12px;color:#909399;line-height:1.9;">
-            热数据（实时缓存 Redis）承接判图/告警队列，保证毫秒级响应；温数据（时序库 InfluxDB + 关系库 PostgreSQL）
-            承载设备遥测与业务台账；冷数据（对象存储 MinIO）归档 X 光原图、开包影像与抓拍；
-            消息总线 Kafka 负责链路解耦、削峰与 7 天回放能力。
-        </p>
-    </div>
 
-    <!-- 订阅分发 -->
-    <div class="tab-content" id="subscribe">
-        <div class="filter-bar">
+        <div class="filter-bar" style="margin-top:20px;">
             <div class="filter-group">
                 <button class="btn btn-success" id="dcNewSubBtn">＋ 新建订阅</button>
             </div>
@@ -191,6 +266,61 @@
                     </tr>
                 </thead>
                 <tbody id="dcSubBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 治理运维 -->
+    <div class="tab-content" id="govern">
+        <div class="sub-title">数据质量规则 <span class="filter-label" id="dcQualityStat"></span></div>
+        <div class="table-section">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>规则编号</th>
+                        <th>规则名称</th>
+                        <th>校验对象</th>
+                        <th>规则类型</th>
+                        <th>通过率</th>
+                        <th>阈值</th>
+                        <th>最近检查</th>
+                        <th>状态</th>
+                        <th>责任人</th>
+                    </tr>
+                </thead>
+                <tbody id="dcQualityBody"></tbody>
+            </table>
+        </div>
+
+        <div class="sub-title">集群容量水位</div>
+        <div class="cap-grid" id="dcCapacity"></div>
+
+        <div class="sub-title">数据分级与脱敏策略</div>
+        <div class="table-section">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>分级</th>
+                        <th>覆盖数据</th>
+                        <th>访问与脱敏策略</th>
+                    </tr>
+                </thead>
+                <tbody id="dcSecurityBody"></tbody>
+            </table>
+        </div>
+
+        <div class="sub-title">最近数据审计</div>
+        <div class="table-section">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>时间</th>
+                        <th>操作人</th>
+                        <th>动作</th>
+                        <th>对象</th>
+                    </tr>
+                </thead>
+                <tbody id="dcAuditBody"></tbody>
             </table>
         </div>
     </div>

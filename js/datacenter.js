@@ -1,4 +1,7 @@
-import { getStore, addSubscription, toggleSubscription, simulateIngest } from './db.js';
+import {
+    getStore, addSubscription, toggleSubscription, simulateIngest, runQualityCheck,
+    DC_LAYERS, DC_DOMAINS, DC_TECH_STACK, DC_CAPACITY, DC_SECURITY_LEVELS
+} from './db.js';
 import { toast, openModal, kvTableHTML, exportCSV, drawChart, paginateData, timeAgo, refreshNavBadges } from './utils.js';
 
 let sourcePage = 1;
@@ -8,6 +11,24 @@ let filteredSources = [];
 const fmtNum = n => Number(n).toLocaleString('zh-CN');
 
 const STATUS_TAG = { '在线': 'status-normal', '重连中': 'status-warning', '离线': 'status-danger' };
+
+// 数仓分层元信息：ODS 贴源 → DWD 明细 → DWS 汇总 → ADS 应用
+const LAYER_META = {
+    ODS: { name: 'ODS 原始层', desc: '贴源接入，保留原始报文', color: '#409eff' },
+    DWD: { name: 'DWD 明细层', desc: '清洗标准化后的业务明细', color: '#67c23a' },
+    DWS: { name: 'DWS 汇总层', desc: '按主题与时间粒度轻聚合', color: '#e6a23c' },
+    ADS: { name: 'ADS 应用层', desc: '面向场景的指标与应用表', color: '#f56c6c' }
+};
+
+// 架构设计原则：解释“为什么这样分层”
+const PRINCIPLES = [
+    { t: '分层解耦', d: '采集 / 处理 / 存储 / 服务职责单一，新增设备协议只改接入层' },
+    { t: '主题域建模', d: '按旅客、包裹、图像、设备、告警、运营划分主题域，指标口径统一' },
+    { t: '流批一体', d: '实时链路与离线补数共用同一套表模型与 SQL，避免双套口径' },
+    { t: '湖仓分层', d: 'ODS → DWD → DWS → ADS 逐层收敛，任一指标可追溯到原始报文' },
+    { t: '服务化共享', d: '消费方只通过数据服务与订阅取数，禁止直连库表，便于限流与审计' },
+    { t: '治理内建', d: '质量规则、血缘、分级脱敏随链路自动采集，不做事后补录' }
+];
 
 function initTabs() {
     const navs = document.querySelectorAll('#datacenter .tab-nav-item');
@@ -27,16 +48,72 @@ function initTabs() {
 
 function renderStats(store) {
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-    const online = store.dataSources.filter(s => s.status === '在线').length;
     const rows = store.dataSources.reduce((s, x) => s + x.todayRows, 0);
+    const quality = store.qualityRules.reduce((s, r) => s + r.passRate, 0) / store.qualityRules.length;
+    set('dcStatDomains', DC_DOMAINS.length);
     set('dcStatSources', store.dataSources.length);
-    set('dcStatOnline', store.dataSources.length ? (online / store.dataSources.length * 100).toFixed(1) + '%' : '-');
     set('dcStatRows', fmtNum(rows));
-    set('dcStatProtocols', new Set(store.dataSources.map(s => s.protocol)).size);
-    set('dcStatLatency', Math.round(store.pipelines.reduce((s, p) => s + p.latencyMs, 0) / store.pipelines.length) + 'ms');
-    set('dcStatSubs', store.subscriptions.filter(s => s.status === '启用').length);
+    set('dcStatTables', store.warehouseTables.length);
+    set('dcStatServices', store.dataServices.length);
+    set('dcStatQuality', quality.toFixed(2) + '%');
 }
 
+// ---------- 架构总览：六层架构 + 主题域 + 技术选型 ----------
+function renderArch() {
+    const wrap = document.getElementById('dcArch');
+    if (!wrap) return;
+    wrap.innerHTML = DC_LAYERS.map((l, i) => `
+        <div class="arch-layer">
+            <div class="arch-layer-name">
+                <span class="arch-index">L${i + 1}</span>
+                <b>${l.name}</b>
+                <small>${l.sub}</small>
+            </div>
+            <div class="arch-layer-body">
+                <div class="arch-chips">${l.items.map(x => `<span class="arch-chip">${x}</span>`).join('')}</div>
+                <div class="arch-meta"><span>${l.standard}</span><span class="arch-note">${l.note}</span></div>
+            </div>
+        </div>
+        ${i < DC_LAYERS.length - 1 ? '<div class="arch-arrow">↓</div>' : ''}`).join('');
+}
+
+function renderDomains(store) {
+    const principles = document.getElementById('dcPrinciples');
+    if (principles) {
+        principles.innerHTML = PRINCIPLES.map(p => `
+            <div class="principle-card">
+                <b>${p.t}</b>
+                <small>${p.d}</small>
+            </div>`).join('');
+    }
+
+    const wrap = document.getElementById('dcDomains');
+    if (!wrap) return;
+    wrap.innerHTML = DC_DOMAINS.map(d => {
+        const owned = store.warehouseTables.filter(t => t.domain === d.name).length;
+        return `
+            <div class="domain-card">
+                <div class="domain-head"><b>${d.name}</b><span class="chip chip-info">${owned} 张表</span></div>
+                <div class="domain-entity">${d.entities}</div>
+                <div class="domain-tables">${d.tables.map(t => `<span class="arch-chip">${t}</span>`).join('')}</div>
+                <div class="domain-owner">责任人：${d.owner}</div>
+            </div>`;
+    }).join('');
+}
+
+function renderTechStack() {
+    const tbody = document.getElementById('dcTechBody');
+    if (!tbody) return;
+    tbody.innerHTML = DC_TECH_STACK.map(t => `
+        <tr>
+            <td><b>${t.component}</b></td>
+            <td>${t.role}</td>
+            <td style="font-size:12px;color:#c0c4cc;">${t.spec}</td>
+            <td style="font-size:12px;color:#909399;">${t.ha}</td>
+        </tr>`).join('');
+}
+
+// ---------- 采集接入 ----------
 function renderCharts() {
     const collect = document.getElementById('collect');
     if (!collect || !collect.classList.contains('active')) return;
@@ -107,6 +184,7 @@ function renderSources() {
     }
 }
 
+// ---------- 链路处理 ----------
 function renderPipelines(store) {
     const wrap = document.getElementById('pipeCards');
     if (wrap) {
@@ -163,19 +241,111 @@ function renderPipelines(store) {
     });
 }
 
-function renderStorages(store) {
-    const tbody = document.getElementById('storageTableBody');
+// ---------- 数据资产：分层统计 + 表清单 + 血缘 ----------
+function renderLayerStats(store) {
+    const wrap = document.getElementById('dcLayerStats');
+    if (!wrap) return;
+    wrap.innerHTML = Object.keys(LAYER_META).map(layer => {
+        const meta = LAYER_META[layer];
+        const list = store.warehouseTables.filter(t => t.layer === layer);
+        const rows = list.reduce((s, t) => s + t.rows, 0);
+        return `
+            <div class="layer-stat">
+                <span class="layer-tag" style="color:${meta.color};border-color:${meta.color};">${layer}</span>
+                <b>${list.length} 张表</b>
+                <div class="layer-rows">${fmtNum(rows)} 行</div>
+                <small>${meta.desc}</small>
+            </div>`;
+    }).join('');
+}
+
+function renderAssets(store) {
+    renderLayerStats(store);
+    const layer = document.getElementById('dcLayerFilter').value;
+    const domain = document.getElementById('dcDomainFilter').value;
+    const list = store.warehouseTables.filter(t => (!layer || t.layer === layer) && (!domain || t.domain === domain));
+    const stat = document.getElementById('dcAssetStat');
+    if (stat) stat.textContent = `表 ${list.length} / ${store.warehouseTables.length} 张`;
+
+    const tbody = document.getElementById('dcTableBody');
     if (!tbody) return;
-    tbody.innerHTML = store.storages.map(s => `
+    tbody.innerHTML = list.map(t => `
+        <tr>
+            <td>${t.id}</td>
+            <td><b style="color:#e6f2ff;">${t.table}</b><div style="font-size:11px;color:#909399;">${t.cn}</div></td>
+            <td><span class="chip chip-info">${t.layer}</span></td>
+            <td>${t.domain}</td>
+            <td>${fmtNum(t.rows)}</td>
+            <td style="font-size:12px;color:#67c23a;">${t.growth}</td>
+            <td>${t.update}</td>
+            <td style="font-size:12px;color:#909399;">${t.partition}</td>
+            <td>${t.owner}</td>
+            <td><button class="btn btn-secondary" data-lineage="${t.table}">血缘</button></td>
+        </tr>`).join('') || '<tr><td colspan="10" style="text-align:center;color:#909399;">无匹配数据表</td></tr>';
+
+    tbody.querySelectorAll('[data-lineage]').forEach(btn => btn.onclick = () => showLineage(btn.dataset.lineage));
+}
+
+// 血缘链路：上游 → 当前表 → 下游表 / 数据服务
+function showLineage(tableName) {
+    const store = getStore();
+    const t = store.warehouseTables.find(x => x.table === tableName);
+    if (!t) return;
+    const services = store.dataServices.filter(s => s.source === t.table);
+    openModal({
+        title: `数据血缘 - ${t.table}`,
+        width: 720,
+        bodyHTML: `
+            <div class="lineage">
+                <div class="lineage-col">
+                    <div class="lineage-title">上游来源</div>
+                    ${t.up.map(u => `<span class="arch-chip">${u}</span>`).join('')}
+                </div>
+                <div class="lineage-arrow">→</div>
+                <div class="lineage-col current">
+                    <div class="lineage-title">当前表 · ${t.layer}</div>
+                    <span class="arch-chip arch-chip-main">${t.table}</span>
+                    <small>${t.cn} · ${t.domain} · ${fmtNum(t.rows)} 行</small>
+                </div>
+                <div class="lineage-arrow">→</div>
+                <div class="lineage-col">
+                    <div class="lineage-title">下游 / 服务</div>
+                    ${t.down.map(d => `<span class="arch-chip">${d}</span>`).join('')}
+                    ${services.map(s => `<span class="arch-chip arch-chip-svc">${s.name}</span>`).join('')}
+                </div>
+            </div>
+            ${kvTableHTML([
+                ['更新频率', t.update], ['分区键', t.partition], ['日增量', t.growth],
+                ['保留与生命周期', `${LAYER_META[t.layer].name} · 按天分区滚动归档`], ['责任人', t.owner]
+            ])}`,
+        actions: [{
+            label: '前往质量规则', className: 'btn-primary',
+            onClick: (close) => {
+                close();
+                const tab = document.querySelector('#datacenter .tab-nav-item[data-tab="govern"]');
+                if (tab) tab.click();
+            }
+        }]
+    });
+}
+
+// ---------- 服务订阅 ----------
+function renderServices(store) {
+    const tbody = document.getElementById('dcServiceBody');
+    if (!tbody) return;
+    tbody.innerHTML = store.dataServices.map(s => `
         <tr>
             <td>${s.id}</td>
-            <td><span class="chip chip-info">${s.layer}</span></td>
-            <td>${s.engine}</td>
-            <td>${s.data}</td>
-            <td>${s.capacity}</td>
-            <td><div class="score-bar"><i style="width:${s.usedPct}%;"></i></div>${s.usedPct}%</td>
-            <td>${s.retention}</td>
-            <td>${s.writeRate}</td>
+            <td><b style="color:#e6f2ff;">${s.name}</b></td>
+            <td style="font-size:12px;color:#909399;">${s.path}</td>
+            <td><span class="chip chip-info">${s.method}</span></td>
+            <td>${s.domain}</td>
+            <td style="font-size:12px;color:#909399;">${s.source}</td>
+            <td style="font-size:12px;">${s.consumer}</td>
+            <td>${s.qps}</td>
+            <td>${s.p99}</td>
+            <td>${s.sla}</td>
+            <td style="font-size:12px;color:#909399;">${s.auth}</td>
             <td><span class="status-tag status-normal">${s.status}</span></td>
         </tr>`).join('');
 }
@@ -244,14 +414,77 @@ function showNewSubForm() {
     });
 }
 
+// ---------- 治理运维 ----------
+function renderQuality(store) {
+    const tbody = document.getElementById('dcQualityBody');
+    const stat = document.getElementById('dcQualityStat');
+    if (stat) {
+        const warn = store.qualityRules.filter(r => r.status === '预警').length;
+        stat.textContent = `规则 ${store.qualityRules.length} 条 · 预警 ${warn} 条`;
+    }
+    if (!tbody) return;
+    tbody.innerHTML = store.qualityRules.map(r => `
+        <tr>
+            <td>${r.id}</td>
+            <td>${r.name}</td>
+            <td style="font-size:12px;color:#909399;">${r.target}</td>
+            <td><span class="chip chip-info">${r.type}</span></td>
+            <td style="color:${r.passRate >= r.threshold ? '#67c23a' : '#f56c6c'};"><b>${r.passRate.toFixed(2)}%</b></td>
+            <td style="font-size:12px;color:#909399;">${r.threshold}%</td>
+            <td style="font-size:12px;color:#909399;">${r.checkedAt}</td>
+            <td><span class="status-tag ${r.status === '通过' ? 'status-normal' : 'status-warning'}">${r.status}</span></td>
+            <td>${r.owner}</td>
+        </tr>`).join('');
+}
+
+function renderGovernance(store) {
+    renderQuality(store);
+
+    const cap = document.getElementById('dcCapacity');
+    if (cap) {
+        cap.innerHTML = DC_CAPACITY.map(c => `
+            <div class="cap-card">
+                <div class="cap-name">${c.name}</div>
+                <div class="cap-value">${c.value}</div>
+                <div class="score-bar"><i style="width:${c.pct}%;"></i></div>
+            </div>`).join('');
+    }
+
+    const security = document.getElementById('dcSecurityBody');
+    if (security) {
+        security.innerHTML = DC_SECURITY_LEVELS.map(s => `
+            <tr>
+                <td><span class="chip ${s.level.startsWith('L4') ? 'chip-danger' : 'chip-info'}">${s.level}</span></td>
+                <td>${s.scope}</td>
+                <td style="font-size:12px;color:#909399;">${s.policy}</td>
+            </tr>`).join('');
+    }
+
+    const audit = document.getElementById('dcAuditBody');
+    if (audit) {
+        audit.innerHTML = store.auditLogs.slice(0, 8).map(a => `
+            <tr>
+                <td style="font-size:12px;color:#909399;">${a.time}</td>
+                <td>${a.user}</td>
+                <td>${a.action}</td>
+                <td style="font-size:12px;color:#909399;">${a.target || '-'}</td>
+            </tr>`).join('');
+    }
+}
+
 function refresh() {
     const store = getStore();
     renderStats(store);
+    renderArch();
+    renderDomains(store);
+    renderTechStack();
     applyFilters();
     renderCharts();
     renderPipelines(store);
-    renderStorages(store);
+    renderAssets(store);
+    renderServices(store);
     renderSubscriptions(store);
+    renderGovernance(store);
     refreshNavBadges();
 }
 
@@ -270,7 +503,20 @@ window.initDatacenterModule = function() {
     const kw = document.getElementById('dcKeyword');
     if (kw) kw.onkeydown = (e) => { if (e.key === 'Enter') applyFilters(); };
 
+    const domainSel = document.getElementById('dcDomainFilter');
+    if (domainSel) {
+        domainSel.innerHTML = '<option value="">全部</option>' + DC_DOMAINS.map(d => `<option>${d.name}</option>`).join('');
+        domainSel.onchange = () => renderAssets(getStore());
+    }
+    const layerSel = document.getElementById('dcLayerFilter');
+    if (layerSel) layerSel.onchange = () => renderAssets(getStore());
+
     document.getElementById('dcNewSubBtn').onclick = showNewSubForm;
+    document.getElementById('dcQualityBtn').onclick = () => {
+        const r = runQualityCheck('数据中台·质量调度');
+        toast(`质量巡检完成：${r.pass} 项通过，${r.warn} 项预警`, r.warn ? 'warning' : 'success');
+        refresh();
+    };
     document.getElementById('dcIngestBtn').onclick = () => {
         const rows = simulateIngest();
         toast(`本轮模拟设备上报完成，新增采集 ${fmtNum(rows)} 条，已分发至启用中的订阅方`, 'success');

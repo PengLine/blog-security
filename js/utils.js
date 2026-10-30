@@ -212,6 +212,7 @@ function loadModuleScript(navId) {
         workorder: 'js/workorder.js',
         recheck: 'js/recheck.js',
         events: 'js/events.js',
+        eventflow: 'js/eventflow.js',
         judge: 'js/judge.js',
         alarm: 'js/alarm.js',
         analysis: 'js/analysis.js',
@@ -606,7 +607,8 @@ export function refreshNavBadges() {
         { nav: 'handoff', count: store.handoffs.filter(h => h.status !== '已完成').length },
         { nav: 'workorder', count: store.workorders.filter(w => w.status !== '已完成').length },
         { nav: 'recheck', count: store.bags.filter(b => b.recheck && b.recheck.status !== '已完成').length },
-        { nav: 'datacenter', count: store.dataSources.filter(s => s.status === '离线').length }
+        { nav: 'datacenter', count: store.dataSources.filter(s => s.status === '离线').length },
+        { nav: 'eventflow', count: store.eventEngine ? store.eventEngine.rawEvents.filter(e => e.status === '待处理').length : 0 }
     ];
     sets.forEach(s => {
         const el = document.querySelector(`.nav-item[data-nav="${s.nav}"] .nav-badge`);
