@@ -1,62 +1,206 @@
 <div class="module" id="config">
     <div class="module-header">
-        <h2>配置管理</h2>
+        <h2>配置中心</h2>
         <div class="module-actions">
-            <button class="btn btn-primary" onclick="addConfig()">新增配置</button>
-            <button class="btn btn-secondary" onclick="showContrabandCatalog()">违禁品名录</button>
+            <button class="btn btn-primary" id="cfgAddBtn">新增配置</button>
+            <button class="btn btn-success" id="cfgPublishAllBtn">发布全部待发布</button>
+            <button class="btn btn-secondary" id="cfgCatalogBtn">违禁品名录</button>
+            <button class="btn btn-secondary" id="cfgExportBtn">导出台账</button>
         </div>
     </div>
 
-    <div class="filter-bar">
-        <div class="filter-group">
-            <label class="filter-label">配置类型：</label>
-            <select id="configTypeFilter" class="form-control">
-                <option value="">全部</option>
-                <option value="device">设备配置</option>
-                <option value="event">事件配置</option>
-                <option value="system">系统配置</option>
-            </select>
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>配置项</h3>
+                <div class="stat-value" id="cfgStatTotal">0</div>
+            </div>
         </div>
-        <div class="filter-group">
-            <label class="filter-label">配置名称：</label>
-            <input type="text" class="form-control" id="configNameFilter" placeholder="输入配置名称">
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>已发布</h3>
+                <div class="stat-value" id="cfgStatPublished" style="color:#67c23a;">0</div>
+            </div>
         </div>
-        <div class="filter-group">
-            <button class="btn btn-primary" id="filterBtn">筛选</button>
-            <button class="btn btn-secondary" id="resetBtn">重置</button>
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>待发布 / 已停用</h3>
+                <div class="stat-value" id="cfgStatDraft" style="color:#e6a23c;">0</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>影响设备</h3>
+                <div class="stat-value" id="cfgStatDevices">0</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>规则缓存键</h3>
+                <div class="stat-value" id="cfgStatCache" style="color:#722ed1;">0</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>历史版本</h3>
+                <div class="stat-value" id="cfgStatVersions">0</div>
+            </div>
         </div>
     </div>
 
-    <div class="table-section">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>配置ID</th>
-                    <th>配置名称</th>
-                    <th>配置类型</th>
-                    <th>生效范围</th>
-                    <th>更新时间</th>
-                    <th>操作</th>
-                </tr>
-            </thead>
-            <tbody id="configsTableBody">
-                <!-- 配置列表将通过JavaScript动态加载 -->
-            </tbody>
-        </table>
+    <div class="tab-nav">
+        <div class="tab-nav-item active" data-tab="cfgItems">配置项</div>
+        <div class="tab-nav-item" data-tab="cfgVersions">版本与发布</div>
+        <div class="tab-nav-item" data-tab="cfgDelivery">缓存下发</div>
+        <div class="tab-nav-item" data-tab="cfgAudit">变更审计</div>
     </div>
 
-    <div class="table-section" style="margin-top:20px;">
-        <div class="table-title">配置变更审计（与业务操作留痕联动）</div>
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>时间</th>
-                    <th>操作人</th>
-                    <th>操作内容</th>
-                    <th>目标配置</th>
-                </tr>
-            </thead>
-            <tbody id="auditTableBody"></tbody>
-        </table>
+    <!-- 配置项 -->
+    <div class="tab-content active" id="cfgItems">
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label class="filter-label">配置类型：</label>
+                <select class="form-control" id="configTypeFilter">
+                    <option value="">全部</option>
+                    <option value="device">设备配置</option>
+                    <option value="event">事件配置</option>
+                    <option value="system">系统配置</option>
+                    <option value="face">人脸/测温配置</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">发布状态：</label>
+                <select class="form-control" id="configStatusFilter">
+                    <option value="">全部</option>
+                    <option value="已发布">已发布</option>
+                    <option value="待发布">待发布</option>
+                    <option value="已停用">已停用</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">配置名称：</label>
+                <input type="text" class="form-control" id="configNameFilter" placeholder="配置名称 / ID">
+            </div>
+            <div class="filter-group">
+                <button class="btn btn-primary" id="filterBtn">筛选</button>
+                <button class="btn btn-secondary" id="resetBtn">重置</button>
+            </div>
+        </div>
+
+        <div class="table-section">
+            <div class="table-title">配置项清单（参数变更需发布后才会下发至设备缓存）</div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>配置ID</th>
+                        <th>配置名称</th>
+                        <th style="width:110px;">类型</th>
+                        <th style="width:80px;">版本</th>
+                        <th style="width:90px;">状态</th>
+                        <th style="width:130px;">生效范围</th>
+                        <th style="width:110px;">影响设备</th>
+                        <th style="width:150px;">更新时间</th>
+                        <th style="width:250px;">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="configsTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 版本与发布 -->
+    <div class="tab-content" id="cfgVersions">
+        <div class="pipe-flow">
+            版本管理遵循「发布生成新版本、回滚也生成新版本」：历史版本只读归档，任一次变更都可追溯到操作人、参数快照与影响设备。
+        </div>
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label class="filter-label">配置项：</label>
+                <select class="form-control" id="cfgVersionConfig"></select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">版本状态：</label>
+                <select class="form-control" id="cfgVersionStatus">
+                    <option value="">全部</option>
+                    <option value="已发布">已发布</option>
+                    <option value="已归档">已归档</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <span class="filter-label" id="cfgVersionStat"></span>
+            </div>
+        </div>
+
+        <div class="table-section">
+            <div class="table-title">版本链</div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>版本</th>
+                        <th style="width:90px;">状态</th>
+                        <th style="width:90px;">变更项</th>
+                        <th>参数摘要</th>
+                        <th style="width:160px;">操作人</th>
+                        <th style="width:150px;">发布时间</th>
+                        <th>说明</th>
+                        <th style="width:150px;">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="cfgVersionBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 缓存下发 -->
+    <div class="tab-content" id="cfgDelivery">
+        <div class="pipe-flow">
+            配置发布后写入 Redis：<b>rule:{key}</b>（告警等级/绑定方式，TTL 300s）与 <b>dev:{id}</b>（站点通道/设备参数，TTL 600s），事件处理引擎按缓存富化数据。
+        </div>
+        <div class="table-section">
+            <div class="table-title">下发状态（离线设备将在恢复后补发）</div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>配置项</th>
+                        <th style="width:210px;">规则缓存键</th>
+                        <th style="width:80px;">TTL</th>
+                        <th style="width:110px;">目标设备</th>
+                        <th style="width:90px;">在线设备</th>
+                        <th style="width:120px;">下发状态</th>
+                        <th style="width:150px;">最近下发</th>
+                        <th>离线设备</th>
+                    </tr>
+                </thead>
+                <tbody id="cfgDeliveryBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 变更审计 -->
+    <div class="tab-content" id="cfgAudit">
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label class="filter-label">关键字：</label>
+                <input type="text" class="form-control" id="cfgAuditKeyword" placeholder="操作人 / 动作 / 配置ID"
+                    style="width:240px;">
+            </div>
+            <div class="filter-group">
+                <span class="filter-label" id="cfgAuditStat"></span>
+            </div>
+        </div>
+        <div class="table-section">
+            <div class="table-title">配置变更审计（与全局操作留痕联动）</div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th style="width:170px;">时间</th>
+                        <th style="width:190px;">操作人</th>
+                        <th>操作内容</th>
+                        <th style="width:150px;">目标配置</th>
+                    </tr>
+                </thead>
+                <tbody id="auditTableBody"></tbody>
+            </table>
+        </div>
     </div>
 </div>

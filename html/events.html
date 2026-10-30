@@ -1,33 +1,80 @@
 <div class="module" id="events">
+    <div class="module-header">
+        <h2>事件中心</h2>
+        <div class="module-actions">
+            <button class="btn btn-primary" id="evtBatchBtn">批量处理</button>
+            <button class="btn btn-success" id="evtSelectPendingBtn">勾选全部未处理</button>
+            <button class="btn btn-secondary" id="evtExportBtn">导出事件台账</button>
+        </div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>事件总数</h3>
+                <div class="stat-value" id="evStatTotal">0</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>未处理</h3>
+                <div class="stat-value" id="evStatUnhandled" style="color:#e6a23c;">0</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>处理中</h3>
+                <div class="stat-value" id="evStatProcessing" style="color:#409eff;">0</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>已处理</h3>
+                <div class="stat-value" id="evStatHandled" style="color:#67c23a;">0</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>危险级事件</h3>
+                <div class="stat-value" id="evStatDanger" style="color:#f56c6c;">0</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>处理率</h3>
+                <div class="stat-value" id="evStatRate" style="color:#722ed1;">0%</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="charts-section">
+        <div class="chart-container">
+            <h3>事件类型分布（Top 8）</h3>
+            <div class="situation-chart" id="evtTypeChart"></div>
+        </div>
+        <div class="chart-container">
+            <h3>24 小时事件趋势</h3>
+            <div class="situation-chart" id="evtTrendChart"></div>
+        </div>
+    </div>
+
     <div class="filter-bar">
         <div class="filter-group">
-            <span class="filter-label">事件类型：</span>
-            <select class="form-control" id="eventTypeFilter">
-                <option value="">全部</option>
-                <option value="正常通过">正常通过</option>
-                <option value="金属检测">金属检测</option>
-                <option value="违禁品检测">违禁品检测</option>
-                <option value="包裹异常">包裹异常</option>
-                <option value="集中判图">集中判图</option>
-                <option value="温度异常">温度异常</option>
-                <option value="未刷脸">未刷脸</option>
-                <option value="未注册">未注册</option>
-                <option value="设备离线">设备离线</option>
-                <option value="网络异常">网络异常</option>
-            </select>
+            <label class="filter-label">事件类型：</label>
+            <select class="form-control" id="eventTypeFilter"></select>
         </div>
         <div class="filter-group">
-            <span class="filter-label">事件状态：</span>
-            <select class="form-control" id="eventStatusFilter">
+            <label class="filter-label">事件等级：</label>
+            <select class="form-control" id="eventLevelFilter">
                 <option value="">全部</option>
-                <option value="status-normal">正常</option>
-                <option value="status-warning">警告</option>
                 <option value="status-danger">危险</option>
+                <option value="status-warning">警告</option>
+                <option value="status-normal">正常</option>
                 <option value="status-processing">处理中</option>
             </select>
         </div>
         <div class="filter-group">
-            <span class="filter-label">处理状态：</span>
+            <label class="filter-label">处理状态：</label>
             <select class="form-control" id="eventProcessFilter">
                 <option value="">全部</option>
                 <option value="未处理">未处理</option>
@@ -36,33 +83,39 @@
             </select>
         </div>
         <div class="filter-group">
-            <span class="filter-label">关键字：</span>
-            <input type="text" class="form-control" id="eventKeyword" placeholder="设备 / 详情 / 事件ID" style="width:200px;">
+            <label class="filter-label">关键字：</label>
+            <input type="text" class="form-control" id="eventKeyword" placeholder="设备 / 详情 / 事件ID" style="width:190px;">
+        </div>
+        <div class="filter-group">
+            <label class="filter-label"><input type="checkbox" id="eventTodayOnly"> 仅看今日</label>
         </div>
         <div class="filter-group">
             <button class="btn btn-primary" id="eventSearchBtn">查询</button>
-            <button class="btn btn-secondary" id="eventExportBtn">导出</button>
+            <button class="btn btn-secondary" id="eventResetBtn">重置</button>
+        </div>
+        <div class="filter-group">
+            <span class="filter-label" id="evtFilterStat"></span>
         </div>
     </div>
 
     <div class="table-section">
-        <div class="table-title">事件列表</div>
+        <div class="table-title">事件台账（可按类型/等级筛选、逐条或批量处置）</div>
         <table class="data-table">
             <thead>
                 <tr>
+                    <th style="width:36px;"><input type="checkbox" id="evtCheckAll" title="全选当前页"></th>
                     <th>事件ID</th>
-                    <th>时间</th>
+                    <th style="width:150px;">时间</th>
                     <th>设备</th>
-                    <th>事件类型</th>
-                    <th>状态</th>
+                    <th style="width:110px;">类型</th>
+                    <th style="width:80px;">等级</th>
                     <th>详情</th>
-                    <th>处理状态</th>
-                    <th>操作</th>
+                    <th style="width:90px;">处理状态</th>
+                    <th style="width:120px;">处理人</th>
+                    <th style="width:140px;">操作</th>
                 </tr>
             </thead>
-            <tbody id="eventsTableBody">
-                <!-- 事件列表将通过JavaScript动态生成 -->
-            </tbody>
+            <tbody id="eventsTableBody"></tbody>
         </table>
     </div>
 </div>

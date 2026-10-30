@@ -4,95 +4,118 @@
         <div class="module-actions">
             <div class="filter-group">
                 <label class="filter-label">时间范围：</label>
-                <select id="timeRangeFilter" class="form-control">
-                    <option value="day">今日</option>
-                    <option value="week">本周</option>
-                    <option value="month">本月</option>
-                    <option value="year">本年</option>
+                <select class="form-control" id="anRange">
+                    <option value="day">今日（小时）</option>
+                    <option value="week">近 7 日</option>
+                    <option value="month">近 30 日</option>
+                    <option value="year">本年（月）</option>
                 </select>
             </div>
-            <button class="btn btn-primary" id="refreshBtn">刷新数据</button>
-            <button class="btn btn-secondary" id="exportBtn">导出报表</button>
+            <div class="filter-group">
+                <label class="filter-label">分析维度：</label>
+                <select class="form-control" id="anDim"></select>
+            </div>
+            <button class="btn btn-primary" id="anRefreshBtn">刷新</button>
+            <button class="btn btn-secondary" id="anExportBtn">导出分时报表</button>
+            <button class="btn btn-secondary" id="anExportDimBtn">导出维度报表</button>
         </div>
     </div>
-    
+
     <div class="stats-grid">
         <div class="stat-card">
             <div class="stat-content">
-                <h3>总客流</h3>
-                <div class="stat-value" id="totalPassenger">0</div>
-                <div class="stat-trend">
-                    <span class="trend-up">+12.5%</span>
-                    <span>较昨日</span>
-                </div>
+                <h3>过检包裹</h3>
+                <div class="stat-value" id="anStatFlow">0</div>
+                <div class="stat-trend" id="anDeltaFlow"></div>
             </div>
         </div>
         <div class="stat-card">
             <div class="stat-content">
-                <h3>违禁品数量</h3>
-                <div class="stat-value" id="totalContraband">0</div>
-                <div class="stat-trend">
-                    <span class="trend-down">-3.2%</span>
-                    <span>较昨日</span>
-                </div>
+                <h3>违禁查获</h3>
+                <div class="stat-value" id="anStatContraband" style="color:#f56c6c;">0</div>
+                <div class="stat-trend" id="anDeltaContraband"></div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>告警数量</h3>
+                <div class="stat-value" id="anStatAlarms" style="color:#e6a23c;">0</div>
+                <div class="stat-trend" id="anDeltaAlarms"></div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>事件数量</h3>
+                <div class="stat-value" id="anStatEvents">0</div>
+                <div class="stat-trend" id="anDeltaEvents"></div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>客流人次</h3>
+                <div class="stat-value" id="anStatPassengers">0</div>
+                <div class="stat-trend" id="anDeltaPassengers"></div>
             </div>
         </div>
         <div class="stat-card">
             <div class="stat-content">
                 <h3>设备在线率</h3>
-                <div class="stat-value" id="deviceOnlineRate">0%</div>
-                <div class="stat-trend">
-                    <span class="trend-up">+0.5%</span>
-                    <span>较昨日</span>
-                </div>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-content">
-                <h3>事件处理率</h3>
-                <div class="stat-value" id="eventProcessRate">0%</div>
-                <div class="stat-trend">
-                    <span class="trend-up">+2.1%</span>
-                    <span>较昨日</span>
-                </div>
+                <div class="stat-value" id="anStatOnline" style="color:#67c23a;">0%</div>
+                <div class="stat-trend" id="anDeltaOnline"></div>
             </div>
         </div>
     </div>
-    
+
+    <div class="analysis-compare" id="anCompareBar"></div>
+
+    <div class="sub-title">趋势分析</div>
     <div class="charts-section">
         <div class="chart-container">
-            <h3>客流趋势</h3>
-            <div class="situation-chart" id="passengerChart"></div>
+            <h3>过检量趋势（<span id="anUnitName">小时</span>）</h3>
+            <div class="situation-chart" id="anFlowChart"></div>
         </div>
         <div class="chart-container">
-            <h3>违禁品分类</h3>
-            <div class="situation-chart" id="contrabandChart"></div>
+            <h3>违禁查获趋势</h3>
+            <div class="situation-chart" id="anContrabandChart"></div>
         </div>
         <div class="chart-container">
-            <h3>设备状态分布</h3>
-            <div class="situation-chart" id="deviceStatusChart"></div>
+            <h3>告警 / 事件趋势</h3>
+            <div class="situation-chart" id="anEventChart"></div>
         </div>
         <div class="chart-container">
-            <h3>事件类型统计</h3>
-            <div class="situation-chart" id="eventTypeChart"></div>
+            <h3 id="anDimChartTitle">维度对比</h3>
+            <div class="situation-chart" id="anDimChart"></div>
         </div>
     </div>
-    
+
+    <div class="sub-title">分析洞察（自动生成）</div>
+    <div class="principle-grid" id="anInsights"></div>
+
+    <div class="sub-title">维度明细 - <span id="anDimTitle">通道</span></div>
     <div class="table-section">
-        <h3>详细统计数据</h3>
+        <table class="data-table">
+            <thead id="anDimHead"></thead>
+            <tbody id="anDimBody"></tbody>
+        </table>
+    </div>
+
+    <div class="sub-title">分时段统计（点击查看钻取）</div>
+    <div class="table-section">
         <table class="data-table">
             <thead>
                 <tr>
-                    <th>时间</th>
+                    <th style="width:130px;">时段</th>
+                    <th>过检量</th>
+                    <th style="width:100px;">环比</th>
+                    <th>违禁查获</th>
+                    <th>告警</th>
+                    <th>事件</th>
                     <th>客流</th>
-                    <th>违禁品数量</th>
-                    <th>告警数量</th>
-                    <th>设备在线数</th>
+                    <th>在线率</th>
+                    <th style="width:80px;">操作</th>
                 </tr>
             </thead>
-            <tbody id="analysisTableBody">
-                <!-- 详细数据将通过JavaScript动态加载 -->
-            </tbody>
+            <tbody id="anTableBody"></tbody>
         </table>
     </div>
 </div>

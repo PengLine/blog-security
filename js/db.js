@@ -601,6 +601,263 @@ export function aggregate(store) {
     };
 }
 
+// ---------- 运营分析：时间粒度 × 业务维度 + 环比 ----------
+export const ANALYSIS_RANGES = {
+    day: { label: '今日', unit: 'hour', days: 1 },
+    week: { label: '本周', unit: 'day', days: 7 },
+    month: { label: '本月', unit: 'day', days: 30 },
+    year: { label: '本年', unit: 'month', days: 365 }
+};
+
+export const ANALYSIS_DIMENSIONS = [
+    { key: 'channel', name: '通道', desc: '按 6 条安检通道对比过检量、查获与告警' },
+    { key: 'team', name: '班组', desc: '按甲/乙班对比判图量与查获（绩效口径）' },
+    { key: 'judge', name: '判图员', desc: '判图量、查获、响应时长与抽检准确率' },
+    { key: 'device', name: '设备类别', desc: '各设备类别的在线率与告警量' },
+    { key: 'category', name: '违禁品类', desc: '按违禁品类别统计查获结构' }
+];
+
+// 稳定伪随机（同一日期永远得到同一结果，重进页面图表不跳变）
+function hash01(str) {
+    let h = 2166136261;
+    for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return (h >>> 0) / 4294967295;
+}
+
+function shiftDayStart() {
+    const d = new Date();
+    d.setHours(8, 0, 0, 0);
+    if (Date.now() < d.getTime()) d.setDate(d.getDate() - 1);
+    return d.getTime();
+}
+
+// 按日生成可复现的历史运营数据（420 天，含周末与国庆峰值）
+function makeAnalyticsHistory() {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const days = [];
+    for (let i = 419; i >= 0; i--) {
+        const ts = today.getTime() - i * 86400000;
+        const key = fmtDate(ts);
+        const s1 = hash01(key), s2 = hash01(`${key}#c`), s3 = hash01(`${key}#a`);
+        const d = new Date(ts);
+        const weekend = (d.getDay() === 0 || d.getDay() === 6) ? 0.86 : 1;
+        const seasonal = 1 + Math.sin((d.getDate() / 30) * Math.PI * 2) * 0.07;
+        const holiday = (d.getMonth() === 9 && d.getDate() <= 7) ? 1.32 : 1;
+        const flow = Math.round((470 + s1 * 180) * weekend * seasonal * holiday);
+        days.push({
+            date: key, ts, weekday: `周${'日一二三四五六'[d.getDay()]}`,
+            flow,
+            contraband: Math.max(1, Math.round(flow * (0.017 + s2 * 0.013))),
+            alarms: Math.round(13 + s3 * 15 + (s1 > 0.9 ? 8 : 0)),
+            events: Math.round(flow * 0.42 + s3 * 12),
+            passengers: Math.round(flow * 0.34),
+            onlineRate: +(96.2 + s2 * 3.2).toFixed(1)
+        });
+    }
+    return days;
+}
+
+function analyticsHistory(store) {
+    if (!store.analyticsHistory) store.analyticsHistory = makeAnalyticsHistory();
+    return store.analyticsHistory;
+}
+
+// 今日真实值：覆盖历史最后一天，保证与首页、判图页口径一致
+function analysisToday(store) {
+    const ts0 = shiftDayStart();
+    const bags = store.bags.filter(b => b.scanTs >= ts0);
+    const online = store.devices.filter(d => d.status === 'online').length;
+    return {
+        flow: bags.length,
+        contraband: bags.filter(b => b.disposition === '开包查扣').length,
+        alarms: store.alarms.filter(a => a.ts >= ts0).length,
+        events: store.events.filter(e => e._ts >= ts0).length,
+        passengers: store.passengers.length,
+        onlineRate: +(online / store.devices.length * 100).toFixed(1)
+    };
+}
+
+function sumMetrics(rows) {
+    const acc = { flow: 0, contraband: 0, alarms: 0, events: 0, passengers: 0, onlineRate: 0 };
+    rows.forEach(r => {
+        ['flow', 'contraband', 'alarms', 'events', 'passengers'].forEach(k => { acc[k] += r[k] || 0; });
+        acc.onlineRate += r.onlineRate || 0;
+    });
+    acc.onlineRate = +(acc.onlineRate / (rows.length || 1)).toFixed(1);
+    return acc;
+}
+
+function deltaPct(cur, prev) {
+    if (!prev) return 0;
+    return +(((cur - prev) / prev) * 100).toFixed(1);
+}
+
+// 业务维度：通道 / 班组 / 判图员 / 设备类别 / 违禁品类
+function analysisDims(store) {
+    const ts0 = shiftDayStart();
+    const todayBags = store.bags.filter(b => b.scanTs >= ts0);
+    const perf = perfStats(store);
+
+    const channel = store.channels.map(c => {
+        const mine = todayBags.filter(b => b.channel === c.id);
+        return {
+            name: c.name,
+            flow: mine.length,
+            contraband: mine.filter(b => b.disposition === '开包查扣').length,
+            pending: mine.filter(b => b.status === 'pending').length,
+            alarms: store.alarms.filter(a => (a.device || '').startsWith(c.name)).length
+        };
+    });
+
+    const teamMap = {};
+    perf.forEach(r => {
+        const t = teamMap[r.team] || (teamMap[r.team] = { name: r.team, judged: 0, contraband: 0, delay: 0, score: 0, n: 0, qc: 0, missed: 0 });
+        t.judged += r.judged; t.contraband += r.danger; t.delay += r.avgDelay;
+        t.score += r.score; t.qc += r.qc; t.missed += r.missed; t.n++;
+    });
+    const team = Object.values(teamMap).map(t => ({
+        name: t.name, judged: t.judged, contraband: t.contraband,
+        avgDelay: +(t.delay / (t.n || 1)).toFixed(1),
+        score: Math.round(t.score / (t.n || 1)),
+        accuracy: t.qc ? +(((t.qc - t.missed) / t.qc) * 100).toFixed(1) : null
+    }));
+
+    const judge = perf.map(r => ({
+        name: r.name, team: r.team, judged: r.judged, contraband: r.danger,
+        avgDelay: r.avgDelay, accuracy: r.accuracy, score: r.score
+    }));
+
+    const device = [...new Set(store.devices.map(d => d.category))].map(cat => {
+        const list = store.devices.filter(d => d.category === cat);
+        const online = list.filter(d => d.status === 'online').length;
+        return {
+            name: cat, total: list.length, online,
+            warning: list.filter(d => d.status === 'warning').length,
+            offline: list.filter(d => d.status === 'offline').length,
+            onlineRate: +(online / list.length * 100).toFixed(1),
+            alarms: store.alarms.filter(a => list.some(d => a.device === d.displayName)).length
+        };
+    });
+
+    const category = CONTRABAND_TYPES.map(c => {
+        const fromHandoff = store.handoffs.filter(h => h.category === c.name).length;
+        const fromBag = todayBags.filter(b => b.seized && b.seized.typeName === c.name).length;
+        return { name: c.name, level: c.level, color: c.color, value: Math.max(fromHandoff, fromBag) };
+    });
+
+    return { channel, team, judge, device, category };
+}
+
+// 分析主入口：时间粒度、维度、环比与自动洞察
+export function analyticsData(rangeKey = 'day', dimKey = 'channel') {
+    const store = getStore();
+    const range = ANALYSIS_RANGES[rangeKey] || ANALYSIS_RANGES.day;
+    const hist = analyticsHistory(store);
+    const today = analysisToday(store);
+    const histAll = hist.map((d, i) => i === hist.length - 1 ? { ...d, ...today } : d);
+
+    let buckets = [];
+    let prevRows = [];
+    let compareLabel = '';
+
+    if (range.unit === 'hour') {
+        const nowHour = new Date().getHours();
+        for (let h = 8; h <= Math.max(8, nowHour); h++) {
+            const base = store.bags.filter(b => new Date(b.scanTs).getHours() === h);
+            buckets.push({
+                key: `${pad(h)}:00`, label: `${pad(h)}:00`,
+                flow: base.length,
+                contraband: store.bags.filter(b => b.judgeResult === '违禁' && b.judgeTs && new Date(b.judgeTs).getHours() === h).length,
+                alarms: store.alarms.filter(a => new Date(a.ts).getHours() === h).length,
+                events: store.events.filter(e => new Date(e._ts).getHours() === h).length,
+                passengers: store.passengers.filter(p => new Date(p._ts).getHours() === h).length,
+                onlineRate: today.onlineRate, real: true
+            });
+        }
+        const yesterday = histAll[histAll.length - 2] || { flow: 0, contraband: 0, alarms: 0, events: 0, passengers: 0, onlineRate: 0 };
+        const ratio = buckets.length / Math.max(1, new Date().getHours() - 7);
+        prevRows = [{
+            flow: Math.round(yesterday.flow * ratio), contraband: Math.round(yesterday.contraband * ratio),
+            alarms: Math.round(yesterday.alarms * ratio), events: Math.round(yesterday.events * ratio),
+            passengers: Math.round(yesterday.passengers * ratio), onlineRate: yesterday.onlineRate
+        }];
+        compareLabel = '较昨日同时段';
+    } else if (range.unit === 'day') {
+        const rows = histAll.slice(-range.days);
+        buckets = rows.map(d => ({
+            key: d.date, label: d.date.slice(5), weekday: d.weekday,
+            flow: d.flow, contraband: d.contraband, alarms: d.alarms,
+            events: d.events, passengers: d.passengers, onlineRate: d.onlineRate,
+            real: d.date === hist[hist.length - 1].date
+        }));
+        prevRows = histAll.slice(-range.days * 2, -range.days);
+        compareLabel = rangeKey === 'week' ? '较上周' : '较上期';
+    } else {
+        const now = new Date();
+        const year = now.getFullYear();
+        for (let m = 1; m <= now.getMonth() + 1; m++) {
+            const rows = histAll.filter(d => {
+                const dt = new Date(d.ts);
+                return dt.getFullYear() === year && dt.getMonth() + 1 === m;
+            });
+            const sum = sumMetrics(rows);
+            buckets.push({
+                key: `${year}-${pad(m)}`, label: `${m}月`,
+                flow: sum.flow, contraband: sum.contraband, alarms: sum.alarms,
+                events: sum.events, passengers: sum.passengers, onlineRate: sum.onlineRate,
+                real: m === now.getMonth() + 1
+            });
+        }
+        prevRows = histAll.filter(d => {
+            const dt = new Date(d.ts);
+            return dt.getFullYear() === year - 1 && dt.getMonth() + 1 <= now.getMonth() + 1;
+        });
+        compareLabel = '较去年同期';
+    }
+
+    // 环比：环比为相邻分桶对比（表格列），prev 为上一可比周期
+    buckets = buckets.map((b, i) => ({
+        ...b,
+        flowDelta: i === 0 ? null : deltaPct(b.flow, buckets[i - 1].flow),
+        contrabandDelta: i === 0 ? null : deltaPct(b.contraband, buckets[i - 1].contraband)
+    }));
+
+    const totals = sumMetrics(buckets);
+    const prev = sumMetrics(prevRows);
+    const delta = {
+        flow: deltaPct(totals.flow, prev.flow),
+        contraband: deltaPct(totals.contraband, prev.contraband),
+        alarms: deltaPct(totals.alarms, prev.alarms),
+        events: deltaPct(totals.events, prev.events),
+        passengers: deltaPct(totals.passengers, prev.passengers),
+        onlineRate: +(totals.onlineRate - prev.onlineRate).toFixed(1)
+    };
+
+    const dims = analysisDims(store);
+    const dim = dims[dimKey] || dims.channel;
+    const safe = arr => (arr && arr.length ? arr : [{}]);
+    const peak = safe(buckets).reduce((a, b) => ((b.flow || 0) > (a.flow || 0) ? b : a), buckets[0] || {});
+    const topCat = safe(dims.category.slice()).sort((a, b) => (b.value || 0) - (a.value || 0))[0];
+    const worstDevice = safe(dims.device.slice()).sort((a, b) => (a.onlineRate || 0) - (b.onlineRate || 0))[0];
+    const slowJudge = safe(dims.judge.slice()).sort((a, b) => (b.avgDelay || 0) - (a.avgDelay || 0))[0];
+    const catTotal = dims.category.reduce((s, c) => s + c.value, 0) || 1;
+    const insights = [
+        `过检高峰出现在 ${peak.label || '-'}（${peak.flow || 0} 件），建议该时段增开 1 条通道`,
+        `查获结构以「${topCat.name || '-'}」为主（${topCat.value || 0} 件，占 ${((topCat.value || 0) / catTotal * 100).toFixed(1)}%），判图辅助库需保持该品类模型更新`,
+        worstDevice.onlineRate < 100
+            ? `「${worstDevice.name}」在线率 ${worstDevice.onlineRate}%，为当前最薄弱设备类别，建议优先安排巡检`
+            : '全部设备类别在线率 100%，设备健康状态良好',
+        slowJudge.name
+            ? `判图员 ${slowJudge.name} 平均复核响应 ${slowJudge.avgDelay} 分钟，高于全局均值，建议关注当班人力配置`
+            : '暂无判图记录，无法评估响应时长'
+    ];
+
+    return {
+        rangeKey, rangeLabel: range.label, granularity: range.unit, compareLabel,
+        buckets, totals, prev, delta, dims, dimKey, dim, insights
+    };
+}
+
 // ---------- 业务动作（写操作，全系统联动） ----------
 export function judgeBag(bagId, result, operatorName) {
     const store = getStore();
@@ -767,14 +1024,38 @@ export function disposeAlarm(alarmId, dispositionKey, operator, note) {
     return { ok: true, alarm: alm, result: extra, order, target, bag };
 }
 
-export function processEventById(eventId, operator) {
+export function processEventById(eventId, operator, note, silent = false) {
     const store = getStore();
     const evt = store.events.find(e => e.id === eventId);
     if (!evt || evt.processStatus === '已处理') return null;
     evt.processStatus = '已处理';
     evt.handler = operator;
     evt.handleTime = fmtDateTime(Date.now());
+    if (note) evt.handleNote = note;
+    // 批量处置由调用方统一留痕，这里跳过避免审计刷屏
+    if (!silent) {
+        store.auditLogs.unshift({
+            time: evt.handleTime, user: operator,
+            action: `处理事件 ${evt.id}（${evt.type}）${note ? `：${note}` : ''}`,
+            target: evt.id
+        });
+    }
     return evt;
+}
+
+// 批量处理事件：一次留痕，避免审计日志被逐条刷屏
+export function processEventsByIds(ids, operator, note) {
+    const store = getStore();
+    let ok = 0;
+    ids.forEach(id => { if (processEventById(id, operator, note, true)) ok++; });
+    if (ok) {
+        store.auditLogs.unshift({
+            time: fmtDateTime(Date.now()), user: operator,
+            action: `批量处理 ${ok} 条事件${note ? `：${note}` : ''}`,
+            target: ids.length > 1 ? `${ids[0]} 等 ${ok} 条` : ids[0]
+        });
+    }
+    return ok;
 }
 
 export function toggleChannel(channelId) {
@@ -1214,6 +1495,180 @@ export function runQualityCheck(operator) {
     });
     store.auditLogs.unshift({ time: fmtDateTime(now), user: operator || '数据中台·质量调度', action: `数据质量巡检完成：${pass} 项通过，${warn} 项预警`, target: 'DC-QUALITY' });
     return { pass, warn, total: store.qualityRules.length };
+}
+
+// ---------- 配置中心：版本、发布、回滚与下发状态 ----------
+// 配置项 → 目标设备类型（用于影响面与下发范围）
+const CONFIG_DEVICE_MAP = {
+    'CFG-001': ['securityCheckMachine'],
+    'CFG-002': ['metalDoor', 'millimeterWaveDoor'],
+    'CFG-003': ['accessControl', 'accessVideo', 'personCertCompare'],
+    'CFG-004': [],
+    'CFG-005': [],
+    'CFG-006': ['accessControl', 'accessVideo'],
+    'CFG-007': [],
+    'CFG-008': []
+};
+
+// 配置项 → 受影响的告警规则缓存键（下发即刷新这些 rule:*）
+const CONFIG_RULE_MAP = {
+    'CFG-001': ['rule:contraband', 'rule:suspicious'],
+    'CFG-002': ['rule:metalAlarm', 'rule:metalPass'],
+    'CFG-003': ['rule:faceRec', 'rule:unregistered'],
+    'CFG-004': ['rule:contraband'],
+    'CFG-005': [],
+    'CFG-006': ['rule:faceTemp'],
+    'CFG-007': [],
+    'CFG-008': []
+};
+
+// 历史版本参数快照：按差距逐代递减，制造可对比的真实差异
+function historicalSnapshot(details, lag) {
+    const snap = {};
+    Object.entries(details || {}).forEach(([k, v]) => {
+        snap[k] = typeof v === 'number' && Number.isFinite(v)
+            ? Math.max(1, Math.round(v * (1 - 0.05 * lag)))
+            : v;
+    });
+    return snap;
+}
+
+// 初始版本链：每个配置 2-4 个版本，最新一个为已发布
+export function makeConfigVersions(configs) {
+    const list = [];
+    const ops = ['系统管理员', '值班队长·王振宇', '设备主管·韩烁'];
+    configs.forEach((cfg, ci) => {
+        const count = 2 + (ci % 3);
+        for (let v = 1; v <= count; v++) {
+            const lag = count - v;
+            const ts = Date.now() - ((lag * (3 + (ci % 4)) + 1) * 86400000) - v * 3600000;
+            list.push({
+                id: `VER-${cfg.id}-${String(v).padStart(2, '0')}`,
+                configId: cfg.id,
+                version: `v${v}.0`,
+                status: lag === 0 ? '已发布' : '已归档',
+                operator: ops[v % ops.length],
+                time: fmtDateTime(ts), ts,
+                note: lag === 0 ? '当前生效版本' : `第 ${v} 次参数调整`,
+                snapshot: lag === 0 ? { ...cfg.configDetails } : historicalSnapshot(cfg.configDetails, lag),
+                changeCount: lag === 0 ? 0 : 1 + (ci + v) % 3
+            });
+        }
+        const latest = list.filter(x => x.configId === cfg.id).slice(-1)[0];
+        cfg.version = latest.version;
+        cfg.status = '已发布';
+    });
+    return list;
+}
+
+// 参数校验：返回 error / warn 两级问题
+export function validateConfigDetails(details) {
+    const issues = [];
+    Object.entries(details || {}).forEach(([k, v]) => {
+        if (v === '' || v === null || v === undefined) {
+            issues.push({ key: k, level: 'error', msg: '不能为空' });
+            return;
+        }
+        const numericField = typeof v === 'number' || /阈值|灵敏度|分辨率|对比度|分区|通过|复审|上限|次数|天数|重搜|穿透|范围|版本号|保留/.test(k);
+        if (!numericField) return;
+        const num = Number(v);
+        if (Number.isNaN(num)) { issues.push({ key: k, level: 'error', msg: '需为数值' }); return; }
+        if (/灵敏度|对比度/.test(k) && (num < 0 || num > 100)) issues.push({ key: k, level: 'error', msg: '取值范围 0-100' });
+        if (/阈值/.test(k) && num <= 0) issues.push({ key: k, level: 'error', msg: '阈值必须大于 0' });
+        if (/正常上限|报警上限/.test(k) && (num < 34 || num > 42)) issues.push({ key: k, level: 'warn', msg: '体温阈值超出 34-42℃ 常规区间' });
+        if (/重搜次数|复测次数/.test(k) && (num < 1 || num > 10)) issues.push({ key: k, level: 'warn', msg: '建议 1-10 次' });
+    });
+    return issues;
+}
+
+// 变更影响面：目标设备 + 需要刷新的规则缓存
+export function configImpact(config, store = getStore()) {
+    const keys = CONFIG_DEVICE_MAP[config.id] || [];
+    const devices = store.devices.filter(d => keys.includes(d.key));
+    const cacheKeys = CONFIG_RULE_MAP[config.id] || [];
+    const rules = store.eventEngine
+        ? cacheKeys.map(k => store.eventEngine.rules.find(r => r.cacheKey === k)).filter(Boolean)
+        : [];
+    return {
+        deviceKeys: keys,
+        deviceCount: devices.length,
+        onlineCount: devices.filter(d => d.status === 'online').length,
+        offlineDevices: devices.filter(d => d.status !== 'online'),
+        cacheKeys, rules
+    };
+}
+
+// 发布：校验 → 归档旧版 → 生成新版本 → 刷缓存 → 留审计
+export function publishConfig(configId, operator, note) {
+    const store = getStore();
+    const cfg = store.configs.find(c => c.id === configId);
+    if (!cfg) return { ok: false, msg: '配置不存在' };
+    const issues = validateConfigDetails(cfg.configDetails);
+    const errors = issues.filter(i => i.level === 'error');
+    if (errors.length) return { ok: false, msg: `参数校验未通过：${errors.map(e => `${e.key} ${e.msg}`).join('；')}`, issues };
+
+    store.configVersions.filter(v => v.configId === configId && v.status === '已发布').forEach(v => { v.status = '已归档'; });
+    const no = store.configVersions.filter(v => v.configId === configId).length + 1;
+    const ver = {
+        id: `VER-${configId}-${String(no).padStart(2, '0')}`,
+        configId, version: `v${no}.0`, status: '已发布',
+        operator: operator || '系统管理员',
+        time: fmtDateTime(Date.now()), ts: Date.now(),
+        note: note || '手动发布',
+        snapshot: JSON.parse(JSON.stringify(cfg.configDetails)),
+        changeCount: 0
+    };
+    store.configVersions.push(ver);
+    cfg.version = ver.version;
+    cfg.status = '已发布';
+    cfg.updateTime = ver.time;
+    store.auditLogs.unshift({
+        time: ver.time, user: ver.operator,
+        action: `发布配置 ${cfg.name} ${ver.version}，已刷新 ${(CONFIG_RULE_MAP[configId] || []).length} 个规则缓存`,
+        target: configId
+    });
+    return { ok: true, version: ver, issues };
+}
+
+// 回滚：以目标版本快照为准，生成新版本而非覆盖历史
+export function rollbackConfigVersion(configId, versionId, operator) {
+    const store = getStore();
+    const cfg = store.configs.find(c => c.id === configId);
+    const target = store.configVersions.find(v => v.id === versionId && v.configId === configId);
+    if (!cfg || !target) return { ok: false, msg: '配置或版本不存在' };
+    if (target.status === '已发布') return { ok: false, msg: '该版本正在生效，无需回滚' };
+    const before = JSON.parse(JSON.stringify(cfg.configDetails));
+    cfg.configDetails = JSON.parse(JSON.stringify(target.snapshot));
+    const res = publishConfig(configId, operator, `回滚至 ${target.version}（${target.note}）`);
+    if (!res.ok) {
+        cfg.configDetails = before;
+        return res;
+    }
+    res.version.rollbackFrom = target.version;
+    res.before = before;
+    res.target = target;
+    store.auditLogs.unshift({
+        time: res.version.time, user: operator || '系统管理员',
+        action: `回滚配置 ${cfg.name} 至 ${target.version}，生成 ${res.version.version}`,
+        target: configId
+    });
+    return res;
+}
+
+// 停用 / 启用：停用后规则缓存不再下发，但保留版本链
+export function toggleConfigStatus(configId, operator) {
+    const store = getStore();
+    const cfg = store.configs.find(c => c.id === configId);
+    if (!cfg) return { ok: false, msg: '配置不存在' };
+    const disabled = cfg.status === '已停用';
+    cfg.status = disabled ? '已发布' : '已停用';
+    cfg.updateTime = fmtDateTime(Date.now());
+    store.auditLogs.unshift({
+        time: cfg.updateTime, user: operator || '系统管理员',
+        action: `${disabled ? '启用' : '停用'}配置 ${cfg.name}（${cfg.id}）`,
+        target: configId
+    });
+    return { ok: true, status: cfg.status };
 }
 
 // ==================== 事件处理引擎 ====================
@@ -1988,6 +2443,549 @@ export function perfStats(store) {
     return rows;
 }
 
+// ---------- 绩效分析：评分构成 / 趋势 / 异常 ----------
+// 与 perfStats 的评分公式逐项对齐：拆解项相加即得原始分，再按 60~100 截断
+export function perfBreakdown(row) {
+    // 平均响应时长在 perfStats 中按未取整的原值参与计分，这里同样回算以保证拆解可对账
+    const bags = row.bags || [];
+    const exactDelay = bags.length ? bags.reduce((s, b) => s + (b.reviewDelayMin || 0), 0) / bags.length : 0;
+    const base = 88;
+    const dangerRaw = row.danger * 0.4;
+    const workloadRaw = Math.min(6, row.judged / 12);
+    const missedRaw = -(row.missed * 6);
+    const sloppyRaw = -(row.sloppy * 2);
+    const delayRaw = -Math.min(4, Math.max(0, exactDelay - 30) / 25);
+    const raw = base + dangerRaw + workloadRaw + missedRaw + sloppyRaw + delayRaw;
+    return {
+        items: [
+            { key: 'base', label: '基础分', value: base, kind: 'base', note: '全员统一基准' },
+            { key: 'danger', label: '查获贡献', value: +dangerRaw.toFixed(2), kind: 'plus', note: `${row.danger} 件 × 0.4` },
+            { key: 'workload', label: '工作量加成', value: +workloadRaw.toFixed(2), kind: 'plus', note: `判图 ${row.judged} 件，每 12 件 +1（上限 +6）` },
+            { key: 'missed', label: '漏判扣分', value: missedRaw, kind: 'minus', note: `漏判 ${row.missed} 起 × 6` },
+            { key: 'sloppy', label: '不规范扣分', value: sloppyRaw, kind: 'minus', note: `处置不规范 ${row.sloppy} 起 × 2` },
+            { key: 'delay', label: '响应超时扣分', value: +delayRaw.toFixed(2), kind: 'minus', note: `平均响应 ${row.avgDelay} 分钟，超 30 分钟起扣（上限 -4）` }
+        ],
+        raw: +raw.toFixed(2),
+        clamped: Math.max(60, Math.min(100, Math.round(raw))),
+        floorHit: raw < 60,
+        ceilHit: raw > 100
+    };
+}
+
+// 团队汇总：页面统计卡与趋势基线共用
+export function perfSummary(rows) {
+    const total = rows.length;
+    const withQc = rows.filter(r => r.accuracy !== null);
+    const worked = rows.filter(r => r.judged > 0);
+    return {
+        total,
+        onDuty: rows.filter(r => r.onDuty).length,
+        judged: rows.reduce((s, r) => s + r.judged, 0),
+        danger: rows.reduce((s, r) => s + r.danger, 0),
+        missed: rows.reduce((s, r) => s + r.missed, 0),
+        avgScore: total ? +(rows.reduce((s, r) => s + r.score, 0) / total).toFixed(1) : 0,
+        accuracy: withQc.length ? +(withQc.reduce((s, r) => s + r.accuracy, 0) / withQc.length).toFixed(1) : null,
+        avgDelay: worked.length ? +(worked.reduce((s, r) => s + r.avgDelay, 0) / worked.length).toFixed(1) : 0,
+        alerts: perfAlerts(rows).length
+    };
+}
+
+// 近 N 日团队趋势：今日取真实值，历史按「数仓日沉淀 + 稳定伪随机」回溯
+export function perfTrend(days = 7) {
+    const store = getStore();
+    const hist = analyticsHistory(store);
+    const sum = perfSummary(perfStats(store));
+    const out = [];
+    for (let i = days - 1; i >= 0; i--) {
+        const d = hist[hist.length - 1 - i];
+        if (!d) continue;
+        if (i === 0) {
+            out.push({ date: d.date, label: '今日', judged: sum.judged, danger: sum.danger, score: sum.avgScore, accuracy: sum.accuracy, missed: sum.missed, real: true });
+            continue;
+        }
+        const s = hash01(`${d.date}#perf`);
+        out.push({
+            date: d.date, label: d.date.slice(5),
+            judged: Math.round(d.events * 0.42 + s * 18),
+            danger: d.contraband,
+            score: +(84.5 + s * 8).toFixed(1),
+            accuracy: +(92.5 + hash01(`${d.date}#acc`) * 6).toFixed(1),
+            missed: Math.round(hash01(`${d.date}#miss`) * 3),
+            real: false
+        });
+    }
+    return out;
+}
+
+const PERF_ALERT_LEVELS = { high: '高危', mid: '关注', low: '提示' };
+
+// 异常识别：漏判/不规范/响应超时/准确率偏低/当班工作量失衡
+export function perfAlerts(rows) {
+    const duty = rows.filter(r => r.onDuty);
+    const dutyAvg = duty.length ? duty.reduce((s, r) => s + r.judged, 0) / duty.length : 0;
+    const list = [];
+    rows.forEach(r => {
+        if (r.missed > 0) {
+            list.push({
+                id: `${r.id}-missed`, empId: r.id, name: r.name, team: r.team,
+                level: 'high', levelName: PERF_ALERT_LEVELS.high, title: '质控漏判',
+                detail: `抽检 ${r.qc} 件中漏判 ${r.missed} 起，抽检准确率 ${r.accuracy}%`,
+                action: '建议暂停独立判图并安排复训'
+            });
+        }
+        if (r.sloppy >= 2) {
+            list.push({
+                id: `${r.id}-sloppy`, empId: r.id, name: r.name, team: r.team,
+                level: 'mid', levelName: PERF_ALERT_LEVELS.mid, title: '处置不规范',
+                detail: `质控抽检发现 ${r.sloppy} 起处置不规范（开包流程/记录填写）`,
+                action: '当班队长现场纠正并补录记录'
+            });
+        }
+        if (r.judged > 0 && r.avgDelay > 45) {
+            list.push({
+                id: `${r.id}-delay`, empId: r.id, name: r.name, team: r.team,
+                level: 'mid', levelName: PERF_ALERT_LEVELS.mid, title: '复核响应超时',
+                detail: `平均复核响应 ${r.avgDelay} 分钟，超过 45 分钟阈值`,
+                action: '关注席位分配，必要时增开判图终端'
+            });
+        }
+        if (r.accuracy !== null && r.accuracy < 90 && r.missed === 0) {
+            list.push({
+                id: `${r.id}-acc`, empId: r.id, name: r.name, team: r.team,
+                level: 'low', levelName: PERF_ALERT_LEVELS.low, title: '抽检准确率偏低',
+                detail: `抽检 ${r.qc} 件，准确率 ${r.accuracy}%（团队基线 90%）`,
+                action: '纳入下一轮图像判读专项抽检'
+            });
+        }
+        if (r.onDuty && dutyAvg > 0 && r.judged < dutyAvg * 0.5) {
+            list.push({
+                id: `${r.id}-load`, empId: r.id, name: r.name, team: r.team,
+                level: 'low', levelName: PERF_ALERT_LEVELS.low, title: '当班工作量偏低',
+                detail: `当班判图 ${r.judged} 件，当班人均 ${dutyAvg.toFixed(1)} 件`,
+                action: '核对席位分配与实际在岗情况'
+            });
+        }
+    });
+    const weight = { high: 0, mid: 1, low: 2 };
+    return list.sort((a, b) => weight[a.level] - weight[b.level]);
+}
+
+// ---------- 排班：交接班 / 考勤点名 / 技能矩阵 ----------
+export const HANDOVER_ITEMS = [
+    { key: 'devices', label: '设备状态确认', hint: '在线率、故障设备与待派工工单' },
+    { key: 'alarms', label: '未处理告警移交', hint: '危险级告警须清零或指定承接人' },
+    { key: 'pending', label: '待判图队列', hint: '积压数量与优先级排序' },
+    { key: 'recheck', label: '复检/开包在办', hint: '在检包裹与预计完成时间' },
+    { key: 'handoff', label: '查扣与民警交接', hint: '未完成交接的查扣物品' },
+    { key: 'assets', label: '钥匙/耗材/对讲机', hint: '实物清点并双人签字' },
+    { key: 'brief', label: '上级通知与临时管控', hint: '限带品管控、专案关注事项' }
+];
+
+function hhmm(ts) {
+    const d = new Date(ts);
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+// 交接项自动摘要：直接取业务中枢实时数据，避免交接时手工抄数
+function handoverAutoText(key, store) {
+    const online = store.devices.filter(d => d.status === 'online').length;
+    const offline = store.devices.filter(d => d.status !== 'online').length;
+    const openWo = store.workorders.filter(w => w.status === '待派工').length;
+    const unhandled = store.alarms.filter(a => a.status === '未处理');
+    const pending = store.bags.filter(b => b.status === 'pending');
+    const earliest = pending.length ? Math.round((Date.now() - pending.reduce((m, b) => Math.min(m, b.scanTs), Date.now())) / 60000) : 0;
+    const recheck = store.bags.filter(b => b.recheck && b.recheck.status !== '已完成');
+    const openHandoff = store.handoffs.filter(h => h.status !== '已完成').length;
+    switch (key) {
+        case 'devices': return `${online} 台在线 / ${offline} 台异常，待派工工单 ${openWo} 个`;
+        case 'alarms': return `未处理告警 ${unhandled.length} 条（危险级 ${unhandled.filter(a => a.level === 'danger').length} 条）`;
+        case 'pending': return pending.length ? `待判图 ${pending.length} 件，最早等待 ${earliest} 分钟` : '待判图队列已清空';
+        case 'recheck': return recheck.length ? `复检在办 ${recheck.length} 件（检查中 ${recheck.filter(b => b.recheck.status === '检查中').length} 件）` : '复检队列已清空';
+        case 'handoff': return openHandoff ? `民警交接未完成 ${openHandoff} 起` : '查扣物品已全部交接';
+        case 'assets': return '对讲机 8 台 / 通道钥匙 12 把 / 封条 200 条（实物清点）';
+        case 'brief': return '执行第 38 号限带品管控通知，重点核查充电宝 >160Wh';
+        default: return '';
+    }
+}
+
+function makeHandover(store) {
+    const cur = currentShiftDef();
+    const next = SHIFT_DEFS.find(d => d.key !== cur.key) || SHIFT_DEFS[1];
+    const now = Date.now();
+    return {
+        id: `HO-${fmtDate(now).replace(/-/g, '')}-${String(100 + (now % 900))}`,
+        shiftKey: cur.key, shiftTeam: cur.team, nextKey: next.key, nextTeam: next.team,
+        createTime: fmtDateTime(now),
+        items: HANDOVER_ITEMS.map(it => ({
+            ...it, status: '待确认', by: '', ts: '', note: '',
+            autoText: handoverAutoText(it.key, store)
+        })),
+        completed: false, completedBy: '', completedTime: '', note: ''
+    };
+}
+
+// 交接单：未确认项每次读取实时刷新摘要，已确认项冻结为交接时快照
+export function shiftHandover(store = getStore()) {
+    if (!store.handover) store.handover = makeHandover(store);
+    const ho = store.handover;
+    if (!ho.completed) {
+        ho.items.forEach(it => { if (it.status === '待确认') it.autoText = handoverAutoText(it.key, store); });
+    }
+    return ho;
+}
+
+export function handoverProgress(ho) {
+    const total = ho.items.length;
+    const done = ho.items.filter(i => i.status === '已确认').length;
+    return { total, done, percent: Math.round((done / total) * 100), ready: done === total };
+}
+
+export function confirmHandoverItem(itemKey, operator, note) {
+    const store = getStore();
+    const ho = shiftHandover(store);
+    if (ho.completed) return { ok: false, msg: '交接单已完成，不可再修改' };
+    const it = ho.items.find(i => i.key === itemKey);
+    if (!it) return { ok: false, msg: '交接项不存在' };
+    if (it.status === '已确认') return { ok: false, msg: `「${it.label}」已确认` };
+    it.status = '已确认';
+    it.by = operator;
+    it.ts = hhmm(Date.now());
+    if (note) it.note = note;
+    return { ok: true, item: it, progress: handoverProgress(ho) };
+}
+
+// 完成交接：存在未确认项时直接拦截，避免「带病交接」
+export function completeHandover(operator, note) {
+    const store = getStore();
+    const ho = shiftHandover(store);
+    if (ho.completed) return { ok: false, msg: '交接单已完成' };
+    const left = ho.items.filter(i => i.status !== '已确认');
+    if (left.length) return { ok: false, msg: `还有 ${left.length} 项未确认：${left.map(i => i.label).join('、')}`, left };
+    ho.completed = true;
+    ho.completedBy = operator;
+    ho.completedTime = fmtDateTime(Date.now());
+    ho.note = note || '交接完成，双方确认';
+    store.auditLogs.unshift({
+        time: ho.completedTime, user: operator,
+        action: `完成 ${ho.shiftKey}→${ho.nextKey} 交接班，${ho.items.length} 项全部确认`,
+        target: ho.id
+    });
+    store.events.unshift({
+        id: `EVT-${fmtDate(Date.now()).replace(/-/g, '')}-${String(10000 + seq.evt++)}`,
+        time: ho.completedTime, _ts: Date.now(), device: '排班管理',
+        type: '交接班', status: 'status-normal', statusName: '', processStatus: '已处理',
+        details: `${operator} 完成 ${ho.shiftKey}→${ho.nextKey} 交接，${ho.items.length} 项已确认`
+    });
+    return { ok: true, handover: ho };
+}
+
+// 技能矩阵：岗位决定基础等级，再按稳定伪随机做个体差异
+const SKILL_ROLE_BASE = {
+    '判图员': { xray: 3, recheck: 1, cert: 2, device: 1, emergency: 2, command: 1 },
+    '值机安检员': { xray: 2, recheck: 2, cert: 2, device: 1, emergency: 2, command: 1 },
+    '复检员': { xray: 1, recheck: 3, cert: 2, device: 1, emergency: 2, command: 1 },
+    '值班队长': { xray: 2, recheck: 2, cert: 2, device: 1, emergency: 3, command: 3 },
+    '维修工程师': { xray: 1, recheck: 1, cert: 1, device: 3, emergency: 1, command: 1 }
+};
+
+export const SKILLS = [
+    { key: 'xray', name: 'X光判图', desc: '图像识别与违禁品判定' },
+    { key: 'recheck', name: '复检开包', desc: '开包检查与查扣处置' },
+    { key: 'cert', name: '人证核验', desc: '证件核验与黑名单比对' },
+    { key: 'device', name: '设备维保', desc: '故障定位与部件更换' },
+    { key: 'emergency', name: '应急处置', desc: '冲闯/纠纷/可疑物先期处置' },
+    { key: 'command', name: '现场指挥', desc: '班次调度与交接管理' }
+];
+
+// 关键岗位-技能组合：每个班次至少 1 人达到 2 级
+const CRITICAL_SKILLS = [
+    { role: '判图员', skill: 'xray' },
+    { role: '值机安检员', skill: 'cert' },
+    { role: '复检员', skill: 'recheck' },
+    { role: '值班队长', skill: 'command' },
+    { role: '维修工程师', skill: 'device' }
+];
+
+function makeSkills(store) {
+    const rows = store.employees.map(e => {
+        const base = SKILL_ROLE_BASE[e.role] || {};
+        const levels = {};
+        SKILLS.forEach(s => {
+            let lv = base[s.key] || 0;
+            const r = hash01(`${e.id}#${s.key}`);
+            if (lv > 0 && r > 0.82) lv = Math.min(3, lv + 1);
+            else if (lv > 1 && r < 0.12) lv -= 1;
+            levels[s.key] = lv;
+        });
+        return { empId: e.id, name: e.name, role: e.role, team: e.team, levels };
+    });
+    return { skills: SKILLS, rows };
+}
+
+export function skillsMatrix(store = getStore()) {
+    if (!store.skills) store.skills = makeSkills(store);
+    return store.skills;
+}
+
+// 关键岗位技能覆盖：两个班次各自校验，缺口可定位到具体岗位
+export function skillCoverage(store = getStore()) {
+    const m = skillsMatrix(store);
+    const gaps = [];
+    ['甲班', '乙班'].forEach(team => {
+        CRITICAL_SKILLS.forEach(c => {
+            const skill = SKILLS.find(s => s.key === c.skill);
+            const holders = m.rows.filter(r => r.team === team && r.role === c.role && r.levels[c.skill] >= 2);
+            if (!holders.length) gaps.push({ team, role: c.role, skill: skill.name, msg: `${team}「${c.role}」缺少 ${skill.name} ≥2 级人员` });
+        });
+    });
+    const total = CRITICAL_SKILLS.length * 2;
+    return { total, covered: total - gaps.length, rate: +(((total - gaps.length) / total) * 100).toFixed(1), gaps };
+}
+
+// 换班候选人：按「岗位技能是否可顶」排序，给出缺口说明
+export function swapCandidates(empId) {
+    const store = getStore();
+    const a = store.employees.find(e => e.id === empId);
+    if (!a) return [];
+    const curShift = store.shifts.find(s => s.members.includes(a.id));
+    const other = store.shifts.find(s => s.key !== curShift.key);
+    if (!other) return [];
+    const m = skillsMatrix(store);
+    const base = SKILL_ROLE_BASE[a.role] || {};
+    const need = SKILLS.filter(s => (base[s.key] || 0) >= 2).map(s => s.key);
+    return other.members
+        .map(id => store.employees.find(e => e.id === id))
+        .filter(Boolean)
+        .map(b => {
+            const row = m.rows.find(r => r.empId === b.id) || { levels: {} };
+            const missing = need.filter(k => (row.levels[k] || 0) < 2);
+            return {
+                id: b.id, name: b.name, role: b.role, civilNo: b.civilNo,
+                sameRole: b.role === a.role,
+                need: need.map(k => SKILLS.find(s => s.key === k).name),
+                missing: missing.map(k => SKILLS.find(s => s.key === k).name),
+                ok: missing.length === 0,
+                score: need.length - missing.length
+            };
+        })
+        .sort((x, y) => (y.ok - x.ok) || (y.score - x.score) || (y.sameRole - x.sameRole));
+}
+
+// 考勤与在岗核验：当班名单按稳定伪随机生成在岗/迟到/请假
+function makeAttendance(store) {
+    const cur = currentShiftDef();
+    const shift = store.shifts.find(s => s.key === cur.key) || store.shifts[0];
+    const rows = store.employees.map(e => {
+        const inShift = shift.members.includes(e.id);
+        const r = hash01(`${e.id}#${cur.key}#att`);
+        const status = !inShift ? 'off' : r > 0.94 ? 'leave' : r > 0.86 ? 'late' : 'present';
+        const mins = 468 + Math.round(r * 20);
+        return {
+            empId: e.id, name: e.name, role: e.role, team: e.team, inShift, status,
+            checkTime: inShift && status !== 'leave' ? `${pad(Math.floor(mins / 60))}:${pad(mins % 60)}` : '—',
+            checkedBy: '', verified: status === 'present'
+        };
+    });
+    return { shiftKey: cur.key, shiftTeam: cur.team, rows };
+}
+
+export function attendanceBoard(store = getStore()) {
+    if (!store.attendance) store.attendance = makeAttendance(store);
+    const rows = store.attendance.rows;
+    const onShift = rows.filter(r => r.inShift);
+    return {
+        rows,
+        shiftKey: store.attendance.shiftKey,
+        shiftTeam: store.attendance.shiftTeam,
+        summary: {
+            should: onShift.length,
+            present: onShift.filter(r => r.status === 'present').length,
+            late: onShift.filter(r => r.status === 'late').length,
+            leave: onShift.filter(r => r.status === 'leave').length,
+            off: rows.filter(r => !r.inShift).length
+        }
+    };
+}
+
+// 点名核验：把迟到/请假人员现场确认为在岗，写审计留痕
+export function rollCall(empId, operator) {
+    const store = getStore();
+    const board = attendanceBoard(store);
+    const row = board.rows.find(r => r.empId === empId);
+    if (!row) return { ok: false, msg: '人员不存在' };
+    if (!row.inShift) return { ok: false, msg: `${row.name} 当前为休班，无需点名` };
+    if (row.verified && row.status === 'present') return { ok: false, msg: `${row.name} 已在岗并完成核验` };
+    row.status = 'present';
+    row.verified = true;
+    row.checkedBy = operator;
+    row.checkTime = hhmm(Date.now());
+    store.auditLogs.unshift({
+        time: fmtDateTime(Date.now()), user: operator,
+        action: `点名核验 ${row.name}（${row.role}）在岗`,
+        target: row.empId
+    });
+    return { ok: true, row, summary: attendanceBoard(store).summary };
+}
+
+// ---------- 首页看板：值班视角 / 异常聚合 / 同期对比 ----------
+export const DASH_VIEWS = [
+    { key: 'captain', name: '值班队长', desc: '全局风险、人力与交接', nav: ['alarm', 'eventflow', 'schedule'] },
+    { key: 'judge', name: '判图席位', desc: '判图积压与质控异常', nav: ['judge', 'performance', 'recheck'] },
+    { key: 'security', name: '通道安保', desc: '客流、查扣与通道状态', nav: ['passage', 'face', 'handoff'] },
+    { key: 'device', name: '设备运维', desc: '在线率、工单与配置下发', nav: ['device', 'workorder', 'config'] }
+];
+
+const NAV_LABELS = {
+    judge: '集中判图', recheck: '复检开包', handoff: '处置交接', face: '人脸识别', passage: '通行管理',
+    device: '设备管理', workorder: '维保工单', alarm: '告警中心', events: '事件中心', eventflow: '事件处理',
+    analysis: '统计分析', schedule: '排班管理', performance: '绩效考核', config: '配置管理', datacenter: '数据中台'
+};
+
+// 同期对比：今日实时累计 vs 昨日同时段 vs 上周同日（按已过时段比例折算）
+function dashTrend(store) {
+    const hist = analyticsHistory(store);
+    const today = analysisToday(store);
+    const elapsed = Math.min(12, Math.max(1, new Date().getHours() - 8 + 1));
+    const ratio = elapsed / 12;
+    const y = hist[hist.length - 2] || { flow: 0, contraband: 0, alarms: 0, passengers: 0 };
+    const w = hist[hist.length - 8] || y;
+    const rows = [
+        { key: 'flow', label: '过检包裹', unit: '件', today: today.flow, yesterday: Math.round(y.flow * ratio), lastweek: Math.round(w.flow * ratio) },
+        { key: 'contraband', label: '违禁查获', unit: '件', today: today.contraband, yesterday: Math.round(y.contraband * ratio), lastweek: Math.round(w.contraband * ratio) },
+        { key: 'alarms', label: '告警数量', unit: '条', today: today.alarms, yesterday: Math.round(y.alarms * ratio), lastweek: Math.round(w.alarms * ratio) },
+        { key: 'passengers', label: '客流人次', unit: '人', today: today.passengers, yesterday: Math.round(y.passengers * ratio), lastweek: Math.round(w.passengers * ratio) }
+    ].map(r => {
+        const base = r.yesterday || 1;
+        return { ...r, delta: +(((r.today - r.yesterday) / base) * 100).toFixed(1) };
+    });
+    return { label: `今日 ${elapsed} 个时段累计`, rows };
+}
+
+// 跨模块异常聚合：同一份清单按视角过滤，避免各页面口径不一
+function dashAlerts(store, agg) {
+    const list = [];
+    const danger = store.alarms.filter(a => a.status === '未处理' && a.level === 'danger');
+    if (danger.length) {
+        const wait = Math.round((Date.now() - danger.reduce((m, a) => Math.min(m, a.ts), Date.now())) / 60000);
+        list.push({ id: 'alarm-danger', level: 'high', title: '危险级告警未处理', detail: `${danger.length} 条危险级告警待处置，最长已挂起 ${wait} 分钟`, nav: 'alarm', views: ['captain', 'security'] });
+    }
+    if (agg.pendingJudge > 8) {
+        list.push({ id: 'judge-backlog', level: agg.pendingJudge > 15 ? 'high' : 'mid', title: '判图队列积压', detail: `待判图 ${agg.pendingJudge} 件（阈值 8 件），建议增开判图席位`, nav: 'judge', views: ['captain', 'judge'] });
+    }
+    const offlineDevices = store.devices.filter(d => d.status === 'offline');
+    if (offlineDevices.length) {
+        list.push({ id: 'device-offline', level: 'high', title: '设备离线', detail: `${offlineDevices.map(d => d.displayName).slice(0, 3).join('、')}${offlineDevices.length > 3 ? ' 等' : ''} ${offlineDevices.length} 台离线`, nav: 'device', views: ['captain', 'device'] });
+    }
+    const stuck = store.bags.filter(b => b.recheck && b.recheck.status === '检查中' && b.recheck.startTs && Date.now() - b.recheck.startTs > 30 * 60000);
+    if (stuck.length) {
+        list.push({ id: 'recheck-stuck', level: 'mid', title: '复检超时', detail: `${stuck.length} 件开包检查超过 30 分钟未完成`, nav: 'recheck', views: ['captain', 'security'] });
+    }
+    const ho = shiftHandover(store);
+    const hp = handoverProgress(ho);
+    if (!ho.completed) {
+        list.push({ id: 'handover', level: hp.done ? 'low' : 'mid', title: '交接班未完成', detail: `${ho.shiftKey}→${ho.nextKey} 交接进度 ${hp.done}/${hp.total}，未完成 ${hp.total - hp.done} 项`, nav: 'schedule', views: ['captain', 'security'] });
+    }
+    const draftCfg = store.configs.filter(c => c.status !== '已发布');
+    if (draftCfg.length) {
+        list.push({ id: 'config-draft', level: 'low', title: '配置未生效', detail: `${draftCfg.length} 个配置项待发布/已停用，设备参数未更新`, nav: 'config', views: ['captain', 'device'] });
+    }
+    const pendWo = store.workorders.filter(w => w.status === '待派工');
+    if (pendWo.length) {
+        const urgent = pendWo.filter(w => w.level === '紧急').length;
+        list.push({ id: 'wo-pending', level: urgent ? 'high' : 'mid', title: '待派工工单', detail: `${pendWo.length} 个工单待派工（紧急 ${urgent} 个）`, nav: 'workorder', views: ['device', 'captain'] });
+    }
+    const lowParts = store.spareParts.filter(p => p.stock <= p.min);
+    if (lowParts.length) {
+        list.push({ id: 'parts-low', level: 'low', title: '备件库存偏低', detail: `${lowParts.map(p => `${p.name} ${p.stock}${p.unit || ''}`).join('、')} 低于安全库存`, nav: 'device', views: ['device'] });
+    }
+    const perf = perfStats(store);
+    const missed = perf.filter(p => p.missed > 0);
+    if (missed.length) {
+        list.push({ id: 'perf-missed', level: 'high', title: '质控漏判', detail: `${missed.map(p => p.name).join('、')} 存在抽检漏判，共 ${missed.reduce((s, p) => s + p.missed, 0)} 起`, nav: 'performance', views: ['captain', 'judge'] });
+    }
+    const slow = perf.filter(p => p.judged > 0 && p.avgDelay > 45);
+    if (slow.length) {
+        list.push({ id: 'perf-delay', level: 'mid', title: '判图响应超时', detail: `${slow.map(p => `${p.name} ${p.avgDelay} 分钟`).join('、')}，超过 45 分钟阈值`, nav: 'performance', views: ['judge'] });
+    }
+    const closedCh = store.channels.filter(c => c.status === 'closed');
+    if (closedCh.length) {
+        list.push({ id: 'channel-closed', level: 'mid', title: '通道关闭', detail: `${closedCh.map(c => c.name).join('、')} 处于关闭状态，注意客流疏导`, nav: 'passage', views: ['security'] });
+    }
+    const busyCh = store.channels.filter(c => c.status === 'busy');
+    if (busyCh.length) {
+        list.push({ id: 'channel-busy', level: 'low', title: '通道设备降级', detail: `${busyCh.map(c => c.name).join('、')} 存在告警设备，通行效率下降`, nav: 'device', views: ['security', 'device'] });
+    }
+    const weight = { high: 0, mid: 1, low: 2 };
+    return list.sort((a, b) => weight[a.level] - weight[b.level]);
+}
+
+// 各视角统计卡：指标完全取自业务中枢，不在页面里硬编码
+function dashCards(store, agg, perf, hp) {
+    const online = store.devices.filter(d => d.status === 'online').length;
+    const openCh = store.channels.filter(c => c.status === 'open').length;
+    const judged = store.bags.filter(b => b.status === 'judged').length;
+    const rechecking = store.bags.filter(b => b.recheck && b.recheck.status !== '已完成').length;
+    const openHandoff = store.handoffs.filter(h => h.status !== '已完成').length;
+    const aiMarked = store.bags.filter(b => b.ai).length;
+    const falseAlarm = store.bags.filter(b => b.ai && b.judgeResult === '正常').length;
+    const pendWo = store.workorders.filter(w => w.status === '待派工').length;
+    const fixing = store.workorders.filter(w => w.status === '维修中').length;
+    const lowParts = store.spareParts.filter(p => p.stock <= p.min).length;
+    const draftCfg = store.configs.filter(c => c.status !== '已发布').length;
+
+    return {
+        captain: [
+            { title: '未处理告警', value: agg.unhandled, hint: '含危险级 ' + store.alarms.filter(a => a.status === '未处理' && a.level === 'danger').length + ' 条', nav: 'alarm', tone: agg.unhandled > 5 ? 'warn' : 'ok' },
+            { title: '待判图', value: agg.pendingJudge, hint: agg.pendingJudge > 8 ? '超过积压阈值' : '队列正常', nav: 'judge', tone: agg.pendingJudge > 8 ? 'warn' : 'ok' },
+            { title: '异常设备', value: store.devices.length - online, hint: `在线率 ${(online / store.devices.length * 100).toFixed(1)}%`, nav: 'device', tone: online === store.devices.length ? 'ok' : 'warn' },
+            { title: '复检在办', value: rechecking, hint: '含开包检查中包裹', nav: 'recheck', tone: 'info' },
+            { title: '当班人数', value: (store.shifts.find(s => s.key === currentShiftDef().key) || { members: [] }).members.length, hint: '当前班次在册人员', nav: 'schedule', tone: 'info' },
+            { title: '交接进度', value: `${hp.done}/${hp.total}`, hint: hp.ready ? '可完成交接' : '仍有未确认项', nav: 'schedule', tone: hp.ready ? 'ok' : 'warn' }
+        ],
+        judge: [
+            { title: '待判图', value: agg.pendingJudge, hint: '点击进入集中判图', nav: 'judge', tone: agg.pendingJudge > 8 ? 'warn' : 'ok' },
+            { title: '今日已判', value: judged, hint: `人工判图率 ${(aiMarked / (store.bags.length || 1) * 100).toFixed(1)}%`, nav: 'performance', tone: 'info' },
+            { title: 'AI 误报率', value: `${(falseAlarm / (aiMarked || 1) * 100).toFixed(1)}%`, hint: 'AI 标记但人工判定正常', nav: 'judge', tone: 'info' },
+            { title: '平均响应', value: `${perf.avgDelay} 分`, hint: '当班判图员均值', nav: 'performance', tone: perf.avgDelay > 45 ? 'warn' : 'ok' },
+            { title: '质控漏判', value: perf.missed, hint: `抽检准确率 ${perf.accuracy === null ? '样本不足' : perf.accuracy + '%'}`, nav: 'performance', tone: perf.missed ? 'danger' : 'ok' },
+            { title: '当班判图员', value: perf.onDuty, hint: `共 ${perf.total} 名判图员`, nav: 'schedule', tone: 'info' }
+        ],
+        security: [
+            { title: '今日客流', value: store.passengers.length, hint: '人证核验通过人次', nav: 'face', tone: 'info' },
+            { title: '过检包裹', value: agg.scanned, hint: '含待判与已判', nav: 'device', tone: 'info' },
+            { title: '开包查扣', value: agg.seized, hint: '进入处置交接流程', nav: 'handoff', tone: agg.seized ? 'warn' : 'ok' },
+            { title: '未处理告警', value: agg.unhandled, hint: '含设备与违禁告警', nav: 'alarm', tone: agg.unhandled > 5 ? 'warn' : 'ok' },
+            { title: '通道开放', value: `${openCh}/${store.channels.length}`, hint: '关闭或降级需报备', nav: 'passage', tone: openCh === store.channels.length ? 'ok' : 'warn' },
+            { title: '民警交接', value: openHandoff, hint: '未完成交接的查扣物品', nav: 'handoff', tone: openHandoff ? 'warn' : 'ok' }
+        ],
+        device: [
+            { title: '设备在线率', value: `${(online / store.devices.length * 100).toFixed(1)}%`, hint: `${online}/${store.devices.length} 台在线`, nav: 'device', tone: online === store.devices.length ? 'ok' : 'warn' },
+            { title: '异常设备', value: store.devices.length - online, hint: `告警 ${store.devices.filter(d => d.status === 'warning').length} 台 / 离线 ${store.devices.filter(d => d.status === 'offline').length} 台`, nav: 'device', tone: 'warn' },
+            { title: '待派工工单', value: pendWo, hint: '紧急工单优先派发', nav: 'workorder', tone: pendWo ? 'warn' : 'ok' },
+            { title: '维修中', value: fixing, hint: '维修完成后转验收', nav: 'workorder', tone: 'info' },
+            { title: '备件预警', value: lowParts, hint: '低于安全库存的品类', nav: 'device', tone: lowParts ? 'warn' : 'ok' },
+            { title: '配置待生效', value: draftCfg, hint: '发布后下发设备缓存', nav: 'config', tone: draftCfg ? 'warn' : 'ok' }
+        ]
+    };
+}
+
+export function dashboardBoard(viewKey = 'captain') {
+    const store = getStore();
+    const view = DASH_VIEWS.find(v => v.key === viewKey) || DASH_VIEWS[0];
+    const agg = aggregate(store);
+    const perf = perfSummary(perfStats(store));
+    const hp = handoverProgress(shiftHandover(store));
+    return {
+        view,
+        views: DASH_VIEWS,
+        cards: (dashCards(store, agg, perf, hp)[view.key] || []).map(c => ({ ...c, navLabel: NAV_LABELS[c.nav] || '' })),
+        alerts: dashAlerts(store, agg).filter(a => a.views.includes(view.key)),
+        trend: dashTrend(store),
+        quick: view.nav.map(n => ({ nav: n, label: NAV_LABELS[n] || n })),
+        agg
+    };
+}
+
 // 模拟现场持续产出：每 15 秒新过检 1~2 件 AI 标记包裹，进入判图队列
 function simulateArrival(store) {
     const machines = store.devices.filter(d => d.key === 'securityCheckMachine' && d.status === 'online');
@@ -2053,6 +3051,8 @@ export function getStore() {
     const dataServices = makeDataServices();
     const qualityRules = makeQualityRules();
     const eventEngine = makeEventEngine({ bags, devices, passengers, recognitionRecords: face.recognitionRecords });
+    const configs = makeConfigs();
+    const configVersions = makeConfigVersions(configs);
 
     const store = {
         initAt: Date.now(),
@@ -2071,7 +3071,7 @@ export function getStore() {
         dataSources, pipelines, storages, subscriptions,
         warehouseTables, dataServices, qualityRules,
         eventEngine,
-        configs: makeConfigs(),
+        configs, configVersions,
         auditLogs: [
             { time: fmtDateTime(Date.now() - 2 * 86400000), user: '系统管理员', action: '更新违禁品数据库至 v3.5.2', target: 'CFG-004' },
             { time: fmtDateTime(Date.now() - 4 * 86400000), user: '值班队长·王振宇', action: '调整人脸比对通过阈值 88→90', target: 'CFG-003' }

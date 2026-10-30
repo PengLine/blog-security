@@ -1,15 +1,86 @@
 <div class="module" id="performance">
     <div class="module-header">
-        <h2>判图员绩效榜（今日）</h2>
+        <h2>判图员绩效考核</h2>
         <div class="module-actions">
-            <button class="btn btn-secondary" id="perfExportBtn">导出考核表</button>
+            <div class="filter-group">
+                <label class="filter-label">班组：</label>
+                <select class="form-control" id="perfTeamFilter">
+                    <option value="">全部班组</option>
+                    <option value="甲班">甲班</option>
+                    <option value="乙班">乙班</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">班次状态：</label>
+                <select class="form-control" id="perfDutyFilter">
+                    <option value="">全部</option>
+                    <option value="on">当班</option>
+                    <option value="off">休班</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">排序：</label>
+                <select class="form-control" id="perfSortSelect">
+                    <option value="score">综合评分</option>
+                    <option value="judged">判图量</option>
+                    <option value="danger">查获量</option>
+                    <option value="delay">响应时长</option>
+                    <option value="missed">漏判次数</option>
+                </select>
+            </div>
+            <button class="btn btn-secondary" id="perfExportBtn">导出当前筛选</button>
         </div>
     </div>
 
-    <div class="rank-grid" id="perfRankCards">
-        <!-- 前三甲卡片由 JS 渲染 -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>当班判图员</h3>
+                <div class="stat-value" id="perfStatOnDuty">0</div>
+                <div class="stat-trend" id="perfStatDutyHint">—</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>今日判图量</h3>
+                <div class="stat-value" id="perfStatJudged">0</div>
+                <div class="stat-trend" id="perfStatJudgedHint">—</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>查获违禁</h3>
+                <div class="stat-value" id="perfStatDanger" style="color:#f56c6c;">0</div>
+                <div class="stat-trend" id="perfStatDangerHint">—</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>平均响应</h3>
+                <div class="stat-value" id="perfStatDelay" style="color:#e6a23c;">0 分</div>
+                <div class="stat-trend" id="perfStatDelayHint">—</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>抽检准确率</h3>
+                <div class="stat-value" id="perfStatAccuracy" style="color:#67c23a;">—</div>
+                <div class="stat-trend" id="perfStatAccuracyHint">—</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>异常人员</h3>
+                <div class="stat-value" id="perfStatAlerts">0</div>
+                <div class="stat-trend" id="perfStatAlertsHint">—</div>
+            </div>
+        </div>
     </div>
 
+    <div class="sub-title">异常预警（点击查看作业档案）</div>
+    <div class="principle-grid" id="perfAlerts"></div>
+
+    <div class="sub-title">作业量与质量趋势</div>
     <div class="charts-section">
         <div class="chart-container">
             <h3>判图量对比</h3>
@@ -19,15 +90,22 @@
             <h3>查获违禁对比</h3>
             <div class="situation-chart" id="perfDangerChart"></div>
         </div>
+        <div class="chart-container">
+            <h3>团队近 7 日平均分</h3>
+            <div class="situation-chart" id="perfTrendChart"></div>
+        </div>
     </div>
 
+    <div class="sub-title">当前前三甲</div>
+    <div class="rank-grid" id="perfRankCards"></div>
+
     <div class="table-section">
-        <div class="table-title">考核明细（点击查看该判图员作业记录）</div>
+        <div class="table-title">考核明细（点击行查看评分构成与近 10 次判图记录）</div>
         <table class="data-table">
             <thead>
                 <tr>
-                    <th>判图员</th>
-                    <th>班次状态</th>
+                    <th style="width:150px;">判图员</th>
+                    <th style="width:120px;">班组 / 状态</th>
                     <th>判图量</th>
                     <th>查获违禁</th>
                     <th>可疑转检</th>
@@ -36,14 +114,18 @@
                     <th>漏判</th>
                     <th>抽检准确率</th>
                     <th>综合评分</th>
+                    <th style="width:100px;">异常</th>
                 </tr>
             </thead>
             <tbody id="perfTableBody"></tbody>
         </table>
     </div>
 
-    <p style="font-size:12px;color:#909399;margin-top:10px;">
-        评分规则：基础分 88 + 查获贡献（每件 +0.4，封顶另计）- 抽检漏判（每起 -6）- 处置不规范（每起 -2）+ 工作量加成（≤6）- 响应超时惩罚（平均超 30 分钟起扣，≤4）。
-        质控抽检由复检室对已判包裹按约 12% 比例回溯核验。
-    </p>
+    <div class="perf-rule">
+        <b>评分口径</b>：基础分 88 + 查获贡献（每件 +0.4）− 漏判（每起 −6）− 处置不规范（每起 −2）
+        + 工作量加成（每 12 件 +1，上限 +6）− 响应超时（平均超 30 分钟起扣，上限 −4），结果按 60~100 截断。
+        <br>
+        <b>质控抽检</b>：复检室对已判包裹按约 12% 比例回溯核验，结论分为合格 / 处置不规范 / 漏判；
+        点击任意人员可查看「构成拆解」，每项加减分可与综合评分逐项对账。
+    </div>
 </div>

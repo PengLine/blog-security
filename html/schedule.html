@@ -4,26 +4,68 @@
     </div>
 
     <div class="module-header">
-        <h2>今日班次安排（两班倒）</h2>
+        <h2>排班与交接管理</h2>
         <div class="module-actions">
             <button class="btn btn-secondary" id="schExportBtn">导出值班表</button>
         </div>
     </div>
-    <div class="shift-grid" id="shiftCards">
-        <!-- 班次卡片由 JS 渲染 -->
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>应到 / 在岗</h3>
+                <div class="stat-value" id="schStatPresent">0/0</div>
+                <div class="stat-trend" id="schStatPresentHint">—</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>迟到 / 请假</h3>
+                <div class="stat-value" id="schStatAbsent" style="color:#e6a23c;">0</div>
+                <div class="stat-trend" id="schStatAbsentHint">—</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>交接进度</h3>
+                <div class="stat-value" id="schStatHandover">0%</div>
+                <div class="stat-trend" id="schStatHandoverHint">—</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>关键技能覆盖</h3>
+                <div class="stat-value" id="schStatSkill" style="color:#67c23a;">0%</div>
+                <div class="stat-trend" id="schStatSkillHint">—</div>
+            </div>
+        </div>
     </div>
 
-    <div class="module">
-        <div class="module-header">
-            <h2>班次业务量</h2>
+    <div class="tab-nav">
+        <div class="tab-nav-item active" data-tab="schShifts">班次与换班</div>
+        <div class="tab-nav-item" data-tab="schHandover">交接班</div>
+        <div class="tab-nav-item" data-tab="schAttendance">考勤与在岗</div>
+        <div class="tab-nav-item" data-tab="schSkills">技能矩阵</div>
+    </div>
+
+    <!-- 班次与换班 -->
+    <div class="tab-content active" id="schShifts">
+        <div class="shift-grid" id="shiftCards">
+            <!-- 班次卡片由 JS 渲染 -->
         </div>
+        <p class="schedule-tip">
+            换班入口在每个人员标签上：系统会按「岗位技能是否可顶」排序候选人，同岗位优先；
+            技能不足会在确认前提示，换班即时生效并写入审计与事件中心。
+        </p>
+
         <div class="table-section">
+            <div class="table-title">班次业务量（按判图完成时刻归属班次）</div>
             <table class="data-table">
                 <thead>
                     <tr>
                         <th>班次</th>
                         <th>值守时段</th>
-                        <th>在岗人数</th>
+                        <th>在册人数</th>
                         <th>已判图（件）</th>
                         <th>查获违禁（件）</th>
                         <th>开包查扣（起）</th>
@@ -33,6 +75,66 @@
                 <tbody id="shiftWorkloadBody"></tbody>
             </table>
         </div>
-        <p style="font-size:12px;color:#909399;margin-top:8px;">说明：业务量按判图完成时刻归属班次；换班调整后，人员即时在「集中判图」当班下拉中生效。</p>
+    </div>
+
+    <!-- 交接班 -->
+    <div class="tab-content" id="schHandover">
+        <div class="pipe-flow" id="hoHead">交接单加载中…</div>
+        <div class="table-section">
+            <div class="table-title">交接检查项（逐项确认后由带班队长完成交接）</div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th style="width:190px;">检查项</th>
+                        <th>自动摘要（取业务中枢实时数据）</th>
+                        <th style="width:110px;">状态</th>
+                        <th style="width:150px;">确认人 / 时间</th>
+                        <th style="width:100px;">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="hoTableBody"></tbody>
+            </table>
+        </div>
+        <div class="ho-actions">
+            <button class="btn btn-primary" id="hoCompleteBtn">完成交接班</button>
+            <span class="ho-actions-tip" id="hoActionTip"></span>
+        </div>
+    </div>
+
+    <!-- 考勤与在岗 -->
+    <div class="tab-content" id="schAttendance">
+        <div class="pipe-flow" id="attHead">考勤数据加载中…</div>
+        <div class="table-section">
+            <div class="table-title">当班点名台账（迟到/请假人员可现场核验为在岗）</div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>姓名</th>
+                        <th style="width:120px;">岗位</th>
+                        <th style="width:90px;">班组</th>
+                        <th style="width:100px;">班次</th>
+                        <th style="width:110px;">考勤状态</th>
+                        <th style="width:110px;">签到时间</th>
+                        <th>核验记录</th>
+                        <th style="width:100px;">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="attTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 技能矩阵 -->
+    <div class="tab-content" id="schSkills">
+        <div class="pipe-flow" id="skillHead">技能矩阵加载中…</div>
+        <div class="table-section">
+            <div class="table-title">技能等级矩阵（●=1 级 熟练度，●●●=3 级 可带教；关键岗位需 ≥2 级）</div>
+            <table class="data-table">
+                <thead id="skillHeadRow"></thead>
+                <tbody id="skillTableBody"></tbody>
+            </table>
+        </div>
+        <div class="sub-title">关键岗位技能缺口</div>
+        <div class="principle-grid" id="skillGaps"></div>
     </div>
 </div>

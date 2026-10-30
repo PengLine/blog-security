@@ -1332,3 +1332,113 @@ body.sidebar-hidden .sidebar { display: none; }
 .situation-value { font-size: 22px; font-weight: bold; color: #e6f2ff; }
 .situation-meta { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px; margin-top: 6px; font-size: 12px; color: #909399; }
 .situation-note { margin-top: 8px; font-size: 12px; color: #909399; line-height: 1.7; }
+
+/* ---------- 通用：表格内小按钮 ---------- */
+.btn-small { padding: 3px 10px; font-size: 12px; line-height: 1.6; margin-right: 6px; }
+.btn-small:last-child { margin-right: 0; }
+
+/* ---------- 统计分析：口径说明条 ---------- */
+.analysis-compare {
+    margin: 14px 0 4px;
+    padding: 10px 16px;
+    background-color: #0f2438;
+    border: 1px dashed #1e3a5f;
+    border-left: 3px solid #409eff;
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.9;
+    color: #909399;
+}
+.analysis-compare b { color: #e6f2ff; }
+
+/* ---------- 配置中心：参数编辑表单 ---------- */
+.cfg-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px 16px; margin-bottom: 6px; }
+.cfg-field { display: flex; flex-direction: column; gap: 4px; }
+.cfg-field label { font-size: 12px; color: #909399; }
+.cfg-field .form-control { width: 100%; }
+.cfg-issue { font-size: 12px; color: #67c23a; line-height: 1.6; min-height: 16px; }
+.cfg-issue.is-error { color: #f56c6c; }
+.cfg-issue.is-warn { color: #e6a23c; }
+.cfg-issue.is-ok { color: #67c23a; }
+.cfg-issues { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+.cfg-issue-line { font-size: 12px; line-height: 1.7; color: #c0c4cc; }
+.cfg-issue-line.is-error { color: #f56c6c; }
+.cfg-issue-line.is-warn { color: #e6a23c; }
+.cfg-issue-line.is-ok { color: #67c23a; }
+
+/* ---------- 配置中心：变更 diff ---------- */
+.cfg-diff { padding: 4px 0; font-size: 12px; }
+.cfg-diff-row {
+    display: grid;
+    grid-template-columns: 140px 1fr 24px 1fr;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    margin-bottom: 6px;
+    background-color: #0f2438;
+    border: 1px solid #1e3a5f;
+    border-radius: 6px;
+}
+.cfg-diff-k { color: #409eff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cfg-diff-old { color: #909399; text-decoration: line-through; word-break: break-all; }
+.cfg-diff-arrow { text-align: center; color: #409eff; }
+.cfg-diff-new { color: #67c23a; word-break: break-all; }
+@media (max-width: 640px) {
+    .cfg-diff-row { grid-template-columns: 1fr; gap: 2px; }
+    .cfg-diff-arrow { display: none; }
+}
+
+/* ---------- 绩效考核：评分拆解与异常 ---------- */
+.perf-rule { margin-top: 14px; padding: 10px 14px; background-color: #0f2438; border: 1px dashed #1e3a5f; border-radius: 8px; font-size: 12px; line-height: 1.9; color: #909399; }
+.perf-rule b { color: #409eff; }
+.perf-alert { cursor: pointer; }
+.perf-alert.is-high { border-left-color: #f56c6c; }
+.perf-alert.is-mid { border-left-color: #e6a23c; }
+.perf-alert.is-low { border-left-color: #409eff; }
+.perf-alert-action { display: block; margin-top: 6px; color: #409eff; }
+.perf-bd { display: flex; flex-direction: column; gap: 6px; }
+.perf-bd-row { display: grid; grid-template-columns: 110px 70px 1fr; gap: 10px; align-items: center; padding: 6px 10px; background-color: #0f2438; border: 1px solid #1e3a5f; border-radius: 6px; font-size: 12px; }
+.perf-bd-k { color: #c0c4cc; }
+.perf-bd-v { font-weight: bold; text-align: right; }
+.perf-bd-note { color: #909399; }
+.perf-cmp-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.perf-cmp { display: flex; flex-direction: column; gap: 2px; padding: 8px 12px; background-color: #0f2438; border: 1px solid #1e3a5f; border-radius: 6px; font-size: 12px; color: #e6f2ff; }
+.perf-cmp i { font-style: normal; font-size: 11px; }
+.perf-cmp small { color: #909399; }
+
+/* ---------- 排班：交接与技能矩阵 ---------- */
+.schedule-tip { margin: 8px 0 12px; font-size: 12px; color: #909399; line-height: 1.8; }
+.ho-actions { display: flex; align-items: center; gap: 12px; margin: 12px 0 4px; }
+.ho-actions .btn[disabled] { opacity: 0.55; cursor: not-allowed; }
+.ho-actions-tip { font-size: 12px; color: #909399; }
+.ho-actions-tip.is-ok { color: #67c23a; }
+.ho-actions-tip.is-warn { color: #e6a23c; }
+.skill-dots { display: inline-flex; gap: 3px; vertical-align: middle; }
+.skill-dots i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: #1e3a5f; }
+.skill-dots i.on { background-color: #409eff; }
+.skill-lv { margin-left: 6px; font-size: 11px; color: #909399; }
+
+/* ---------- 首页看板：视角切换 / 异常聚合 / 同期对比 ---------- */
+.dash-view-bar { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin: 10px 0 4px; }
+.dash-views { display: flex; flex-wrap: wrap; gap: 8px; }
+.dash-view { min-width: 132px; padding: 8px 14px; background-color: #0f2438; border: 1px solid #1e3a5f; border-radius: 8px; cursor: pointer; transition: border-color 0.2s, box-shadow 0.2s; }
+.dash-view b { display: block; font-size: 13px; color: #e6f2ff; }
+.dash-view small { font-size: 11px; color: #909399; }
+.dash-view:hover { border-color: #409eff; }
+.dash-view.active { border-color: #409eff; box-shadow: 0 0 10px rgba(64, 158, 255, 0.25); }
+.dash-view.active b { color: #409eff; }
+.dash-quick { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.dash-quick-item { padding: 4px 12px; font-size: 12px; color: #409eff; background-color: rgba(64, 158, 255, 0.1); border: 1px solid #1e3a5f; border-radius: 14px; cursor: pointer; }
+.dash-quick-item:hover { border-color: #409eff; }
+.dash-alert { cursor: pointer; }
+.dash-alert.is-high { border-left-color: #f56c6c; }
+.dash-alert.is-mid { border-left-color: #e6a23c; }
+.dash-alert.is-low { border-left-color: #409eff; }
+.dash-alert-go { display: block; margin-top: 6px; color: #409eff; }
+.principle-card.is-ok { border-left-color: #67c23a; }
+.principle-card.is-warn { border-left-color: #e6a23c; }
+.dash-card { position: relative; }
+.dash-card-go { margin-top: 6px; font-size: 11px; color: #409eff; opacity: 0.8; }
+.dash-card.tone-warn .stat-value { color: #e6a23c; }
+.dash-card.tone-danger .stat-value { color: #f56c6c; }
+.dash-card.tone-ok .stat-value { color: #67c23a; }
