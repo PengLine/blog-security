@@ -33,11 +33,12 @@ body .container{
 
 .main-nav {
     display: flex;
+    flex-wrap: wrap;
     gap: 6px;
 }
 
 .nav-item {
-    padding: 6px 10px;
+    padding: 6px 8px;
     font-size: 13px;
     cursor: pointer;
     border-radius: 4px;
@@ -1103,6 +1104,9 @@ body .container{
 /* 紧凑徽章（级别） */
 .level-severe { color: #f56c6c; }
 .level-restricted { color: #e6a23c; }
+
+/* 侧边栏按页面显隐：仅设备/告警等设备相关页面保留左侧设备导航 */
+body.sidebar-hidden .sidebar { display: none; }
 
 /* 模块内子标题 */
 .sub-title { font-size: 14px; color: #409eff; margin: 16px 0 8px; padding-left: 8px; border-left: 3px solid #409eff; }

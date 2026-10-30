@@ -248,7 +248,34 @@ function finalizeBag(bag, judges, now, generated) {
         bag.disposition = '放行';
         bag.aiCorrect = bag.ai.label.startsWith('疑似');
     } else if (result === '可疑') {
-        bag.disposition = Math.random() > 0.45 ? '复检放行' : '开包查扣';
+        // 可疑 → 复检开包流程：新近记录进待复检队列，较早记录已完成复检
+        const fresh = judgeTs > now - 20 * 60000;
+        if (fresh) {
+            bag.disposition = '转复检';
+            bag.recheck = {
+                status: Math.random() > 0.6 ? '待复检' : '检查中',
+                startTs: 0, finishTs: 0, result: '', note: '', by: ''
+            };
+            if (bag.recheck.status === '检查中') bag.recheck.startTs = Math.min(now - 60000, judgeTs + 8 * 60000);
+        } else if (Math.random() > 0.55) {
+            bag.disposition = '复检放行';
+            bag.recheck = {
+                status: '已完成', startTs: judgeTs + 6 * 60000, finishTs: judgeTs + 18 * 60000,
+                result: '放行', note: '开包检查未见异常，复测后放行', by: '复检员·何秀兰'
+            };
+        } else {
+            bag.disposition = '开包查扣';
+            const ct2 = CONTRABAND_TYPES.find(c => c.name === bag.ai.type) || CONTRABAND_TYPES[0];
+            bag.seized = {
+                typeName: ct2.name, level: ct2.level,
+                itemName: ct2.items[Math.floor(Math.random() * ct2.items.length)],
+                qty: 1, unit: '件'
+            };
+            bag.recheck = {
+                status: '已完成', startTs: judgeTs + 5 * 60000, finishTs: judgeTs + 20 * 60000,
+                result: '查扣', note: '开包检查确认违禁，转开包查扣', by: '复检员·徐宗翰'
+            };
+        }
     } else {
         bag.disposition = '开包查扣';
         const ct = CONTRABAND_TYPES.find(c => c.name === bag.ai.type);
@@ -565,6 +592,7 @@ export function judgeBag(bagId, result, operatorName) {
         bag.disposition = '放行';
     } else if (result === '可疑') {
         bag.disposition = '转复检';
+        bag.recheck = { status: '待复检', startTs: 0, finishTs: 0, result: '', note: '', by: '' };
     } else {
         // 违禁：默认按 AI 识别品类生成查扣明细，交接页可修改
         const ct = CONTRABAND_TYPES.find(c => c.name === (bag.ai ? bag.ai.type : '')) || CONTRABAND_TYPES[CONTRABAND_TYPES.length - 1];
@@ -691,6 +719,118 @@ export function addToBlacklist(personIdOrName, reason) {
     };
     store.blacklist.unshift(item);
     return { ok: true, item };
+}
+
+// ---------- 复检开包（判图可疑 → 复检台开包检查） ----------
+// 队列：已判图“可疑”且 recheck 未完成的包裹
+export function recheckQueue(store) {
+    return store.bags
+        .filter(b => b.recheck && b.recheck.status !== '已完成')
+        .sort((a, b) => (a.recheck.status === '检查中' ? -1 : 1) - (b.recheck.status === '检查中' ? -1 : 1) || (b.judgeTs || 0) - (a.judgeTs || 0));
+}
+
+export function startRecheck(bagId, operator) {
+    const store = getStore();
+    const bag = store.bags.find(b => b.id === bagId);
+    if (!bag || !bag.recheck || bag.recheck.status === '已完成') return null;
+    bag.recheck.status = '检查中';
+    bag.recheck.startTs = Date.now();
+    bag.recheck.by = operator;
+    return bag;
+}
+
+// 完成开包检查：pass=true → 未见异常复检放行；pass=false → 检出违禁转查扣（生成交接单+告警）
+export function completeRecheck(bagId, pass, note, operator) {
+    const store = getStore();
+    const bag = store.bags.find(b => b.id === bagId);
+    if (!bag || !bag.recheck || bag.recheck.status === '已完成') return null;
+    const now = Date.now();
+    bag.recheck.status = '已完成';
+    bag.recheck.finishTs = now;
+    bag.recheck.by = operator;
+    bag.recheck.result = pass ? '放行' : '查扣';
+    bag.recheck.note = note || (pass ? '开包检查未见异常，复检放行' : '开包检查确认违禁，转开包查扣');
+
+    if (pass) {
+        bag.disposition = '复检放行';
+        store.events.unshift({
+            id: `EVT-${fmtDate(now).replace(/-/g, '')}-${String(10000 + seq.evt++)}`,
+            time: fmtDateTime(now), _ts: now, device: bag.machineName,
+            type: '包裹异常', status: 'status-normal', statusName: '', processStatus: '已处理',
+            passengerId: bag.owner, handler: operator, handleTime: fmtDateTime(now),
+            details: `${bag.ownerName} 的包裹 ${bag.id} 开包检查未见异常，复检放行（复检人：${operator}）`
+        });
+    } else {
+        bag.disposition = '开包查扣';
+        const ct = CONTRABAND_TYPES.find(c => c.name === (bag.ai ? bag.ai.type : '')) || CONTRABAND_TYPES[CONTRABAND_TYPES.length - 1];
+        if (!bag.seized) {
+            bag.seized = { typeName: ct.name, level: ct.level, itemName: ct.items[0], qty: 1, unit: '件' };
+        }
+        const ho = {
+            id: `HO-${fmtDate(now).replace(/-/g, '')}-${String(500 + seq.ho++)}`,
+            bagId: bag.id, passengerName: bag.ownerName, passengerId: bag.owner,
+            channel: bag.channelName, machineName: bag.machineName,
+            typeName: `${bag.seized.typeName}·${bag.seized.itemName}`, category: bag.seized.typeName,
+            level: bag.seized.level, qty: bag.seized.qty, unit: bag.seized.unit,
+            foundWay: '开包检查', foundBy: operator, foundByRole: '复检员',
+            ts: now, time: fmtDateTime(now), status: '待移交',
+            toPost: '复检台', police: '',
+            storageNo: `CC${fmtDate(now).replace(/-/g, '').slice(2)}${String(1000 + Math.floor(Math.random() * 8999))}`,
+            note: '复检开包检出违禁品，待民警交接'
+        };
+        store.handoffs.unshift(ho);
+        store.alarms.unshift({
+            id: `ALM-${fmtDate(now).replace(/-/g, '')}-${String(3000 + seq.alm++)}`,
+            ts: now, time: fmtDateTime(now), device: bag.machineName, level: 'danger', type: '违禁品检出',
+            content: `${bag.ownerName} 的包裹 ${bag.id} 开包检查检出违禁：${ho.typeName}`,
+            status: '未处理', operator: '', handleTime: '', refId: bag.id,
+            details: `复检员：${operator}，已自动生成查扣登记 ${ho.id}`
+        });
+        store.events.unshift({
+            id: `EVT-${fmtDate(now).replace(/-/g, '')}-${String(10000 + seq.evt++)}`,
+            time: fmtDateTime(now), _ts: now, device: bag.machineName,
+            type: '违禁品检测', status: 'status-danger', statusName: '', processStatus: '处理中',
+            passengerId: bag.owner,
+            details: `${bag.ownerName} 的包裹 ${bag.id} 开包检查检出${ho.typeName}，已生成查扣登记 ${ho.id}`
+        });
+    }
+    return bag;
+}
+
+// ---------- 备件库存 ----------
+function makeSpareParts() {
+    return [
+        { name: '以太网模块', stock: 6, min: 4, unit: '块' },
+        { name: '温度传感器', stock: 9, min: 5, unit: '个' },
+        { name: '电源适配器', stock: 3, min: 4, unit: '个' },
+        { name: '传送带皮带', stock: 12, min: 6, unit: '条' },
+        { name: '闪烁探测器', stock: 2, min: 2, unit: '个' },
+        { name: '门磁模块', stock: 5, min: 3, unit: '个' }
+    ];
+}
+
+// ---------- 人脸核验记录（1:1 人证比对工作台写入） ----------
+export function addRecognitionRecord({ person, device, channel, similarity, status, temperature }) {
+    const store = getStore();
+    const now = Date.now();
+    const rec = {
+        id: `REC-${fmtDate(now).replace(/-/g, '')}-${String(4000 + seq.rec++)}`,
+        time: fmtDateTime(now), ts: now,
+        personId: person.id, personName: person.name,
+        device: device || '人证对比工作台', channel: channel || '人工核验台',
+        similarity: String(similarity), status, temperature: temperature || person.temperature
+    };
+    store.recognitionRecords.unshift(rec);
+    store.events.unshift({
+        id: `EVT-${fmtDate(now).replace(/-/g, '')}-${String(10000 + seq.evt++)}`,
+        time: fmtDateTime(now), _ts: now, device: rec.device,
+        type: status === '未识别' ? '未注册' : '正常通过',
+        status: status === '识别成功' ? 'status-normal' : 'status-warning', statusName: '',
+        processStatus: status === '人工复核' ? '处理中' : (status === '识别成功' ? '已处理' : '未处理'),
+        passengerId: person.id,
+        details: `人证比对：${person.name}（${person.id}）相似度 ${similarity}%，结论：${status}`
+    });
+    return rec;
 }
 
 // ---------- 排班计划（按班组对应班次，全员每日单班） ----------
@@ -871,6 +1011,15 @@ export function finishRepair(woId, repairNote, parts) {
     wo.repairNote = repairNote || wo.repairNote;
     wo.parts = parts || '（未更换配件）';
     wo.finishTs = Date.now();
+    // 备件库存自动扣减（格式：配件名 ×数量）
+    const m = /^(.+?)\s*×\s*(\d+)$/.exec(wo.parts);
+    if (m) {
+        const part = store.spareParts.find(p => p.name === m[1].trim());
+        if (part) {
+            part.stock = Math.max(0, part.stock - parseInt(m[2], 10));
+            wo.partsDeducted = parseInt(m[2], 10);
+        }
+    }
     return wo;
 }
 
@@ -997,6 +1146,7 @@ export function getStore() {
     const channels = makeChannels(devices);
     const shifts = makeShiftPlan(employees);
     const workorders = makeWorkorders(devices, employees);
+    const spareParts = makeSpareParts();
 
     const store = {
         initAt: Date.now(),
@@ -1011,6 +1161,7 @@ export function getStore() {
         channels,
         shifts,
         workorders,
+        spareParts,
         configs: makeConfigs(),
         auditLogs: [
             { time: fmtDateTime(Date.now() - 2 * 86400000), user: '系统管理员', action: '更新违禁品数据库至 v3.5.2', target: 'CFG-004' },

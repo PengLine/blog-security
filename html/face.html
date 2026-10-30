@@ -6,6 +6,7 @@
     <!-- 标签页导航 -->
     <div class="tab-nav">
         <div class="tab-nav-item active" data-tab="personnel">人员管理</div>
+        <div class="tab-nav-item" data-tab="verify">人证核验</div>
         <div class="tab-nav-item" data-tab="enroll">人脸录入</div>
         <div class="tab-nav-item" data-tab="records">识别记录</div>
         <div class="tab-nav-item" data-tab="blacklist">黑名单管理</div>
@@ -76,6 +77,49 @@
                 <tbody id="personnelTableBody">
                     <!-- 人员列表将通过JavaScript动态生成 -->
                 </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 人证核验标签页（1:1 比对工作台） -->
+    <div class="tab-content" id="verify">
+        <div class="judge-interface">
+            <div class="image-panel">
+                <div class="chart-title">现场抓拍</div>
+                <div class="image-container" id="verifyCapture">
+                    <span style="color:#909399;">请选择旅客并点击「开始核验」</span>
+                </div>
+                <div class="judge-controls">
+                    <button class="btn btn-primary" id="verifyStartBtn">开始核验</button>
+                    <button class="btn btn-success" id="verifyPassBtn" disabled>确认通过</button>
+                    <button class="btn btn-warning" id="verifyManualBtn" style="background-color:#e6a23c;color:#fff;"
+                        disabled>转人工复核</button>
+                    <button class="btn btn-danger" id="verifyRejectBtn" disabled>拒绝通行</button>
+                </div>
+                <div class="hotkey-tip">判定规则：相似度 ≥ 90% 自动通过；75%-90% 转人工复核；&lt; 75% 拒绝通行并登记</div>
+            </div>
+            <div class="judge-list" style="max-height: 340px;">
+                <div class="chart-title">待核验旅客</div>
+                <select class="form-control" id="verifyPersonSelect" style="width: 100%; padding: 8px;">
+                    <!-- 旅客列表由JS填充 -->
+                </select>
+                <div id="verifyResult" style="margin-top: 12px; font-size: 13px; color: #909399;">尚未开始核验</div>
+            </div>
+        </div>
+
+        <div class="table-section" style="margin-top: 20px;">
+            <div class="table-title">今日人证核验流水</div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>时间</th>
+                        <th>旅客</th>
+                        <th>相似度</th>
+                        <th>结论</th>
+                        <th>设备</th>
+                    </tr>
+                </thead>
+                <tbody id="verifyRecordsBody"></tbody>
             </table>
         </div>
     </div>

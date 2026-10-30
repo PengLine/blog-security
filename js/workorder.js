@@ -44,6 +44,23 @@ function renderStats() {
     set('woStatDone', store.workorders.filter(w => w.status === '已完成').length);
 }
 
+// 备件库存：完工登记扣减后实时刷新，低于安全库存预警
+function renderParts() {
+    const tbody = document.getElementById('woPartsBody');
+    if (!tbody) return;
+    const parts = getStore().spareParts || [];
+    tbody.innerHTML = parts.map(p => {
+        const low = p.stock <= p.min;
+        return `<tr>
+            <td>${p.name}</td>
+            <td style="font-weight:bold;color:${low ? '#f56c6c' : '#67c23a'};">${p.stock}</td>
+            <td>${p.min}</td>
+            <td>${p.unit}</td>
+            <td><span class="status-tag ${low ? 'status-danger' : 'status-normal'}">${low ? '库存不足·请补货' : '库存正常'}</span></td>
+        </tr>`;
+    }).join('') || '<tr><td colspan="5" style="text-align:center;color:#909399;">暂无备件台账</td></tr>';
+}
+
 function renderTable() {
     const tbody = document.getElementById('woTableBody');
     if (!tbody) return;
@@ -161,8 +178,10 @@ function showFinishForm(id) {
     const store = getStore();
     const w = store.workorders.find(x => x.id === id);
     if (!w) return;
-    const partOptions = ['（未更换配件）', '以太网模块 ×1', '温度传感器 ×1', '电源适配器 ×1', '传送带皮带 ×1', '闪烁探测器 ×1']
-        .map(p => `<option value="${p}">${p}</option>`).join('');
+    const partOptions = ['（未更换配件）'].concat((store.spareParts || []).map(p => `${p.name} ×1`))
+        .map(p => p === '（未更换配件）'
+            ? `<option value="${p}">${p}</option>`
+            : `<option value="${p}" ${(store.spareParts.find(x => p.startsWith(x.name)) || {}).stock > 0 ? '' : 'disabled'}>${p}（库存 ${(store.spareParts.find(x => p.startsWith(x.name)) || {}).stock}）</option>`).join('');
     openModal({
         title: `维修完工登记 - ${w.id}`,
         width: 540,
@@ -175,7 +194,7 @@ function showFinishForm(id) {
             label: '提交完工', className: 'btn-success',
             onClick: (close, mask) => {
                 finishRepair(w.id, mask.querySelector('#woRepairNote').value.trim(), mask.querySelector('#woPartsSelect').value);
-                toast(`${w.id} 已完工，转入待验收`, 'success');
+                toast(`${w.id} 已完工，转入待验收，备件库存已同步扣减`, 'success');
                 close(); refresh();
             }
         }]
@@ -254,6 +273,7 @@ function showNewRepairForm() {
 function refresh() {
     applyFilters();
     renderStats();
+    renderParts();
     refreshNavBadges();
 }
 

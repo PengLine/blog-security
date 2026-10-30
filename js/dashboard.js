@@ -12,6 +12,7 @@ function renderFlowBar() {
         { label: '人包绑定', count: store.bags.filter(b => b.bindingStatus === '已绑定').length, nav: 'passage' },
         { label: 'X光过检', count: agg.scanned, nav: 'device' },
         { label: '待人工判图', count: agg.pendingJudge, nav: 'judge', hot: true },
+        { label: '复检开包', count: store.bags.filter(b => b.recheck && b.recheck.status !== '已完成').length, nav: 'recheck', hot: true },
         { label: '违禁品查扣', count: agg.seized, nav: 'handoff' },
         { label: '民警交接完成', count: store.handoffs.filter(h => h.status === '已完成').length, nav: 'handoff' }
     ];

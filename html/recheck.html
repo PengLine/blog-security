@@ -1,0 +1,79 @@
+<div class="module" id="recheck">
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>待复检</h3>
+                <div class="stat-value" id="rcStatPending" style="color:#e6a23c;">0</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>开包检查中</h3>
+                <div class="stat-value" id="rcStatChecking" style="color:#409eff;">0</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>复检放行</h3>
+                <div class="stat-value" id="rcStatPassed" style="color:#67c23a;">0</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <h3>复检转查扣</h3>
+                <div class="stat-value" id="rcStatSeized" style="color:#f56c6c;">0</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="filter-bar">
+        <div class="filter-group">
+            <span class="filter-label">当班复检员：</span>
+            <select class="form-control" id="recheckOperatorSelect"></select>
+        </div>
+        <div class="filter-group">
+            <span class="filter-label" id="recheckQueueStat"></span>
+        </div>
+        <div class="filter-group">
+            <button class="btn btn-primary" id="recheckRefreshBtn">刷新队列</button>
+        </div>
+    </div>
+
+    <div class="judge-interface">
+        <div class="image-panel">
+            <div class="chart-title">开包检查工作台</div>
+            <div id="recheckDetail" style="color:#909399;padding:24px;font-size:13px;">
+                从右侧队列选择一件「可疑」包裹，核对 AI 标记与判图结论后开始开包检查。
+            </div>
+            <div class="judge-controls">
+                <button class="btn btn-primary" id="btnRcStart">开始开包检查</button>
+                <button class="btn btn-success" id="btnRcPass">未见异常·放行</button>
+                <button class="btn btn-danger" id="btnRcSeize">检出违禁·转查扣</button>
+                <button class="btn btn-secondary" id="btnRcNext">下一件</button>
+            </div>
+            <div class="hotkey-tip">查扣后自动生成《查扣物品登记》与危险级告警，转入「处置交接」完成民警交接</div>
+        </div>
+        <div class="judge-list">
+            <div class="chart-title">待复检队列</div>
+            <div id="recheckList"></div>
+        </div>
+    </div>
+
+    <div class="table-section">
+        <div class="table-title">今日复检记录</div>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>完成时间</th>
+                    <th>包裹</th>
+                    <th>旅客</th>
+                    <th>AI 标记</th>
+                    <th>复检结论</th>
+                    <th>处置</th>
+                    <th>复检人</th>
+                </tr>
+            </thead>
+            <tbody id="recheckHistoryBody"></tbody>
+        </table>
+    </div>
+</div>

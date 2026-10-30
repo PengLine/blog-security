@@ -1,4 +1,4 @@
-import { getStore, addToBlacklist } from './db.js';
+import { getStore, addToBlacklist, addRecognitionRecord } from './db.js';
 import { toast, openModal, kvTableHTML, maskId, maskPhone, timeAgo } from './utils.js';
 
 let mockData = {};
@@ -25,6 +25,9 @@ function initPage() {
     renderBlacklist(mockData.blacklist);
     renderStats();
     updatePersonnelSelect();
+    updateVerifySelect();
+    renderVerifyRecords();
+    bindVerify();
 }
 
 function initTabs() {
@@ -391,6 +394,98 @@ window.updatePersonnel = updatePersonnel;
 window.deletePersonnel = deletePersonnel;
 window.editPersonnel = editPersonnel;
 window.clearPersonnelForm = clearPersonnelForm;
+
+// ---------------- 人证核验（1:1 比对工作台） ----------------
+let verifyState = null;
+
+// 待核验旅客：优先人包已绑定（正在过检）的旅客
+function updateVerifySelect() {
+    const sel = document.getElementById('verifyPersonSelect');
+    if (!sel) return;
+    const store = getStore();
+    const boundOwners = new Set(store.bags.filter(b => b.bindingStatus === '已绑定').map(b => b.owner));
+    let list = store.passengers.filter(p => boundOwners.has(p.id)).slice(0, 40);
+    if (!list.length) list = store.passengers.slice(0, 40);
+    const keep = sel.value;
+    sel.innerHTML = list.map(p =>
+        `<option value="${p.id}">${p.name}（${p.id}）· ${p.department}${p.faceEnrolled ? '' : ' · 人脸未录入'}</option>`
+    ).join('');
+    if (keep && list.some(p => p.id === keep)) sel.value = keep;
+}
+
+function renderVerifyRecords() {
+    const tbody = document.getElementById('verifyRecordsBody');
+    if (!tbody) return;
+    const recs = getStore().recognitionRecords.slice(0, 10);
+    tbody.innerHTML = recs.length ? recs.map(r => `
+        <tr>
+            <td>${r.time}</td>
+            <td>${r.personName}（${r.personId}）</td>
+            <td>${r.similarity}%</td>
+            <td><span class="status-tag ${r.status === '识别成功' ? 'status-normal' : 'status-warning'}">${r.status}</span></td>
+            <td>${r.device || r.channel}</td>
+        </tr>`).join('') : '<tr><td colspan="5" style="text-align:center;color:#909399;">暂无核验记录</td></tr>';
+}
+
+function setVerifyButtons(disabled) {
+    ['verifyPassBtn', 'verifyManualBtn', 'verifyRejectBtn'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.disabled = disabled;
+    });
+}
+
+function bindVerify() {
+    const startBtn = document.getElementById('verifyStartBtn');
+    if (!startBtn || startBtn.dataset.bound) return;
+    startBtn.dataset.bound = '1';
+
+    startBtn.onclick = () => {
+        const sel = document.getElementById('verifyPersonSelect');
+        const person = getStore().passengers.find(p => p.id === sel.value);
+        if (!person) { toast('请选择待核验旅客', 'warning'); return; }
+        const box = document.getElementById('verifyCapture');
+        box.innerHTML = '<div style="color:#409eff;">正在采集人脸并调用人像库比对…</div>';
+        setVerifyButtons(true);
+        setTimeout(() => {
+            // 已录入人脸的相似度偏高；未录入仅比对身份证照片
+            const sim = person.faceEnrolled ? (88 + Math.random() * 11.5) : (60 + Math.random() * 25);
+            const similarity = parseFloat(sim.toFixed(1));
+            verifyState = { person, similarity };
+            box.innerHTML = `<div style="text-align:center;">
+                <div style="font-size:42px;">☑</div>
+                现场抓拍已生成 · 质量分 ${Math.round(90 + Math.random() * 9)}/100<br>
+                <span style="font-size:12px;color:#909399;">活体检测通过 · 光照合格 · 姿态角 ${(Math.random() * 5).toFixed(1)}°</span>
+            </div>`;
+            const color = similarity >= 90 ? '#67c23a' : similarity >= 75 ? '#e6a23c' : '#f56c6c';
+            const verdict = similarity >= 90 ? '建议自动通过' : similarity >= 75 ? '建议转人工复核' : '相似度不足，建议拒绝通行';
+            document.getElementById('verifyResult').innerHTML = `
+                <div style="font-size:22px;font-weight:bold;color:${color};">${similarity}%</div>
+                <div style="margin-top:4px;">${verdict}</div>
+                <div class="score-bar" style="margin-top:8px;"><i style="width:${similarity}%;background:${color};"></i></div>`;
+            setVerifyButtons(false);
+        }, 900);
+    };
+
+    const record = (status, msg) => {
+        if (!verifyState) { toast('请先执行「开始核验」', 'warning'); return; }
+        addRecognitionRecord({
+            person: verifyState.person, similarity: verifyState.similarity,
+            status, temperature: verifyState.person.temperature
+        });
+        toast(`${verifyState.person.name} 人证核验：${msg}`, status === '识别成功' ? 'success' : 'warning');
+        verifyState = null;
+        const res = document.getElementById('verifyResult');
+        if (res) res.innerHTML = '<span style="color:#909399;">核验已归档，可选择下一位旅客继续</span>';
+        setVerifyButtons(true);
+        renderStats();
+        renderVerifyRecords();
+        renderRecognitionRecords(mockData.recognitionRecords.slice(0, 50));
+    };
+
+    document.getElementById('verifyPassBtn').onclick = () => record('识别成功', '自动通过，开闸放行');
+    document.getElementById('verifyManualBtn').onclick = () => record('人工复核', '已转人工复核台，人工核对证件后放行');
+    document.getElementById('verifyRejectBtn').onclick = () => record('未识别', '拒绝通行，已推送特勤岗位拦截');
+}
 
 // 全局初始化函数
 window.initFaceModule = function() {

@@ -175,15 +175,56 @@ function renderPassageRecords(records) {
 
     tbody.querySelectorAll('[data-pdetail]').forEach(btn => btn.onclick = () => {
         const r = mockData.passageRecords.find(x => x.id === btn.dataset.pdetail);
-        if (r) openModal({
-            title: `通行详情 - ${r.packageId}`, width: 560,
-            bodyHTML: kvTableHTML([
-                ['通行时间', r.time], ['旅客', `${r.passengerName}（${r.passengerId}）`],
-                ['体温', `${r.temperature}℃`], ['检出物品', r.contraband],
-                ['通道', r.channelName], ['通行结论', r.status],
-                ['黑名单命中', r.blacklisted ? '是，已拦截并通知值班队长' : '否']
-            ])
+        if (!r) return;
+        openPassageDetail(r);
+    });
+}
+
+// 通行详情：人脸核验 + 判图处置 + 体温复测闭环
+function openPassageDetail(r) {
+    const store = getStore();
+    const bag = store.bags.find(b => b.id === r.packageId) || {};
+    const p = store.passengers.find(x => x.id === r.passengerId) || {};
+    const faceRec = store.recognitionRecords.find(rec => rec.personId === r.passengerId);
+    const tempAbnormal = (p.temperature || 36.5) > 37.3;
+    const actions = [];
+    if (tempAbnormal) {
+        actions.push({
+            label: '复测体温', className: 'btn-primary',
+            onClick: (close) => {
+                // 复测：随机得到 36.2-37.2 的稳定体温，极少数仍需转诊
+                const again = Math.random() < 0.85;
+                const temp = again ? (36.2 + Math.random()).toFixed(1) : (37.4 + Math.random() * 0.5).toFixed(1);
+                p.temperature = parseFloat(temp);
+                const now = Date.now();
+                store.events.unshift({
+                    id: `EVT-${now}`, time: new Date(now).toLocaleString(), _ts: now,
+                    device: r.channelName, type: '体温异常',
+                    status: again ? 'status-normal' : 'status-warning', statusName: '',
+                    processStatus: again ? '已处理' : '处理中', passengerId: r.passengerId,
+                    handler: `安检员·${store.currentUser.name}`, handleTime: new Date(now).toLocaleString(),
+                    details: `${r.passengerName} 体温复测 ${temp}℃，${again ? '恢复正常，允许通行' : '仍异常，转医务观察点'}`
+                });
+                close();
+                toast(again ? `${r.passengerName} 复测 ${temp}℃，体温正常，予以放行` : `${r.passengerName} 复测 ${temp}℃，仍超阈值，转医务观察点`, again ? 'success' : 'warning');
+                initPage();
+            }
         });
+    }
+    openModal({
+        title: `通行详情 - ${r.packageId}`, width: 580,
+        bodyHTML: kvTableHTML([
+            ['通行时间', r.time], ['旅客', `${r.passengerName}（${r.passengerId}）`],
+            ['人脸核验', faceRec ? `${faceRec.similarity}% · ${faceRec.status}（${faceRec.device}）` : '无核验记录'],
+            ['现场体温', `${r.temperature}℃${tempAbnormal ? ' <span style="color:#f56c6c;">超阈值</span>' : ''}`],
+            ['包裹', r.packageId], ['检出物品', r.contraband],
+            ['AI 预判', bag.ai ? bag.ai.label : '-'], ['判图结论', bag.judgeResult || '-'],
+            ['处置结论', bag.disposition || '待判图'],
+            ['复检状态', bag.recheck ? `${bag.recheck.status}${bag.recheck.result ? '（' + bag.recheck.result + '）' : ''}` : '未触发'],
+            ['通道', r.channelName], ['通行结论', r.status],
+            ['黑名单命中', r.blacklisted ? '是，已拦截并通知值班队长' : '否']
+        ]),
+        actions: actions.length ? actions : undefined
     });
 }
 

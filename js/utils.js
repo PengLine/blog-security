@@ -133,6 +133,12 @@ export function updateTime() {
     }
 }
 
+// 左侧设备导航仅在设备相关页面显示（其余页面内容区全宽）
+const SIDEBAR_NAV = ['device', 'alarm'];
+export function updateSidebarVisibility(navId) {
+    document.body.classList.toggle('sidebar-hidden', !SIDEBAR_NAV.includes(navId));
+}
+
 // 导航切换功能
 export function setupNavigation() {
     const navItems = document.querySelectorAll('.nav-item');
@@ -146,6 +152,7 @@ export function setupNavigation() {
     navItems.forEach(item => {
         item.addEventListener('click', function() {
             const navId = this.dataset.nav;
+            updateSidebarVisibility(navId);
             
             // 更新导航状态
             navItems.forEach(i => i.classList.remove('active'));
@@ -182,6 +189,7 @@ function loadModuleScript(navId) {
         dashboard: 'js/dashboard.js',
         device: 'js/device.js',
         workorder: 'js/workorder.js',
+        recheck: 'js/recheck.js',
         events: 'js/events.js',
         judge: 'js/judge.js',
         alarm: 'js/alarm.js',
@@ -256,6 +264,7 @@ export function setupDeviceSwitch() {
 
 // 先加载设备管理模块，然后调用设备详情
 function loadDeviceModuleThenDetail(deviceType) {
+    updateSidebarVisibility('device');
     const contentDiv = document.querySelector('.content');
     if (!contentDiv) return;
     
@@ -568,7 +577,8 @@ export function refreshNavBadges() {
         { nav: 'alarm', count: store.alarms.filter(a => a.status === '未处理').length },
         { nav: 'judge', count: store.bags.filter(b => b.status === 'pending').length },
         { nav: 'handoff', count: store.handoffs.filter(h => h.status !== '已完成').length },
-        { nav: 'workorder', count: store.workorders.filter(w => w.status !== '已完成').length }
+        { nav: 'workorder', count: store.workorders.filter(w => w.status !== '已完成').length },
+        { nav: 'recheck', count: store.bags.filter(b => b.recheck && b.recheck.status !== '已完成').length }
     ];
     sets.forEach(s => {
         const el = document.querySelector(`.nav-item[data-nav="${s.nav}"] .nav-badge`);
@@ -603,6 +613,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // 加载初始首页
 function loadInitialDashboard() {
+    updateSidebarVisibility('dashboard');
     console.log('Loading initial dashboard...');
     const contentDiv = document.querySelector('.content');
     if (!contentDiv) return;
